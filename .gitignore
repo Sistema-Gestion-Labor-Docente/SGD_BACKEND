@@ -49,3 +49,4 @@ logs
 .settings
 .springBeans
 .sts4-cache
+src/main/resources/application-dev.yml
