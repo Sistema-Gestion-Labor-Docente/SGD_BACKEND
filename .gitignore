@@ -38,7 +38,7 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-src/main/java/co/edu/unicauca/sed/archivos/
+src/main/java/co/edu/unicauca/sgd/archivos/
 logs
 
 ### STS ###
