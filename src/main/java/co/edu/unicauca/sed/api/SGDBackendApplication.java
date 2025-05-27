@@ -10,10 +10,10 @@ import java.util.TimeZone;
 @SpringBootApplication
 @EnableScheduling
 @EnableAsync
-public class SedBackendApplication {
+public class SGDBackendApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SedBackendApplication.class, args);
+		SpringApplication.run(SGDBackendApplication.class, args);
 	}
 
 	@PostConstruct
