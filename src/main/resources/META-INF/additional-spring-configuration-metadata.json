@@ -1,0 +1,9 @@
+{
+    "properties": [
+        {
+            "name": "files.base-path",
+            "type": "java.lang.String",
+            "description": "File path for saving files 'files.base-path'"
+        }
+    ]
+}

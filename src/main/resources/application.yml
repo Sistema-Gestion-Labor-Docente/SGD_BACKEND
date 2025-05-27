@@ -1,0 +1,71 @@
+spring:
+  jackson:
+    time-zone: America/Bogota
+  jpa:
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: sed
+  datasource:
+    url: ${DESARROLLO_DATASOURCE_URL}
+    username: ${DESARROLLO_DATASOURCE_USER}
+    password: ${DESARROLLO_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE}
+
+  notification:
+    service:
+      url: ${NOTIFICATION_SERVICE_URL}
+    cron: ${NOTIFICACION_CRON:0 0 10 * * *}
+    habilitada: ${NOTIFICACION_HABILITADA:false}
+    dias:
+      min: ${NOTIFICACION_DIAS_MIN:0}
+      max: ${NOTIFICACION_DIAS_MAX:5}
+  periodo-academico:
+    api:
+      url: ${PERIODO_ACADEMICO_API_URL}
+
+server:
+  port: ${SERVER_PORT}
+  servlet:
+    context-path: /sed-back
+
+files:
+  basePath: ${FILES_BASE_PATH}
+
+document:
+  upload-dir: ${DOCUMENT_UPLOAD_DIR}
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT}
+    'co.edu.unicauca.sed.api': ${LOG_LEVEL_API}
+  file:
+    name: ${LOG_FILE_NAME}
+    max-size: ${LOG_FILE_MAX_SIZE}
+    max-history: ${LOG_FILE_MAX_HISTORY}
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n"
+
+app:
+  jwtSecret: ${JWT_SECRET}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    operations-sorter: method
+  default-produces-media-type: application/json
+
+info:
+  app:
+    title: Microservicio Sistema Evaluación Docente
+    description: API para Gestión Docente
+    version: 1.0.0
