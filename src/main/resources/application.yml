@@ -8,7 +8,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: sed
+        default_schema: sgd
   datasource:
     url: ${DESARROLLO_DATASOURCE_URL}
     username: ${DESARROLLO_DATASOURCE_USER}
@@ -66,6 +66,6 @@ springdoc:
 
 info:
   app:
-    title: Microservicio Sistema Evaluación Docente
-    description: API para Gestión Docente
+    title: Microservicio Sistema Gestion Docente
+    description: API para Gestión de Labor Docente
     version: 1.0.0
