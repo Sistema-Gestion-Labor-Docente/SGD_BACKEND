@@ -17,7 +17,7 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class FileDownloadService {
 
-    @Value("${DOCUMENT_UPLOAD_DIR}")
+    @Value("${document.upload-dir}")
     private String documentUploadDir;
 
     @Autowired

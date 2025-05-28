@@ -23,13 +23,13 @@ public class FuenteNotificacionService {
     private final PeriodoAcademicoRepository periodoAcademicoRepository;
     private final ClienteNotificacion mensajeriaClient;
 
-    @Value("${notificacion.dias.min}")
+    @Value("${spring.notification.dias.min}")
     private int diasMin;
 
-    @Value("${notificacion.dias.max}")
+    @Value("${spring.notification.dias.max}")
     private int diasMax;
 
-    @Value("${notificacion.habilitada:false}")
+    @Value("${spring.notification.habilitada:false}")
     private boolean notificacionHabilitada;
 
     public FuenteNotificacionService(FuenteRepository fuenteRepository,
@@ -40,7 +40,7 @@ public class FuenteNotificacionService {
         this.mensajeriaClient = mensajeriaClient;
     }
 
-    @Scheduled(cron = "${notificacion.cron}", zone = "America/Bogota")
+    @Scheduled(cron = "${spring.notification.cron}", zone = "America/Bogota")
     public void notificarFuentesPendientes() {
         PeriodoAcademico periodoActivo = periodoAcademicoRepository
                 .findByEstadoPeriodoAcademicoNombre("ACTIVO").orElse(null);
