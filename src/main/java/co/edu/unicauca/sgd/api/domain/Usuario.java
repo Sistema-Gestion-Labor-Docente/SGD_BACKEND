@@ -73,12 +73,4 @@ public class Usuario {
     @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(name = "ROLUSUARIO", joinColumns = @JoinColumn(name = "OIDUSUARIO"), inverseJoinColumns = @JoinColumn(name = "OIDROL"))
     private List<Rol> roles;
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "evaluador", cascade = CascadeType.REMOVE)
-    private List<Proceso> procesosEvaluados;
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "evaluado", cascade = CascadeType.REMOVE)
-    private List<Proceso> procesosEvaluado;
 }

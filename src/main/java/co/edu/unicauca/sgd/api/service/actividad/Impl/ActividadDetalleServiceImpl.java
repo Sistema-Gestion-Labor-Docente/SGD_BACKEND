@@ -44,7 +44,7 @@ public class ActividadDetalleServiceImpl implements ActividadDetalleService {
         String actividad = obtenerValorAtributo(atributos, "ACTIVIDAD");
         String semillero = obtenerValorAtributo(atributos, "SEMILLERO");
     
-        Integer idUsuario = actividadDTO.getOidEvaluador();
+        Integer idUsuario = -1;
         /*Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + idUsuario));*/
     

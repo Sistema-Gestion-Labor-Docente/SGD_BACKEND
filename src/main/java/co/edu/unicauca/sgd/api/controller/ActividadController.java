@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.*;
-import co.edu.unicauca.sgd.api.service.actividad.ActividadQueryService;
 import co.edu.unicauca.sgd.api.service.actividad.ActividadService;
 
 import org.springframework.data.domain.Page;
@@ -23,11 +22,9 @@ import java.util.List;
 public class ActividadController {
 
     private final ActividadService actividadService;
-    private final ActividadQueryService actividadQueryService;
 
-    public ActividadController(ActividadService actividadService, ActividadQueryService actividadQueryService) {
+    public ActividadController(ActividadService actividadService) {
         this.actividadService = actividadService;
-        this.actividadQueryService = actividadQueryService;
     }
 
     @GetMapping
@@ -51,60 +48,6 @@ public class ActividadController {
     public ResponseEntity<ApiResponse<ActividadBaseDTO>> findById(
             @Parameter(description = "ID de la actividad") @PathVariable Integer oid) {
         ApiResponse<ActividadBaseDTO> response = actividadService.buscarDTOPorId(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
-    }
-
-    @GetMapping("/buscarActividadesPorEvaluado")
-    @Operation(
-        summary = "Buscar actividades por evaluado",
-        description = "Obtiene las actividades asignadas a un evaluado en períodos activos. Soporta múltiples filtros opcionales."
-    )
-    public ResponseEntity<ApiResponse<Page<ActividadBaseDTO>>> buscarActividadesPorEvaluado(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) Integer idEvaluador,
-            @RequestParam(required = false) Integer idEvaluado,
-            @RequestParam(required = false) String tipoActividad,
-            @RequestParam(required = false) String nombreActividad,
-            @RequestParam(required = false) String nombreEvaluador,
-            @RequestParam(required = false) List<String> roles,
-            @RequestParam(required = false) String tipoFuente,
-            @RequestParam(required = false) String estadoFuente,
-            @RequestParam(required = false) Boolean orden,
-            @RequestParam(required = false) Integer idPeriodo,
-            @RequestParam(required = false) Boolean asignacionDefault) {
-
-        ApiResponse<Page<ActividadBaseDTO>> response = actividadQueryService.buscarActividadesPorEvaluado(
-                idEvaluador, idEvaluado, nombreActividad, tipoActividad, nombreEvaluador,
-                roles, tipoFuente, estadoFuente, orden, idPeriodo, asignacionDefault, PageRequest.of(page, size));
-
-        return ResponseEntity.status(response.getCodigo()).body(response);
-    }
-
-    @GetMapping("/buscarActividadesPorEvaluador")
-    @Operation(
-        summary = "Buscar actividades por evaluador",
-        description = "Obtiene las actividades asignadas a un evaluador en períodos activos. Permite aplicar filtros por evaluado, tipo, nombre y estado."
-    )
-    public ResponseEntity<ApiResponse<Page<ActividadDTOEvaluador>>> buscarActividadesPorEvaluador(
-            @RequestParam(required = false) Integer idEvaluador,
-            @RequestParam(required = false) Integer idEvaluado,
-            @RequestParam(required = false) String tipoActividad,
-            @RequestParam(required = false) String nombreActividad,
-            @RequestParam(required = false) String nombreEvaluado,
-            @RequestParam(required = false) List<String> roles,
-            @RequestParam(required = false) String tipoFuente,
-            @RequestParam(required = false) String estadoFuente,
-            @RequestParam(required = false) Boolean orden,
-            @RequestParam(required = false) Integer idPeriodo,
-            @RequestParam(required = false) Boolean asignacionDefault,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-            ApiResponse<Page<ActividadDTOEvaluador>> response = actividadQueryService.buscarActividadesPorEvaluador(
-                idEvaluador, idEvaluado, nombreActividad, tipoActividad, nombreEvaluado, roles,
-                tipoFuente, estadoFuente, orden, idPeriodo, asignacionDefault, PageRequest.of(page, size));     
-
         return ResponseEntity.status(response.getCodigo()).body(response);
     }
 

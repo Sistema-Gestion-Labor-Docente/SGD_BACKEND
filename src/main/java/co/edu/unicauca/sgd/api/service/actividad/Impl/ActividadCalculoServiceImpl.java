@@ -3,9 +3,7 @@ package co.edu.unicauca.sgd.api.service.actividad.Impl;
 import org.springframework.stereotype.Service;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
-import co.edu.unicauca.sgd.api.domain.Fuente;
 import co.edu.unicauca.sgd.api.service.actividad.ActividadCalculoService;
-import co.edu.unicauca.sgd.api.utils.MathUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -33,17 +31,6 @@ public class ActividadCalculoServiceImpl implements ActividadCalculoService {
         return BigDecimal.valueOf((horasActividad / horasTotales) * 100)
                 .setScale(1, RoundingMode.HALF_UP)
                 .doubleValue();
-    }
-
-    @Override
-    public double calcularPromedio(List<Fuente> fuentes) {
-        return MathUtils.redondearDecimal(
-                fuentes.stream()
-                    .filter(f -> f.getCalificacion() != null)
-                    .mapToDouble(Fuente::getCalificacion)
-                    .average()
-                    .orElse(0),
-                2).doubleValue();
     }
 
     @Override

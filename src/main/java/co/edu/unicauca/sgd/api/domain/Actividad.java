@@ -26,14 +26,6 @@ public class Actividad {
     private TipoActividad tipoActividad;
 
     @ManyToOne
-    @JoinColumn(name = "OIDPROCESO", nullable = false)
-    private Proceso proceso;
-
-    @OneToMany(mappedBy = "actividad", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    @JsonIgnore
-    private List<Fuente> fuentes;
-
-    @ManyToOne
     @JoinColumn(name = "OIDESTADOACTIVIDAD", nullable = false)
     private EstadoActividad estadoActividad;
 

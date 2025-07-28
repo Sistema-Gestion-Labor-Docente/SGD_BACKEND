@@ -5,17 +5,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
-import co.edu.unicauca.sgd.api.domain.Fuente;
-import co.edu.unicauca.sgd.api.dto.FuenteDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadPaginadaDTO;
 import co.edu.unicauca.sgd.api.service.actividad.ActividadCalculoService;
 import co.edu.unicauca.sgd.api.service.actividad.ActividadTransformacionService;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -30,39 +26,13 @@ public class ActividadTransformacionServiceImpl implements ActividadTransformaci
     @Override
     public Map<String, Object> transformarActividad(Actividad actividad, float horasTotales) {
         double porcentaje = calculoService.calcularPorcentaje(actividad.getHoras(), horasTotales);
-        double promedio = calculoService.calcularPromedio(actividad.getFuentes());
-        double acumulado = calculoService.calcularAcumulado(promedio, porcentaje);
 
-        int totalFuentes = Optional.ofNullable(actividad.getFuentes())
-                .orElse(Collections.emptyList())
-                .stream()
-                .filter(fuente -> fuente.getCalificacion() != null)
-                .mapToInt(f -> 1)
-                .sum();
 
         return Map.of(
                 "oidActividad", actividad.getOidActividad(),
                 "nombre", actividad.getNombreActividad(),
                 "horas", actividad.getHoras(),
-                "fuentes", transformarFuentes(actividad.getFuentes()),
-                "porcentaje", porcentaje,
-                "promedio", promedio,
-                "acumulado", acumulado,
-                "totalFuentes", totalFuentes);
-    }
-
-    @Override
-    public List<FuenteDTO> transformarFuentes(List<Fuente> fuentes) {
-        return fuentes.stream()
-			.sorted(Comparator.comparing(Fuente::getTipoFuente))
-			.map(fuente -> new FuenteDTO(
-				fuente.getOidFuente(),
-				fuente.getEstadoFuente() != null
-						? fuente.getEstadoFuente().getNombreEstado()
-						: null,
-				fuente.getCalificacion(),
-				fuente.getTipoFuente() != null ? fuente.getTipoFuente() : "Sin tipo"))
-			.collect(Collectors.toList());
+                "porcentaje", porcentaje);
     }
 
     @Override
