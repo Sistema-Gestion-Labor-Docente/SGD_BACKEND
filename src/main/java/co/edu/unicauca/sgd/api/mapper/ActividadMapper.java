@@ -41,31 +41,11 @@ public class ActividadMapper {
             actividad.setTipoActividad(tipoActividad);
         }
 
-        // Mapear el proceso si está presente
-        if (actividadDTO.getOidProceso() != null) {
-            Proceso proceso = new Proceso();
-            proceso.setOidProceso(actividadDTO.getOidProceso());
-            actividad.setProceso(proceso);
-        }
-
         // Mapear el estado de la actividad si está presente
         if (actividadDTO.getOidEstadoActividad() != null) {
             EstadoActividad estadoActividad = new EstadoActividad();
             estadoActividad.setOidEstadoActividad(actividadDTO.getOidEstadoActividad());
             actividad.setEstadoActividad(estadoActividad);
-        }
-
-        // Mapear las fuentes si están presentes
-        if (actividadDTO.getFuentes() != null) {
-            List<Fuente> fuentes = actividadDTO.getFuentes().stream()
-                    .map(fuenteDTO -> {
-                        Fuente fuente = new Fuente();
-                        fuente.setOidFuente(fuenteDTO.getOidFuente());
-                        return fuente;
-                    })
-                    .sorted(Comparator.comparing(Fuente::getTipoFuente))
-                    .collect(Collectors.toList());
-            actividad.setFuentes(fuentes);
         }
 
         return actividad;

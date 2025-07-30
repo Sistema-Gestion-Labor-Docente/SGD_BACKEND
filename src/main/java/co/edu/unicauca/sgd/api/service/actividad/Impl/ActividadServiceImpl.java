@@ -19,18 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.EavAtributo;
-import co.edu.unicauca.sgd.api.domain.EstadoFuente;
-import co.edu.unicauca.sgd.api.domain.PeriodoAcademico;
-import co.edu.unicauca.sgd.api.domain.Proceso;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
-import co.edu.unicauca.sgd.api.dto.EvaluadorAsignacionDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.exception.ValidationException;
 import co.edu.unicauca.sgd.api.mapper.ActividadMapper;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
 import co.edu.unicauca.sgd.api.repository.EavAtributoRepository;
-import co.edu.unicauca.sgd.api.repository.EstadoFuenteRepository;
 import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.EavAtributoService;
@@ -39,9 +34,6 @@ import co.edu.unicauca.sgd.api.service.actividad.ActividadDetalleService;
 import co.edu.unicauca.sgd.api.service.actividad.ActividadQueryService;
 import co.edu.unicauca.sgd.api.service.actividad.ActividadService;
 import co.edu.unicauca.sgd.api.service.actividad.EstadoActividadService;
-import co.edu.unicauca.sgd.api.service.fuente.FuenteService;
-import co.edu.unicauca.sgd.api.service.periodo_academico.PeriodoAcademicoService;
-import co.edu.unicauca.sgd.api.service.proceso.ProcesoService;
 
 @Service
 public class ActividadServiceImpl implements ActividadService {
@@ -60,17 +52,10 @@ public class ActividadServiceImpl implements ActividadService {
     @Autowired
     private ActividadMapper actividadMapper;
 
-    @Autowired
-    private PeriodoAcademicoService periodoAcademicoService;
 
     @Autowired
     private EstadoActividadService estadoActividadService;
 
-    @Autowired
-    private FuenteService fuenteService;
-
-    @Autowired
-    private ProcesoService procesoService;
 
     @Autowired
     private EavAtributoService eavAtributoService;
@@ -78,8 +63,6 @@ public class ActividadServiceImpl implements ActividadService {
     @Autowired
     private EavAtributoRepository eavAtributoRepository;
 
-    @Autowired
-    EstadoFuenteRepository estadoFuenteRepository;
 
     @Autowired
     private ActividadDetalleService actividadDetalleService;
@@ -132,10 +115,8 @@ public class ActividadServiceImpl implements ActividadService {
         Map<String, EavAtributo> cacheAtributos = eavAtributoRepository.findAll().stream()
             .collect(Collectors.toMap(EavAtributo::getNombre, Function.identity()));
 
-        EstadoFuente estadoFuentePendiente = estadoFuenteRepository.findByNombreEstado("PENDIENTE")
-            .orElseThrow(() -> new IllegalArgumentException("Estado 'PENDIENTE' no encontrado."));
 
-        Integer idPeriodoAcademico = periodoAcademicoService.obtenerIdPeriodoAcademicoActivo();
+        Integer idPeriodoAcademico = -1;
 
         Map<Integer, Usuario> cacheUsuariosPorId = new HashMap<>();
         Map<String, Usuario> cacheUsuariosPorIdentificacion = new HashMap<>();
@@ -153,9 +134,6 @@ public class ActividadServiceImpl implements ActividadService {
                     }
                 }
                 */
-                if (dto.getOidEvaluado() == null) {
-                    throw new ValidationException(400, "El id evaluado no puede ser nulo.");
-                }
                 if (dto.getTipoActividad() == null || dto.getTipoActividad().getOidTipoActividad() == null) {
                     throw new ValidationException(400, "El tipo de actividad no puede ser nulo.");
                 }
@@ -169,7 +147,7 @@ public class ActividadServiceImpl implements ActividadService {
                 if (dto.getSemanas() == null || dto.getSemanas() <= 0) {
                     throw new ValidationException(400, "La cantidad de semanas no puede ser nula o negativa.");
                 }
-                Actividad guardada = guardarActividad(dto, cacheAtributos, estadoFuentePendiente, idPeriodoAcademico, cacheUsuariosPorId, cacheUsuariosPorIdentificacion, cacheEvaluadores);
+                Actividad guardada = guardarActividad(dto, cacheAtributos, idPeriodoAcademico, cacheUsuariosPorId, cacheUsuariosPorIdentificacion, cacheEvaluadores);
                 actividadesGuardadas.add(guardada);
             } catch (DataIntegrityViolationException e) {
                 errores.add("Actividad con ID " + dto.getOidActividad() + ": ya existe.");
@@ -195,24 +173,17 @@ public class ActividadServiceImpl implements ActividadService {
         return mensaje;
     }    
 
-    private Actividad guardarActividad(ActividadBaseDTO dto, Map<String, EavAtributo> cacheAtributos, EstadoFuente estadoFuentePendiente,
+    private Actividad guardarActividad(ActividadBaseDTO dto, Map<String, EavAtributo> cacheAtributos,
         Integer idPeriodoAcademico, Map<Integer, Usuario> cacheUsuariosPorId, Map<String, Usuario> cacheUsuariosPorIdentificacion, Map<String, Usuario> cacheEvaluadores) {
 
         validarDuplicado(dto);
 
         Actividad actividad = actividadMapper.convertToEntity(dto);
-        asignarPeriodoAcademicoActivo(actividad, idPeriodoAcademico);
 
-        if (actividad.getProceso().getNombreProceso() == null || actividad.getProceso().getNombreProceso().isEmpty()) {
-            actividad.getProceso().setNombreProceso("ACTIVIDAD");
-        }
-
-        asignarUsuario(actividad, dto, cacheUsuariosPorId, cacheUsuariosPorIdentificacion, cacheEvaluadores);
-        procesoService.guardarProceso(actividad);
         asignarNombreActividad(actividad, dto);
 
         Actividad actividadGuardada = actividadRepository.save(actividad);
-        guardarComponentesRelacionados(dto, actividadGuardada, cacheAtributos, estadoFuentePendiente);
+        guardarComponentesRelacionados(dto, actividadGuardada, cacheAtributos);
 
         return actividadGuardada;
     }
@@ -223,23 +194,6 @@ public class ActividadServiceImpl implements ActividadService {
         }
     }
 
-    private void asignarUsuario(Actividad actividad, ActividadBaseDTO dto, Map<Integer, Usuario> cacheUsuariosPorId, Map<String, Usuario> cacheUsuariosPorIdentificacion, Map<String, Usuario> cacheEvaluadores) {
-        Usuario evaluado = obtenerUsuarioEvaluado(dto, cacheUsuariosPorId, cacheUsuariosPorIdentificacion);
-        actividad.getProceso().setEvaluado(evaluado);
-
-        Usuario evaluador;
-        if (dto.getOidEvaluador() != 0) {
-            evaluador = new Usuario(dto.getOidEvaluador());
-            actividad.setAsignacionDefault(false);
-        } else {
-            Integer idTipoActividad = dto.getTipoActividad().getOidTipoActividad();
-            EvaluadorAsignacionDTO evaluadorAsignacion = obtenerEvaluadorAutomatico(idTipoActividad, evaluado, cacheEvaluadores);
-            evaluador = evaluadorAsignacion.getEvaluador();
-            actividad.setAsignacionDefault(evaluadorAsignacion.isAsignacionDefault());
-        }
-
-        actividad.getProceso().setEvaluador(evaluador);
-    }
 
     private void asignarNombreActividad(Actividad actividad, ActividadBaseDTO dto) {
         if (actividad.getNombreActividad() == null || actividad.getNombreActividad().isEmpty()) {
@@ -249,9 +203,7 @@ public class ActividadServiceImpl implements ActividadService {
 
     private void guardarComponentesRelacionados(ActividadBaseDTO dto,
             Actividad actividadGuardada,
-            Map<String, EavAtributo> cacheAtributos,
-            EstadoFuente estadoFuentePendiente) {
-        fuenteService.crearTipoFuente(actividadGuardada, estadoFuentePendiente);
+            Map<String, EavAtributo> cacheAtributos) {
         eavAtributoService.guardarAtributosDinamicos(dto, actividadGuardada, cacheAtributos);
     }
 
@@ -270,21 +222,6 @@ public class ActividadServiceImpl implements ActividadService {
             if (actividadDTO.getNombreActividad() == null || actividadDTO.getNombreActividad().isEmpty()) {
                 actividadDTO.setNombreActividad(actividadDetalleService.generarNombreActividad(actividadDTO));
             }
-
-            Proceso proceso = actividadExistente.getProceso();
-            if (proceso == null) {
-                throw new ValidationException(400, "Error: La actividad no tiene un proceso asociado.");
-            }
-
-            proceso.setEvaluador(new Usuario(actividadDTO.getOidEvaluador()));
-            proceso.setEvaluado(new Usuario(actividadDTO.getOidEvaluado()));
-
-            // Si el nombre del proceso está vacío, asignar un valor por defecto
-            if (proceso.getNombreProceso() == null || proceso.getNombreProceso().isEmpty()) {
-                proceso.setNombreProceso("ACTUALIZADO - ACTIVIDAD");
-            }
-
-            procesoService.actualizar(actividadExistente.getProceso().getOidProceso(), proceso);
 
             actividadMapper.actualizarCamposBasicos(actividadExistente, actividadDTO);
             estadoActividadService.asignarEstadoActividad(actividadExistente, actividadDTO.getOidEstadoActividad());
@@ -313,98 +250,5 @@ public class ActividadServiceImpl implements ActividadService {
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar la actividad: " + e.getMessage(), null);
         }
-    }
-
-    private void asignarPeriodoAcademicoActivo(Actividad actividad, Integer idPeriodoAcademico) {
-        if (idPeriodoAcademico == null) {
-            throw new IllegalArgumentException("El ID del periodo académico no puede ser nulo.");
-        }
-    
-        if (actividad.getProceso() == null) {
-            actividad.setProceso(new Proceso());
-        }
-    
-        PeriodoAcademico periodoAcademico = new PeriodoAcademico();
-        periodoAcademico.setOidPeriodoAcademico(idPeriodoAcademico);
-        actividad.getProceso().setOidPeriodoAcademico(periodoAcademico);
-    }
-
-    private EvaluadorAsignacionDTO obtenerEvaluadorAutomatico(Integer oidTipoActividad,Usuario evaluado,Map<String, Usuario> cacheEvaluadores) {
-        final int ROL_DECANO = 3;
-        final int ROL_JEFE_DEPTO = 4;
-        final int ROL_SECRETARIA = 5;
-
-        String facultad = evaluado.getUsuarioDetalle().getFacultad();
-        String departamento = evaluado.getUsuarioDetalle().getDepartamento();
-
-        try {
-            switch (oidTipoActividad) {
-                case 4: {
-                    String key = claveEvaluador("FACULTAD", facultad, ROL_DECANO);
-                    Usuario evaluador = cacheEvaluadores.computeIfAbsent(key,
-                        k -> usuarioRepository.findFirstActiveByFacultadAndRolId(facultad, ROL_DECANO)
-                            .orElseThrow(() -> new RuntimeException("No se encontró Decano activo para la facultad " + facultad)));
-                    return new EvaluadorAsignacionDTO(evaluador, false);
-                }
-                case 3, 5, 6, 8, 9: {
-                    String key = claveEvaluador("DEPARTAMENTO", departamento, ROL_JEFE_DEPTO);
-                    Usuario evaluador = cacheEvaluadores.computeIfAbsent(key,
-                        k -> usuarioRepository.findFirstActiveByDepartamentoAndRolId(departamento, ROL_JEFE_DEPTO)
-                            .orElseThrow(() -> new RuntimeException("No se encontró Jefe de Departamento activo para el departamento " + departamento)));
-                    return new EvaluadorAsignacionDTO(evaluador, false);
-                }
-                case 1, 2, 7:
-                default: {
-                    String key = claveEvaluador("DEPARTAMENTO", departamento, ROL_JEFE_DEPTO);
-                    Usuario evaluador = cacheEvaluadores.computeIfAbsent(key,
-                        k -> usuarioRepository.findFirstActiveByDepartamentoAndRolId(departamento, ROL_JEFE_DEPTO)
-                            .orElseThrow(() -> new RuntimeException("No se encontró Jefe de Departamento activo para el departamento " + departamento)));
-                    return new EvaluadorAsignacionDTO(evaluador, true);
-                }
-            }
-        } catch (RuntimeException e) {
-            // Fallback definitivo a secretaria de facultad
-            String fallbackKey = claveEvaluador("FACULTAD", facultad, ROL_SECRETARIA);
-            Usuario evaluadorFallback = cacheEvaluadores.computeIfAbsent(fallbackKey,
-                    k -> usuarioRepository.findFirstActiveByFacultadAndRolId(facultad, ROL_SECRETARIA)
-                        .orElseThrow(() -> new RuntimeException("❌ No se encontró secretaria/o activa para la facultad " + facultad)));
-            return new EvaluadorAsignacionDTO(evaluadorFallback, true);
-        }
-    }
-
-    private String claveEvaluador(String tipo, String valor, int rolId) {
-        return tipo + ":" + valor + ":" + rolId;
-    }
-
-    private Usuario obtenerUsuarioEvaluado(ActividadBaseDTO dto,Map<Integer, Usuario> cachePorId, Map<String, Usuario> cachePorIdentificacion) {
-        Integer oidEvaluado = dto.getOidEvaluado();
-
-        // 1. Buscar por ID en caché
-        if (cachePorId.containsKey(oidEvaluado)) {
-            return cachePorId.get(oidEvaluado);
-        }
-
-        // 2. Buscar por ID en base de datos
-        Optional<Usuario> posibleEvaluado = usuarioRepository.findById(oidEvaluado);
-        if (posibleEvaluado.isPresent()) {
-            cachePorId.put(oidEvaluado, posibleEvaluado.get());
-            return posibleEvaluado.get();
-        }
-
-        // 3. Buscar por identificación (string)
-        String identificacion = String.valueOf(oidEvaluado);
-
-        if (cachePorIdentificacion.containsKey(identificacion)) {
-            return cachePorIdentificacion.get(identificacion);
-        }
-
-        Usuario evaluado = usuarioRepository.findByIdentificacion(identificacion);
-        if (evaluado == null) {
-            throw new RuntimeException("No se encontró evaluado con identificación " + identificacion);
-        }
-
-        // Guardar en caché por identificación
-        cachePorIdentificacion.put(identificacion, evaluado);
-        return evaluado;
     }
 }

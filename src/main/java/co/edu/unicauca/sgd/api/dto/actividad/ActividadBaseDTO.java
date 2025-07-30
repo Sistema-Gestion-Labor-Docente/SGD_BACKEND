@@ -5,7 +5,6 @@ import java.util.List;
 
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
-import co.edu.unicauca.sgd.api.dto.FuenteDTO;
 import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,7 +17,6 @@ public class ActividadBaseDTO {
 
     private Integer oidActividad;
     private TipoActividad tipoActividad;
-    private Integer oidProceso;
     private Integer oidEstadoActividad;
     private String nombreActividad;
     private Float horas;
@@ -26,23 +24,18 @@ public class ActividadBaseDTO {
     private Boolean informeEjecutivo;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
-    private List<FuenteDTO> fuentes;
     private List<AtributoDTO> atributos;
-    private UsuarioDTO evaluador;
-    private Integer oidEvaluado;
-    private Integer oidEvaluador;
     private Integer idLaborDocente;
     private Boolean esLaborDocente;
     private Boolean archivoLaborDocente;
 
     // Constructor completo
-    public ActividadBaseDTO(Integer oidActividad, TipoActividad tipoActividad, Integer oidProceso, Integer oidEstadoActividad,
+    public ActividadBaseDTO(Integer oidActividad, TipoActividad tipoActividad, Integer oidEstadoActividad,
                              String nombreActividad, Float horas, Float semanas, Boolean informeEjecutivo,
-                             LocalDateTime fechaCreacion, LocalDateTime fechaActualizacion, List<FuenteDTO> fuentes,
-                             List<AtributoDTO> atributos, UsuarioDTO evaluador, Integer oidEvaluado, Integer oidEvaluador) {
+                             LocalDateTime fechaCreacion, LocalDateTime fechaActualizacion,
+                             List<AtributoDTO> atributos, Integer idLaborDocente, Boolean archivoLaborDocente) {
         this.oidActividad = oidActividad;
         this.tipoActividad = tipoActividad;
-        this.oidProceso = oidProceso;
         this.oidEstadoActividad = oidEstadoActividad;
         this.nombreActividad = nombreActividad;
         this.horas = horas;
@@ -50,10 +43,8 @@ public class ActividadBaseDTO {
         this.informeEjecutivo = informeEjecutivo;
         this.fechaCreacion = fechaCreacion;
         this.fechaActualizacion = fechaActualizacion;
-        this.fuentes = fuentes;
         this.atributos = atributos;
-        this.evaluador = evaluador;
-        this.oidEvaluado = oidEvaluado;
-        this.oidEvaluador = oidEvaluador;
+        this.idLaborDocente = idLaborDocente;
+        this.archivoLaborDocente = archivoLaborDocente;
     }
 }

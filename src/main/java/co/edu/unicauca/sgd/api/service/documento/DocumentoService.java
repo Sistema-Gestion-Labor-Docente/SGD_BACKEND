@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import co.edu.unicauca.sgd.api.dto.ArchivoDTO;
-import co.edu.unicauca.sgd.api.service.evaluacion_docente.AutoevaluacionOdsService;
 
 @Service
 @RequiredArgsConstructor
@@ -18,25 +17,25 @@ public class DocumentoService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DocumentoService.class);
     private final FileService fileService;
-    private final AutoevaluacionOdsService autoevaluacionOdsService;
 
     public ResponseEntity<?> obtenerArchivoPorTipo(Integer idArchivo, String tipoArchivo) {
         try {
             String rutaArchivo = null;
             String nombreArchivo = null;
 
-            switch (tipoArchivo.toUpperCase()) {
-                case "ODS":
-                    ArchivoDTO archivoODS = autoevaluacionOdsService.obtenerArchivoPorId(idArchivo);
-                    if (archivoODS == null) {
-                        throw new RuntimeException("ODS con ID " + idArchivo + " no encontrado.");
-                    }
-                    rutaArchivo = archivoODS.getRuta();
-                    nombreArchivo = archivoODS.getNombre();
-                    break;
+            // TODO: Funcionalidad para manejar diferentes tipos de archivos
+            // switch (tipoArchivo.toUpperCase()) {
+            //     case "ODS":
+            //         ArchivoDTO archivoODS = autoevaluacionOdsService.obtenerArchivoPorId(idArchivo);
+            //         if (archivoODS == null) {
+            //             throw new RuntimeException("ODS con ID " + idArchivo + " no encontrado.");
+            //         }
+            //         rutaArchivo = archivoODS.getRuta();
+            //         nombreArchivo = archivoODS.getNombre();
+            //         break;
 
-                default: return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Tipo de archivo no soportado: " + tipoArchivo);
-            }
+            //     default: return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Tipo de archivo no soportado: " + tipoArchivo);
+            // }
 
             if (rutaArchivo == null || rutaArchivo.isBlank()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El archivo solicitado no está disponible para este tipo de documento.");

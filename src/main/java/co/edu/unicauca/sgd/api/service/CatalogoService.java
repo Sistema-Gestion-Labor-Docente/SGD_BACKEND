@@ -12,12 +12,9 @@ import co.edu.unicauca.sgd.api.enums.DepartamentoEnum;
 import co.edu.unicauca.sgd.api.enums.EstudiosEnum;
 import co.edu.unicauca.sgd.api.enums.FacultadEnum;
 import co.edu.unicauca.sgd.api.enums.ProgramaEnum;
-import co.edu.unicauca.sgd.api.repository.EstadoEtapaDesarrolloRepository;
-import co.edu.unicauca.sgd.api.repository.PreguntaRepository;
 import co.edu.unicauca.sgd.api.repository.RolRepository;
 import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDetalleRepository;
-import co.edu.unicauca.sgd.api.service.evaluacion_docente.EstadoEtapaDesarrolloService;
 import co.edu.unicauca.sgd.api.utils.EnumUtils;
 
 import java.util.Arrays;
@@ -26,14 +23,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 @Service
 public class CatalogoService {
-
-    private final EstadoEtapaDesarrolloService estadoEtapaDesarrolloService;
 
     @Autowired
     private RolRepository rolRepository;
@@ -42,17 +35,7 @@ public class CatalogoService {
     private TipoActividadRepository tipoActividadRepository;
 
     @Autowired
-    private PreguntaRepository preguntaRepository;
-
-    @Autowired
-    private EstadoEtapaDesarrolloRepository estadoEtapaDesarrolloRepository;
-
-    @Autowired
     private UsuarioDetalleRepository usuarioDetalleRepository;
-
-    CatalogoService(EstadoEtapaDesarrolloService estadoEtapaDesarrolloService) {
-        this.estadoEtapaDesarrolloService = estadoEtapaDesarrolloService;
-    }
 
     /**
      * Método principal para obtener el catálogo completo.
@@ -69,7 +52,6 @@ public class CatalogoService {
             catalogoDTO.setDedicaciones(obtenerDedicaciones());
             catalogoDTO.setEstudios(obtenerEstudios());
             catalogoDTO.setProgramas(obtenerProgramas());
-            catalogoDTO.setEstadoEtapaDesarrollo(obtenerEstadoEtapasDesarrollo());
 
             // Obtener Roles
             catalogoDTO.setRoles(obtenerRoles());
@@ -77,8 +59,6 @@ public class CatalogoService {
             // Obtener Tipo Actividades
             catalogoDTO.setTipoActividades(obtenerTipoActividades());
 
-            // Obtener Preguntas de Evaluación Docente
-            catalogoDTO.setPreguntaEvaluacionDocente(obtenerPreguntasEvaluacionDocente());
 
             return new ApiResponse<>(200, "Catálogo obtenido correctamente.", catalogoDTO);
 
@@ -148,15 +128,6 @@ public class CatalogoService {
                 .collect(Collectors.toList());
     }
 
-    private List<Map<String, Object>> obtenerEstadoEtapasDesarrollo() {
-        return estadoEtapaDesarrolloRepository.findAll().stream()
-            .map(estado -> {
-                Map<String, Object> estadoMap = new HashMap<>();
-                estadoMap.put("oidEstadoEtapaDesarrollo", estado.getOidEstadoEtapaDesarrollo());
-                estadoMap.put("nombre", estado.getNombre());
-                return estadoMap;
-            }).collect(Collectors.toList());
-    }
 
     private List<Map<String, Object>> obtenerRoles() {
         return rolRepository.findAll().stream()
@@ -170,16 +141,5 @@ public class CatalogoService {
             .filter(Objects::nonNull)
             .map(tipoActividad -> Map.<String, Object>of("codigo", tipoActividad.getOidTipoActividad(), "nombre", tipoActividad.getNombre()))
             .collect(Collectors.toList());
-    }
-
-    private List<Map<String, Object>> obtenerPreguntasEvaluacionDocente() {
-        return preguntaRepository.findAll().stream()
-                .filter(pregunta -> pregunta.getEstadoPregunta())
-                .map(pregunta -> {
-                    Map<String, Object> preguntaMap = new HashMap<>();
-                    preguntaMap.put("oidPregunta", pregunta.getOidPregunta());
-                    preguntaMap.put("pregunta", pregunta.getPregunta());
-                    return preguntaMap;
-                }).collect(Collectors.toList());
     }
 }

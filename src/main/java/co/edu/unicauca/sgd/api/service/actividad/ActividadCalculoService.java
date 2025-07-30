@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
-import co.edu.unicauca.sgd.api.domain.Fuente;
 
 /**
  * Interface que define los métodos para cálculos de actividades.
@@ -27,14 +26,6 @@ public interface ActividadCalculoService {
      * @return Porcentaje calculado redondeado a 2 decimales.
      */
     double calcularPorcentaje(float horasActividad, float horasTotales);
-
-    /**
-     * Calcula el promedio de calificaciones de una lista de fuentes.
-     *
-     * @param fuentes Lista de fuentes.
-     * @return Promedio redondeado a 2 decimales.
-     */
-    double calcularPromedio(List<Fuente> fuentes);
 
     /**
      * Calcula el valor acumulado de una actividad.

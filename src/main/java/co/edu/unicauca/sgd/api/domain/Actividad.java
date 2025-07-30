@@ -6,8 +6,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
-import java.util.List;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @Entity
@@ -24,14 +22,6 @@ public class Actividad {
     @ManyToOne
     @JoinColumn(name = "OIDTIPOACTIVIDAD", nullable = false)
     private TipoActividad tipoActividad;
-
-    @ManyToOne
-    @JoinColumn(name = "OIDPROCESO", nullable = false)
-    private Proceso proceso;
-
-    @OneToMany(mappedBy = "actividad", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    @JsonIgnore
-    private List<Fuente> fuentes;
 
     @ManyToOne
     @JoinColumn(name = "OIDESTADOACTIVIDAD", nullable = false)

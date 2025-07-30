@@ -3,8 +3,6 @@ package co.edu.unicauca.sgd.api.service.actividad;
 import org.springframework.data.domain.Page;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
-import co.edu.unicauca.sgd.api.domain.Fuente;
-import co.edu.unicauca.sgd.api.dto.FuenteDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadPaginadaDTO;
 
 import java.util.List;
@@ -23,14 +21,6 @@ public interface ActividadTransformacionService {
      * @return Mapa con los datos de la actividad transformados.
      */
     Map<String, Object> transformarActividad(Actividad actividad, float horasTotales);
-
-    /**
-     * Transforma una lista de fuentes en una lista de DTOs.
-     *
-     * @param fuentes Lista de fuentes.
-     * @return Lista de FuenteDTO con los datos transformados.
-     */
-    List<FuenteDTO> transformarFuentes(List<Fuente> fuentes);
 
     /**
      * Construye un objeto `ActividadPaginadaDTO` a partir de una página de actividades.
