@@ -24,4 +24,8 @@ public class StringUtils {
         }
         return texto.replace("-", "").replaceAll("\\s+", "_");
     }
+
+    public static boolean hasText(String str) {
+        return str != null && !str.trim().isEmpty();
+    }
 }

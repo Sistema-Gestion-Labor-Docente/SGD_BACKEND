@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: dev
   jackson:
     time-zone: America/Bogota
   jpa:
