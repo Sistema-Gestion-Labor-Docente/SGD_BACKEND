@@ -5,10 +5,6 @@ import org.springframework.stereotype.Component;
 import co.edu.unicauca.sgd.api.domain.*;
 import co.edu.unicauca.sgd.api.dto.actividad.*;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-
 /**
  * Clase para mapear entre entidades y DTOs relacionados con actividades.
  */
