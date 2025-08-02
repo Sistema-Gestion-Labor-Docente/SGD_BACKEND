@@ -1,7 +1,5 @@
 package co.edu.unicauca.sgd.api.service.calendario.Impl;
 
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTORequest;
+import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.mapper.CalendarioMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.service.calendario.CalendarioService;
 import co.edu.unicauca.sgd.api.utils.StringUtils;
@@ -25,32 +26,41 @@ public class CalendarioServiceImpl implements CalendarioService {
     @Autowired
     private CalendarioRepository calendarioRepository;
 
+    @Autowired
+    private CalendarioMapper calendarioMapper;
+
     @Override
-    public ApiResponse<Page<Calendario>> obtenerTodos(String nombreCalendario, String estado, Pageable pageable) {
+    public ApiResponse<Page<CalendarioDTOResponse>> obtenerTodos(String nombreCalendario, String estado, Pageable pageable) {
         try {
             Specification<Calendario> spec = Specification.where(null);
 
             if (StringUtils.hasText(nombreCalendario)) {
-                spec = spec.and((root, query, cb) -> cb.like(cb.upper(root.get("nombreCalendario")), "%" + nombreCalendario.toUpperCase() + "%"));
+                spec = spec.and((root, query, cb) ->
+                        cb.like(cb.upper(root.get("nombreCalendario")), "%" + nombreCalendario.toUpperCase() + "%"));
             }
 
             if (StringUtils.hasText(estado)) {
-                spec = spec.and((root, query, cb) -> cb.equal(cb.upper(root.get("estado")), estado.toUpperCase()));
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(cb.upper(root.get("estado")), estado.toUpperCase()));
             }
 
             Page<Calendario> calendarios = calendarioRepository.findAll(spec, pageable);
-            return new ApiResponse<>(200, "Calendarios encontrados correctamente.", calendarios);
+            Page<CalendarioDTOResponse> responsePage = calendarios.map(calendarioMapper::toResponse);
+
+            return new ApiResponse<>(200, "Calendarios encontrados correctamente.", responsePage);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al recuperar los calendarios: " + e.getMessage(), null);
         }
     }
 
     @Override
-    public ApiResponse<Calendario> buscarPorId(Integer oid) {
+    public ApiResponse<CalendarioDTOResponse> buscarPorId(Integer oid) {
         try {
             Calendario calendario = calendarioRepository.findById(oid)
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
-            return new ApiResponse<>(200, "Calendario encontrado correctamente.", calendario);
+
+            CalendarioDTOResponse dto = calendarioMapper.toResponse(calendario);
+            return new ApiResponse<>(200, "Calendario encontrado correctamente.", dto);
         } catch (RuntimeException e) {
             return new ApiResponse<>(404, "Calendario no encontrado: " + e.getMessage(), null);
         } catch (Exception e) {
@@ -60,10 +70,12 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     @Override
     @Transactional
-    public ApiResponse<Calendario> guardar(Calendario calendario) {
+    public ApiResponse<CalendarioDTOResponse> guardar(CalendarioDTORequest request) {
         try {
+            Calendario calendario = calendarioMapper.convertToEntity(request);
             Calendario guardado = calendarioRepository.save(calendario);
-            return new ApiResponse<>(200, "Calendario guardado correctamente.", guardado);
+            CalendarioDTOResponse dto = calendarioMapper.toResponse(guardado);
+            return new ApiResponse<>(200, "Calendario guardado correctamente.", dto);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al guardar el calendario: " + e.getMessage(), null);
         }
@@ -71,21 +83,15 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     @Override
     @Transactional
-    public ApiResponse<Calendario> actualizar(Integer id, Calendario calendarioActualizado) {
+    public ApiResponse<CalendarioDTOResponse> actualizar(Integer id, CalendarioDTORequest request) {
         try {
             Calendario existente = calendarioRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + id));
 
-            existente.setNombreCalendario(calendarioActualizado.getNombreCalendario());
-            existente.setSemanasClase(calendarioActualizado.getSemanasClase());
-            existente.setSemanasPreparacion(calendarioActualizado.getSemanasPreparacion());
-            existente.setHorasTotales(calendarioActualizado.getHorasTotales());
-            existente.setUsuarioActualizacion(calendarioActualizado.getUsuarioActualizacion());
-            existente.setEstado(calendarioActualizado.getEstado());
-            existente.setObservacion(calendarioActualizado.getObservacion());
-
-            Calendario guardado = calendarioRepository.save(existente);
-            return new ApiResponse<>(200, "Calendario actualizado correctamente.", guardado);
+            calendarioMapper.actualizarCamposBasicos(existente, request);
+            Calendario actualizado = calendarioRepository.save(existente);
+            CalendarioDTOResponse dto = calendarioMapper.toResponse(actualizado);
+            return new ApiResponse<>(200, "Calendario actualizado correctamente.", dto);
         } catch (RuntimeException e) {
             return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
         } catch (Exception e) {

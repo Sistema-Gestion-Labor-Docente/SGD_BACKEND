@@ -3,18 +3,19 @@ package co.edu.unicauca.sgd.api.service.calendario;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTORequest;
+import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
 
 public interface CalendarioService {
 
-    ApiResponse<Page<Calendario>> obtenerTodos(String nombreCalendario, String estado, Pageable pageable);
+    ApiResponse<Page<CalendarioDTOResponse>> obtenerTodos(String nombreCalendario, String estado, Pageable pageable);
 
-    ApiResponse<Calendario> buscarPorId(Integer oid);
+    ApiResponse<CalendarioDTOResponse> buscarPorId(Integer oid);
 
-    ApiResponse<Calendario> guardar(Calendario calendario);
+    ApiResponse<CalendarioDTOResponse> guardar(CalendarioDTORequest dto);
 
-    ApiResponse<Calendario> actualizar(Integer id, Calendario calendarioActualizado);
+    ApiResponse<CalendarioDTOResponse> actualizar(Integer id, CalendarioDTORequest dto);
 
     ApiResponse<Void> eliminar(Integer oid);
 }
