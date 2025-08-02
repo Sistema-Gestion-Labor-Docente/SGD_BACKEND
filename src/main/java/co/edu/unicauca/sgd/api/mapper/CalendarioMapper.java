@@ -11,23 +11,22 @@ public class CalendarioMapper {
 
     public Calendario convertToEntity(CalendarioDTORequest dto) {
         Calendario calendario = new Calendario();
-        calendario.setNombreCalendario(dto.getNombreCalendario());
+        calendario.setAnioCalendario(dto.getAnioCalendario());
+        calendario.setNumeroCalendario(dto.getNumeroCalendario());
         calendario.setSemanasClase(dto.getSemanasClase());
         calendario.setSemanasPreparacion(dto.getSemanasPreparacion());
         calendario.setHorasTotales(dto.getHorasTotales());
-        calendario.setUsuarioCreacion(dto.getUsuarioCreacion());
-        calendario.setUsuarioActualizacion(dto.getUsuarioActualizacion());
         calendario.setEstado(dto.getEstado());
         calendario.setObservacion(dto.getObservacion());
         return calendario;
     }
 
     public void actualizarCamposBasicos(Calendario existente, CalendarioDTORequest dto) {
-        existente.setNombreCalendario(dto.getNombreCalendario());
+        existente.setAnioCalendario(dto.getAnioCalendario());
+        existente.setNumeroCalendario(dto.getNumeroCalendario());
         existente.setSemanasClase(dto.getSemanasClase());
         existente.setSemanasPreparacion(dto.getSemanasPreparacion());
         existente.setHorasTotales(dto.getHorasTotales());
-        existente.setUsuarioActualizacion(dto.getUsuarioActualizacion());
         existente.setEstado(dto.getEstado());
         existente.setObservacion(dto.getObservacion());
     }
@@ -35,7 +34,8 @@ public class CalendarioMapper {
     public CalendarioDTOResponse toResponse(Calendario entidad) {
         CalendarioDTOResponse dto = new CalendarioDTOResponse();
         dto.setOidcalendario(entidad.getOidcalendario());
-        dto.setNombreCalendario(entidad.getNombreCalendario());
+        dto.setAnioCalendario(entidad.getAnioCalendario());
+        dto.setNumeroCalendario(entidad.getNumeroCalendario());
         dto.setSemanasClase(entidad.getSemanasClase());
         dto.setSemanasPreparacion(entidad.getSemanasPreparacion());
         dto.setHorasTotales(entidad.getHorasTotales());
