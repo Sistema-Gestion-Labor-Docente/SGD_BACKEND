@@ -36,7 +36,7 @@ public class FechaMapper {
         dto.setFechaFin(entidad.getFechaFin());
         dto.setTipo(entidad.getTipo());
         dto.setOidCalendario(entidad.getCalendario().getOidcalendario());
-        dto.setNombreCalendario(entidad.getCalendario().getNombreCalendario());
+        dto.setNombreCalendario(entidad.getCalendario().getAnioCalendario() + " - " + entidad.getCalendario().getNumeroCalendario());
         return dto;
     }
 }

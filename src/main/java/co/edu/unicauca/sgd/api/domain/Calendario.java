@@ -24,8 +24,11 @@ public class Calendario {
     @Column(name = "OIDCALENDARIO")
     private Integer oidcalendario;
 
-    @Column(name = "NOMBRECALENDARIO", nullable = false, length = 255)
-    private String nombreCalendario;
+    @Column(name = "ANIOCALENDARIO", nullable = false, length = 5)
+    private String anioCalendario;
+
+    @Column(name = "NUMEROCALENDARIO", nullable = false)
+    private Integer numeroCalendario;
 
     @Column(name = "SEMANASCLASE", nullable = false)
     private Float semanasClase;
@@ -43,11 +46,11 @@ public class Calendario {
     @Column(name = "USUARIOCREACION", updatable = false, nullable = false, length = 100)
     private String usuarioCreacion;
 
-    @Column(name = "FECHAACTUALIZACION", nullable = false)
+    @Column(name = "FECHAACTUALIZACION")
     @UpdateTimestamp
     private LocalDateTime fechaActualizacion;
 
-    @Column(name = "USUARIOACTUALIZACION", nullable = false, length = 100)
+    @Column(name = "USUARIOACTUALIZACION", length = 100)
     private String usuarioActualizacion;
 
     @Column(name = "ESTADO", nullable = false, length = 50)

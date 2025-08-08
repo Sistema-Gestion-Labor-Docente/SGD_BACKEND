@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 public class CalendarioDTORequest {
 
     @NotBlank
-    private String nombreCalendario;
+    private String anioCalendario;
+
+    @NotNull
+    private Integer numeroCalendario;
 
     @NotNull
     private Float semanasClase;
@@ -20,13 +23,8 @@ public class CalendarioDTORequest {
     @NotNull
     private Float horasTotales;
 
-    @NotBlank
-    private String usuarioCreacion;
+    private String usuario;
 
-    @NotBlank
-    private String usuarioActualizacion;
-
-    @NotBlank
     private String estado;
 
     private String observacion;

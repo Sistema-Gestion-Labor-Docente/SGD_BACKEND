@@ -10,7 +10,8 @@ import lombok.NoArgsConstructor;
 public class CalendarioDTOResponse {
 
     private Integer oidcalendario;
-    private String nombreCalendario;
+    private String anioCalendario;
+    private Integer numeroCalendario;
     private Float semanasClase;
     private Float semanasPreparacion;
     private Float horasTotales;

@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.service.calendario.Impl;
 
+import java.time.LocalDateTime;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +23,7 @@ import co.edu.unicauca.sgd.api.utils.StringUtils;
 @Service
 public class CalendarioServiceImpl implements CalendarioService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CalendarioServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(CalendarioServiceImpl.class);
 
     @Autowired
     private CalendarioRepository calendarioRepository;
@@ -47,6 +49,8 @@ public class CalendarioServiceImpl implements CalendarioService {
             Page<Calendario> calendarios = calendarioRepository.findAll(spec, pageable);
             Page<CalendarioDTOResponse> responsePage = calendarios.map(calendarioMapper::toResponse);
 
+            logger.info("Calendarios encontrados: {}", responsePage.getTotalElements());
+
             return new ApiResponse<>(200, "Calendarios encontrados correctamente.", responsePage);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al recuperar los calendarios: " + e.getMessage(), null);
@@ -60,6 +64,9 @@ public class CalendarioServiceImpl implements CalendarioService {
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
 
             CalendarioDTOResponse dto = calendarioMapper.toResponse(calendario);
+
+            logger.info("Calendario encontrado con ID: {}", oid);
+
             return new ApiResponse<>(200, "Calendario encontrado correctamente.", dto);
         } catch (RuntimeException e) {
             return new ApiResponse<>(404, "Calendario no encontrado: " + e.getMessage(), null);
@@ -73,8 +80,13 @@ public class CalendarioServiceImpl implements CalendarioService {
     public ApiResponse<CalendarioDTOResponse> guardar(CalendarioDTORequest request) {
         try {
             Calendario calendario = calendarioMapper.convertToEntity(request);
+            calendario.setUsuarioCreacion("Usuario");
+            calendario.setEstado("PENDIENTE");
             Calendario guardado = calendarioRepository.save(calendario);
             CalendarioDTOResponse dto = calendarioMapper.toResponse(guardado);
+
+            logger.info("Calendario guardado con ID: {}", guardado.getOidcalendario());
+
             return new ApiResponse<>(200, "Calendario guardado correctamente.", dto);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al guardar el calendario: " + e.getMessage(), null);
@@ -87,10 +99,13 @@ public class CalendarioServiceImpl implements CalendarioService {
         try {
             Calendario existente = calendarioRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + id));
-
             calendarioMapper.actualizarCamposBasicos(existente, request);
+            existente.setUsuarioActualizacion("UsuarioActualizacion");
             Calendario actualizado = calendarioRepository.save(existente);
             CalendarioDTOResponse dto = calendarioMapper.toResponse(actualizado);
+
+            logger.info("Calendario actualizado con ID: {}", id);
+
             return new ApiResponse<>(200, "Calendario actualizado correctamente.", dto);
         } catch (RuntimeException e) {
             return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
@@ -106,6 +121,9 @@ public class CalendarioServiceImpl implements CalendarioService {
                 return new ApiResponse<>(404, "Calendario no encontrado con ID: " + oid, null);
             }
             calendarioRepository.deleteById(oid);
+
+            logger.info("Calendario eliminado con ID: {}", oid);
+
             return new ApiResponse<>(200, "Calendario eliminado correctamente.", null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar el calendario: " + e.getMessage(), null);
