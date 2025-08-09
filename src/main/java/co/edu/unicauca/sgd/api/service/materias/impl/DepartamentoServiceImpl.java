@@ -68,6 +68,7 @@ public class DepartamentoServiceImpl implements DepartamentoService {
     public ApiResponse<DepartamentoDTOResponse> guardar(DepartamentoDTORequest request) {
         try {
             Departamento entity = departamentoMapper.convertToEntity(request);
+            entity.setNombre(request.getNombre().toUpperCase());
             entity.setUsuarioCreacion("Usuario");
             Departamento saved = departamentoRepository.save(entity);
             logger.info("Departamento guardado ID: {}", saved.getOidDepartamento());

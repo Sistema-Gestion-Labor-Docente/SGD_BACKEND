@@ -69,6 +69,7 @@ public class ProgramaServiceImpl implements ProgramaService {
     public ApiResponse<ProgramaDTOResponse> guardar(ProgramaDTORequest request) {
         try {
             Programa entity = programaMapper.convertToEntity(request);
+            entity.setNombre(request.getNombre().toUpperCase());
             entity.setUsuarioCreacion("Usuario"); // igual que Calendario
             Programa saved = programaRepository.save(entity);
             logger.info("Programa guardado ID: {}", saved.getOidPrograma());
