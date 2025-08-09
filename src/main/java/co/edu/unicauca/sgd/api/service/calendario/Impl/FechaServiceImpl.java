@@ -1,6 +1,5 @@
-package co.edu.unicauca.sgd.api.service.calendario.Impl;
+package co.edu.unicauca.sgd.api.service.calendario.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -22,15 +21,20 @@ import co.edu.unicauca.sgd.api.utils.StringUtils;
 @Service
 public class FechaServiceImpl implements FechaService {
 
-    @Autowired
     private FechaRepository fechaRepository;
 
-    @Autowired
     private CalendarioRepository calendarioRepository;
 
-    @Autowired
     private FechaMapper fechaMapper;
 
+    public FechaServiceImpl(FechaRepository fechaRepository, CalendarioRepository calendarioRepository,
+            FechaMapper fechaMapper) {
+        this.fechaRepository = fechaRepository;
+        this.calendarioRepository = calendarioRepository;
+        this.fechaMapper = fechaMapper;
+    }
+
+    
     @Override
     public ApiResponse<Page<FechaDTOResponse>> obtenerTodas(String nombre, TipoFechaEnum tipo, Pageable pageable) {
         try {

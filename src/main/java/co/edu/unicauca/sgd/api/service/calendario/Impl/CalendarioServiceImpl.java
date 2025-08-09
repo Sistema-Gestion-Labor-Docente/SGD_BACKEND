@@ -1,10 +1,9 @@
-package co.edu.unicauca.sgd.api.service.calendario.Impl;
+package co.edu.unicauca.sgd.api.service.calendario.impl;
 
 import java.time.LocalDateTime;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,11 +24,14 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private static final Logger logger = LoggerFactory.getLogger(CalendarioServiceImpl.class);
 
-    @Autowired
     private CalendarioRepository calendarioRepository;
 
-    @Autowired
     private CalendarioMapper calendarioMapper;
+
+    public CalendarioServiceImpl(CalendarioRepository calendarioRepository, CalendarioMapper calendarioMapper) {
+        this.calendarioRepository = calendarioRepository;
+        this.calendarioMapper = calendarioMapper;
+    }
 
     @Override
     public ApiResponse<Page<CalendarioDTOResponse>> obtenerTodos(String nombreCalendario, String estado, Pageable pageable) {
