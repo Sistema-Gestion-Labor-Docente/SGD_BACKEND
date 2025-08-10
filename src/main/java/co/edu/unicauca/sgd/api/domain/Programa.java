@@ -23,16 +23,18 @@ public class Programa {
   @Column(name = "OIDPROGRAMA")
   private Integer oidPrograma;
 
-  @Column(name = "NOMBRE", nullable = false)
+  @Column(name = "NOMBRE", nullable = false, unique = true)
   private String nombre;
 
-  @CreationTimestamp @Column(name = "FECHACREACION", updatable = false, nullable = false)
+  @CreationTimestamp 
+  @Column(name = "FECHACREACION", updatable = false, nullable = false)
   private LocalDateTime fechaCreacion;
 
   @Column(name = "USUARIOCREACION", updatable = false, nullable = false, length = 100)
   private String usuarioCreacion;
 
-  @UpdateTimestamp @Column(name = "FECHAACTUALIZACION")
+  @UpdateTimestamp 
+  @Column(name = "FECHAACTUALIZACION")
   private LocalDateTime fechaActualizacion;
 
   @Column(name = "USUARIOACTUALIZACION", length = 100)

@@ -24,7 +24,7 @@ public class Plan {
   @Column(name = "OIDPLAN")
   private Integer oidPlan;
 
-  @Column(name = "NUMERO", nullable = false)
+  @Column(name = "NUMERO", nullable = false, unique = true)
   private String numero;
 
   @Column(name = "ESTADO", nullable = false)
@@ -36,13 +36,15 @@ public class Plan {
   @Column(name = "ACUERDO")
   private String acuerdo;
 
-  @CreationTimestamp @Column(name = "FECHACREACION", updatable = false, nullable = false)
+  @CreationTimestamp 
+  @Column(name = "FECHACREACION", updatable = false, nullable = false)
   private LocalDateTime fechaCreacion;
 
   @Column(name = "USUARIOCREACION", updatable = false, nullable = false, length = 100)
   private String usuarioCreacion;
 
-  @UpdateTimestamp @Column(name = "FECHAACTUALIZACION")
+  @UpdateTimestamp 
+  @Column(name = "FECHAACTUALIZACION")
   private LocalDateTime fechaActualizacion;
 
   @Column(name = "USUARIOACTUALIZACION", length = 100)

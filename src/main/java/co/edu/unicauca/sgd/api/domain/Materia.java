@@ -19,9 +19,12 @@ import lombok.Data;
 public class Materia {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "materiaSeq")
-  @SequenceGenerator(name = "materiaSeq", sequenceName = "SEQ_OIDMATERIA", allocationSize = 1)
-  @Column(name = "OIDMATERIA")
-  private Integer oidMateria;
+  @SequenceGenerator(name = "materiaSeq", sequenceName = "SEQ_IDMATERIA", allocationSize = 1)
+  @Column(name = "IDMATERIA")
+  private Integer idMateria;
+
+  @Column(name = "OIDMATERIA", nullable = false)
+  private String oidMateria;
 
   @Column(name = "CODIGO", nullable = false)
   private String codigo;
@@ -32,24 +35,26 @@ public class Materia {
   @Column(name = "SEMESTRE", nullable = false)
   private Integer semestre;
 
-  @Column(name = "HORASSEMANA", nullable = false)
+  @Column(name = "HORASSEMANA")
   private Integer horasSemana;
 
   @ManyToOne
-  @JoinColumn(name = "OIDDEPARTAMENTO", nullable = false)
+  @JoinColumn(name = "OIDDEPARTAMENTO")
   private Departamento departamento;
 
   @ManyToOne
   @JoinColumn(name = "OIDPLAN", nullable = false)
   private Plan plan;
 
-  @CreationTimestamp @Column(name = "FECHACREACION", updatable = false, nullable = false)
+  @CreationTimestamp 
+  @Column(name = "FECHACREACION", updatable = false, nullable = false)
   private LocalDateTime fechaCreacion;
 
   @Column(name = "USUARIOCREACION", updatable = false, nullable = false, length = 100)
   private String usuarioCreacion;
 
-  @UpdateTimestamp @Column(name = "FECHAACTUALIZACION")
+  @UpdateTimestamp 
+  @Column(name = "FECHAACTUALIZACION")
   private LocalDateTime fechaActualizacion;
 
   @Column(name = "USUARIOACTUALIZACION", length = 100)
@@ -59,8 +64,8 @@ public class Materia {
   @ManyToMany
   @JoinTable(
     name = "MATERIACORREQUISITO",
-    joinColumns = @JoinColumn(name = "OIDMATERIA_A"),
-    inverseJoinColumns = @JoinColumn(name = "OIDMATERIA_B")
+    joinColumns = @JoinColumn(name = "IDMATERIA_A", referencedColumnName = "IDMATERIA"),
+    inverseJoinColumns = @JoinColumn(name = "IDMATERIA_B", referencedColumnName = "IDMATERIA")
   )
   @JsonIgnore
   private List<Materia> correquisitos;
