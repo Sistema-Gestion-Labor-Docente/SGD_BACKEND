@@ -42,5 +42,9 @@ public class Departamento {
 
   @OneToMany(mappedBy = "departamento") @JsonIgnore
   private List<Materia> materias;
+
+  public Departamento() {}
+
+  public Departamento(Integer oidDepartamento) { this.oidDepartamento = oidDepartamento; }
 }
 
