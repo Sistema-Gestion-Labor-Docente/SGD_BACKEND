@@ -20,8 +20,11 @@ import jakarta.validation.Valid;
 @Tag(name = "Fecha", description = "Gestión de fechas del calendario académico")
 public class FechaController {
 
-    @Autowired
     private FechaService fechaService;
+
+    public FechaController(FechaService fechaService) {
+        this.fechaService = fechaService;
+    }
 
     @GetMapping
     @Operation(summary = "Listar fechas", description = "Obtiene todas las fechas con filtros opcionales")

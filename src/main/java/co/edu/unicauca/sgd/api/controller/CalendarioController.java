@@ -19,8 +19,11 @@ import jakarta.validation.Valid;
 @Tag(name = "Calendario", description = "Gestión del calendario académico")
 public class CalendarioController {
 
-    @Autowired
     private CalendarioService calendarioService;
+
+    public CalendarioController(CalendarioService calendarioService) {
+        this.calendarioService = calendarioService;
+    }
 
     @GetMapping
     @Operation(summary = "Listar calendarios", description = "Obtiene todos los calendarios registrados con filtros opcionales")
