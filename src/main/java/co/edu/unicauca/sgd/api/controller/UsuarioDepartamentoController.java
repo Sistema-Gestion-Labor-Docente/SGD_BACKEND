@@ -14,7 +14,7 @@ import co.edu.unicauca.sgd.api.dto.materias.UsuarioDepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.service.materias.UsuarioDepartamentoService;
 
 @RestController
-@RequestMapping("api/usuario-departamentos")
+@RequestMapping("api/departamentos/usuarios")
 @Tag(name = "Usuario-Departamento", description = "Gestión de la asignación de usuario a departamento")
 public class UsuarioDepartamentoController {
 
