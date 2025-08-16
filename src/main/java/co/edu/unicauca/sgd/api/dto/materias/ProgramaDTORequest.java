@@ -7,4 +7,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ProgramaDTORequest {
     private String nombre;
+    private Integer coordinadorOidUsuario;
 }

@@ -26,6 +26,10 @@ public class Programa {
   @Column(name = "NOMBRE", nullable = false, unique = true)
   private String nombre;
 
+  @ManyToOne(fetch = FetchType.LAZY, optional = true)
+  @JoinColumn(name = "COORDINADOR_OIDUSUARIO")
+  private Usuario coordinador;
+
   @CreationTimestamp 
   @Column(name = "FECHACREACION", updatable = false, nullable = false)
   private LocalDateTime fechaCreacion;

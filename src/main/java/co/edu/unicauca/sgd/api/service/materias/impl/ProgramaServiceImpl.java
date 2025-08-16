@@ -9,11 +9,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import co.edu.unicauca.sgd.api.domain.Programa;
+import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.materias.ProgramaDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.ProgramaDTOResponse;
 import co.edu.unicauca.sgd.api.mapper.ProgramaMapper;
 import co.edu.unicauca.sgd.api.repository.ProgramaRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.materias.ProgramaService;
 import jakarta.transaction.Transactional;
 
@@ -24,10 +26,14 @@ public class ProgramaServiceImpl implements ProgramaService {
 
     private ProgramaRepository programaRepository;
 
+    private UsuarioRepository usuarioRepository;
+
     private ProgramaMapper programaMapper;
 
-    public ProgramaServiceImpl(ProgramaRepository programaRepository, ProgramaMapper programaMapper) {
+    public ProgramaServiceImpl(ProgramaRepository programaRepository, UsuarioRepository usuarioRepository,
+            ProgramaMapper programaMapper) {
         this.programaRepository = programaRepository;
+        this.usuarioRepository = usuarioRepository;
         this.programaMapper = programaMapper;
     }
 
@@ -68,32 +74,48 @@ public class ProgramaServiceImpl implements ProgramaService {
     @Transactional
     public ApiResponse<ProgramaDTOResponse> guardar(ProgramaDTORequest request) {
         try {
-            Programa entity = programaMapper.convertToEntity(request);
-            entity.setNombre(request.getNombre().toUpperCase());
-            entity.setUsuarioCreacion("Usuario"); // igual que Calendario
-            Programa saved = programaRepository.save(entity);
-            logger.info("Programa guardado ID: {}", saved.getOidPrograma());
-            return new ApiResponse<>(200, "Programa guardado correctamente.", programaMapper.toResponse(saved));
+            Programa entidad = programaMapper.convertToEntity(request);
+
+            if (request.getCoordinadorOidUsuario() != null) {
+                Usuario coord = usuarioRepository.findById(request.getCoordinadorOidUsuario())
+                    .orElseThrow(() -> new RuntimeException("Coordinador no encontrado"));
+                entidad.setCoordinador(coord);
+            }
+
+            entidad.setUsuarioCreacion("Usuario");
+            Programa saved = programaRepository.save(entidad);
+            return new ApiResponse<>(200, "Programa guardado.", programaMapper.toResponse(saved));
+        } catch (RuntimeException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al guardar el programa: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error al guardar programa: " + e.getMessage(), null);
         }
     }
 
     @Override
     @Transactional
-    public ApiResponse<ProgramaDTOResponse> actualizar(Integer oid, ProgramaDTORequest request) {
+    public ApiResponse<ProgramaDTOResponse> actualizar(Integer id, ProgramaDTORequest request) {
         try {
-            Programa existente = programaRepository.findById(oid)
-                .orElseThrow(() -> new RuntimeException("Programa no encontrado con ID: " + oid));
+            Programa existente = programaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Programa no encontrado"));
+
             programaMapper.actualizarCamposBasicos(existente, request);
+
+            if (request.getCoordinadorOidUsuario() != null) {
+                Usuario coord = usuarioRepository.findById(request.getCoordinadorOidUsuario())
+                    .orElseThrow(() -> new RuntimeException("Coordinador no encontrado"));
+                existente.setCoordinador(coord);
+            } else {
+                existente.setCoordinador(null);
+            }
+
             existente.setUsuarioActualizacion("UsuarioActualizacion");
             Programa actualizado = programaRepository.save(existente);
-            logger.info("Programa actualizado ID: {}", oid);
-            return new ApiResponse<>(200, "Programa actualizado correctamente.", programaMapper.toResponse(actualizado));
+            return new ApiResponse<>(200, "Programa actualizado.", programaMapper.toResponse(actualizado));
         } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno al actualizar: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error al actualizar programa: " + e.getMessage(), null);
         }
     }
 
