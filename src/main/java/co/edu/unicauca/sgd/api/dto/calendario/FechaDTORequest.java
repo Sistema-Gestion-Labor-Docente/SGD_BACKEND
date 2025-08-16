@@ -12,8 +12,8 @@ import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
 @NoArgsConstructor
 public class FechaDTORequest {
 
-    @NotBlank
-    private String nombre;
+    @NotNull
+    private Integer oidNombreFecha;
 
     @NotNull
     private LocalDateTime fechaInicial;
