@@ -1,11 +1,13 @@
 package co.edu.unicauca.sgd.api.service.materias.impl;
 
 import co.edu.unicauca.sgd.api.domain.Departamento;
+import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.materias.DepartamentoDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.DepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.mapper.DepartamentoMapper;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.materias.DepartamentoService;
 import jakarta.transaction.Transactional;
 import org.slf4j.*;
@@ -22,11 +24,17 @@ public class DepartamentoServiceImpl implements DepartamentoService {
 
     private DepartamentoRepository departamentoRepository;
 
+    private UsuarioRepository usuarioRepository;
+
     private DepartamentoMapper departamentoMapper;
 
-    public DepartamentoServiceImpl(@Autowired DepartamentoRepository departamentoRepository,
-                                    @Autowired DepartamentoMapper departamentoMapper) {
+    public DepartamentoServiceImpl(
+        @Autowired DepartamentoRepository departamentoRepository,
+        @Autowired UsuarioRepository usuarioRepository,
+        @Autowired DepartamentoMapper departamentoMapper
+    ) {
         this.departamentoRepository = departamentoRepository;
+        this.usuarioRepository = usuarioRepository;
         this.departamentoMapper = departamentoMapper;
     }
 
@@ -69,10 +77,20 @@ public class DepartamentoServiceImpl implements DepartamentoService {
         try {
             Departamento entity = departamentoMapper.convertToEntity(request);
             entity.setNombre(request.getNombre().toUpperCase());
-            entity.setUsuarioCreacion("Usuario");
+
+            // resolver jefe si viene
+            if (request.getJefeOidUsuario() != null) {
+                Usuario jefe = usuarioRepository.findById(request.getJefeOidUsuario())
+                    .orElseThrow(() -> new RuntimeException("Jefe no encontrado con ID: " + request.getJefeOidUsuario()));
+                entity.setJefe(jefe);
+            }
+
+            entity.setUsuarioCreacion("Usuario"); // del contexto
             Departamento saved = departamentoRepository.save(entity);
             logger.info("Departamento guardado ID: {}", saved.getOidDepartamento());
             return new ApiResponse<>(200, "Departamento guardado correctamente.", departamentoMapper.toResponse(saved));
+        } catch (RuntimeException e) {
+            return new ApiResponse<>(400, "Error en datos: " + e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al guardar el departamento: " + e.getMessage(), null);
         }
@@ -84,7 +102,18 @@ public class DepartamentoServiceImpl implements DepartamentoService {
         try {
             Departamento existente = departamentoRepository.findById(oid)
                 .orElseThrow(() -> new RuntimeException("Departamento no encontrado con ID: " + oid));
+
             departamentoMapper.actualizarCamposBasicos(existente, request);
+
+            // actualizar jefe: si viene null explícito => quitar jefe
+            if (request.getJefeOidUsuario() != null) {
+                Usuario jefe = usuarioRepository.findById(request.getJefeOidUsuario())
+                    .orElseThrow(() -> new RuntimeException("Jefe no encontrado con ID: " + request.getJefeOidUsuario()));
+                existente.setJefe(jefe);
+            } else {
+                existente.setJefe(null);
+            }
+
             existente.setUsuarioActualizacion("UsuarioActualizacion");
             Departamento actualizado = departamentoRepository.save(existente);
             logger.info("Departamento actualizado ID: {}", oid);

@@ -17,6 +17,7 @@ import lombok.Data;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "DEPARTAMENTO")
 public class Departamento {
+
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "departamentoSeq")
   @SequenceGenerator(name = "departamentoSeq", sequenceName = "SEQ_OIDDEPARTAMENTO", allocationSize = 1)
@@ -26,14 +27,18 @@ public class Departamento {
   @Column(name = "NOMBRE", nullable = false, unique = true)
   private String nombre;
 
-  @CreationTimestamp 
+  @ManyToOne(fetch = FetchType.LAZY, optional = true)
+  @JoinColumn(name = "JEFE_OIDUSUARIO")
+  private Usuario jefe;
+
+  @CreationTimestamp
   @Column(name = "FECHACREACION", updatable = false, nullable = false)
   private LocalDateTime fechaCreacion;
 
   @Column(name = "USUARIOCREACION", updatable = false, nullable = false, length = 100)
   private String usuarioCreacion;
 
-  @UpdateTimestamp 
+  @UpdateTimestamp
   @Column(name = "FECHAACTUALIZACION")
   private LocalDateTime fechaActualizacion;
 
@@ -44,7 +49,6 @@ public class Departamento {
   private List<Materia> materias;
 
   public Departamento() {}
-
   public Departamento(Integer oidDepartamento) { this.oidDepartamento = oidDepartamento; }
 }
 
