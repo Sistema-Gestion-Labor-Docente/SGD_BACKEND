@@ -2,6 +2,8 @@ package co.edu.unicauca.sgd.api.domain;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import jakarta.persistence.*;
@@ -22,12 +24,14 @@ public class NombreFecha {
     @Column(name = "NOMBRE", nullable = false, unique = true, length = 255)
     private String nombre;
 
+    @CreationTimestamp
     @Column(name = "FECHACREACION", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
     @Column(name = "USUARIOCREACION", nullable = false, length = 100)
     private String usuarioCreacion;
 
+    @UpdateTimestamp
     @Column(name = "FECHAACTUALIZACION")
     private LocalDateTime fechaActualizacion;
 

@@ -9,7 +9,10 @@ import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
 
 public interface CalendarioService {
 
-    ApiResponse<Page<CalendarioDTOResponse>> obtenerTodos(String nombreCalendario, String estado, Pageable pageable);
+    ApiResponse<Page<CalendarioDTOResponse>> obtenerTodos(String anioCalendario,
+                                                          Integer numeroCalendario,
+                                                          String estado,
+                                                          Pageable pageable);
 
     ApiResponse<CalendarioDTOResponse> buscarPorId(Integer oid);
 

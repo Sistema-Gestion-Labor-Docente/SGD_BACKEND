@@ -26,12 +26,14 @@ public class CalendarioController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar calendarios", description = "Obtiene todos los calendarios registrados con filtros opcionales")
+    @Operation(summary = "Listar calendarios", description = "Filtros opcionales: anioCalendario, numeroCalendario, estado")
     public ResponseEntity<ApiResponse<Page<CalendarioDTOResponse>>> findAll(
-            @RequestParam(required = false) String nombreCalendario,
+            @RequestParam(required = false) String anioCalendario,
+            @RequestParam(required = false) Integer numeroCalendario,
             @RequestParam(required = false) String estado,
             Pageable pageable) {
-        ApiResponse<Page<CalendarioDTOResponse>> response = calendarioService.obtenerTodos(nombreCalendario, estado, pageable);
+        ApiResponse<Page<CalendarioDTOResponse>> response =
+                calendarioService.obtenerTodos(anioCalendario, numeroCalendario, estado, pageable);
         return ResponseEntity.status(response.getCodigo()).body(response);
     }
 
@@ -46,13 +48,14 @@ public class CalendarioController {
     @Operation(summary = "Guardar calendario", description = "Guarda un nuevo calendario")
     public ResponseEntity<ApiResponse<CalendarioDTOResponse>> save(@Valid @RequestBody CalendarioDTORequest dto) {
         ApiResponse<CalendarioDTOResponse> response = calendarioService.guardar(dto);
+        // Si tu ApiResponse ya pone 201, esto lo respeta:
         return ResponseEntity.status(response.getCodigo()).body(response);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{oid}")
     @Operation(summary = "Actualizar calendario", description = "Actualiza un calendario existente")
-    public ResponseEntity<ApiResponse<CalendarioDTOResponse>> update(@PathVariable Integer id, @Valid @RequestBody CalendarioDTORequest dto) {
-        ApiResponse<CalendarioDTOResponse> response = calendarioService.actualizar(id, dto);
+    public ResponseEntity<ApiResponse<CalendarioDTOResponse>> update(@PathVariable Integer oid, @Valid @RequestBody CalendarioDTORequest dto) {
+        ApiResponse<CalendarioDTOResponse> response = calendarioService.actualizar(oid, dto);
         return ResponseEntity.status(response.getCodigo()).body(response);
     }
 

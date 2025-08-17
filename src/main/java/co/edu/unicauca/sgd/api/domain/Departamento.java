@@ -27,6 +27,9 @@ public class Departamento {
   @Column(name = "NOMBRE", nullable = false, unique = true)
   private String nombre;
 
+  @Column(name = "FACULTAD", nullable = false)
+  private String facultad;
+
   @ManyToOne(fetch = FetchType.LAZY, optional = true)
   @JoinColumn(name = "JEFE_OIDUSUARIO")
   private Usuario jefe;
