@@ -3,9 +3,9 @@ package co.edu.unicauca.sgd.api.enums;
 import co.edu.unicauca.sgd.api.utils.EnumUtils;
 
 public enum TipoFechaEnum implements EnumUtils.ValorEnum {
-    RESALTADAS("RESALTADA"),
-    NO_RESALTADAS("NO RESALTADA"),
-    ADMINISTRATIVAS("ADMINISTRATIVA"),
+    RESALTADAS("RESALTADAS"),
+    NO_RESALTADAS("NO RESALTADAS"),
+    ADMINISTRATIVAS("ADMINISTRATIVAS"),
     CLASES("CLASES"),
     OCASIONAL("OCASIONAL"),
     CATEDRA("CATEDRA"),

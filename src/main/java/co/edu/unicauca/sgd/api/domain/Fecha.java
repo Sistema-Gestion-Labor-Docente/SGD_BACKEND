@@ -31,7 +31,7 @@ public class Fecha {
     @Column(name = "FECHAINICIAL", nullable = false)
     private LocalDateTime fechaInicial;
 
-    @Column(name = "FECHAFIN", nullable = false)
+    @Column(name = "FECHAFIN")
     private LocalDateTime fechaFin;
 
     @Enumerated(EnumType.STRING)

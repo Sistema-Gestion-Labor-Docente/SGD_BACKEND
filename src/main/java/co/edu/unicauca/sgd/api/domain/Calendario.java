@@ -30,13 +30,13 @@ public class Calendario {
     @Column(name = "NUMEROCALENDARIO", nullable = false)
     private Integer numeroCalendario;
 
-    @Column(name = "SEMANASCLASE", nullable = false)
+    @Column(name = "SEMANASCLASE")
     private Float semanasClase;
 
-    @Column(name = "SEMANASPREPARACION", nullable = false)
+    @Column(name = "SEMANASPREPARACION")
     private Float semanasPreparacion;
 
-    @Column(name = "HORASTOTALES", nullable = false)
+    @Column(name = "HORASTOTALES")
     private Float horasTotales;
 
     @Column(name = "FECHACREACION", updatable = false, nullable = false)

@@ -61,6 +61,7 @@ public class NombreFechaServiceImpl implements NombreFechaService {
     public ApiResponse<NombreFechaDTOResponse> guardar(NombreFechaDTORequest dto) {
         try {
             NombreFecha entidad = nombreFechaMapper.toEntity(dto);
+            entidad.setUsuarioCreacion("system");
             NombreFecha guardado = nombreFechaRepository.save(entidad);
             return new ApiResponse<>(200, "Creado correctamente", nombreFechaMapper.toResponse(guardado));
         } catch (Exception e) {
@@ -76,6 +77,7 @@ public class NombreFechaServiceImpl implements NombreFechaService {
                     .orElseThrow(() -> new RuntimeException("NombreFecha no encontrado con ID: " + oid));
 
             nombreFechaMapper.update(existente, dto);
+            existente.setUsuarioActualizacion("system");
             NombreFecha actualizado = nombreFechaRepository.save(existente);
             return new ApiResponse<>(200, "Actualizado correctamente", nombreFechaMapper.toResponse(actualizado));
         } catch (RuntimeException e) {

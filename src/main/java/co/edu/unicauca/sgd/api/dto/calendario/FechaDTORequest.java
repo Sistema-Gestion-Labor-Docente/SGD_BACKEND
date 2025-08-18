@@ -18,7 +18,7 @@ public class FechaDTORequest {
     @NotNull
     private LocalDateTime fechaInicial;
 
-    @NotNull
+    @NotBlank
     private LocalDateTime fechaFin;
 
     @NotNull

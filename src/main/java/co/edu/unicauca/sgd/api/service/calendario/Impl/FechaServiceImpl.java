@@ -43,14 +43,9 @@ public class FechaServiceImpl implements FechaService {
 
     
     @Override
-    public ApiResponse<Page<FechaDTOResponse>> obtenerTodas(String nombre, TipoFechaEnum tipo, Pageable pageable) {
+    public ApiResponse<Page<FechaDTOResponse>> obtenerTodas(TipoFechaEnum tipo, Pageable pageable) {
         try {
             Specification<Fecha> spec = Specification.where(null);
-
-            if (StringUtils.hasText(nombre)) {
-                spec = spec.and((root, query, cb) ->
-                        cb.like(cb.upper(root.join("nombreFecha").get("nombre")), "%" + nombre.toUpperCase() + "%"));
-            }
 
             if (tipo != null) {
                 spec = spec.and((root, query, cb) -> cb.equal(root.get("tipo"), tipo));
@@ -80,8 +75,11 @@ public class FechaServiceImpl implements FechaService {
     @Override
     @Transactional
     public ApiResponse<FechaDTOResponse> guardar(FechaDTORequest dto) {
+        System.out.println("Guardando fecha: " + dto);
         try {
-            validarRango(dto.getFechaInicial(), dto.getFechaFin());
+            if (dto.getFechaFin() != null) {
+                validarRango(dto.getFechaInicial(), dto.getFechaFin());
+            }
 
             Calendario calendario = calendarioRepository.findById(dto.getOidCalendario())
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + dto.getOidCalendario()));
@@ -103,7 +101,9 @@ public class FechaServiceImpl implements FechaService {
     @Transactional
     public ApiResponse<FechaDTOResponse> actualizar(Integer id, FechaDTORequest dto) {
         try {
-            validarRango(dto.getFechaInicial(), dto.getFechaFin());
+            if (dto.getFechaFin() != null) {
+                validarRango(dto.getFechaInicial(), dto.getFechaFin());
+            }
 
             Fecha existente = fechaRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Fecha no encontrada con ID: " + id));
