@@ -23,9 +23,6 @@
       </column>
       <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
       <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
-      <column name="OIDUSUARIO" type="INT">
-        <constraints nullable="false"/>
-      </column>
       <column name="JEFE_OIDUSUARIO" type="INT"/>
     </createTable>
 
@@ -33,11 +30,6 @@
         tableName="DEPARTAMENTO"
         columnNames="NOMBRE"
         constraintName="UQ_DEPARTAMENTO_NOMBRE"/>
-
-    <addForeignKeyConstraint
-        baseTableName="DEPARTAMENTO" baseColumnNames="OIDUSUARIO"
-        referencedTableName="USUARIO" referencedColumnNames="OIDUSUARIO"
-        constraintName="FK_DEPARTAMENTO_USUARIO"/>
 
     <addForeignKeyConstraint
         baseTableName="DEPARTAMENTO" baseColumnNames="JEFE_OIDUSUARIO"

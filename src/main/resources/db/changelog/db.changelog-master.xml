@@ -17,4 +17,7 @@
     <include file="db/changelog/0009-17082025-table-materia.xml"/>
     <include file="db/changelog/0010-17082025-table-usuariodepartamento.xml"/>
     <include file="db/changelog/0011-17082025-indexes.xml"/>
+    <include file="db/changelog/0012-17082025-seed-departamentos.xml"/>
+    <include file="db/changelog/0013-17082025-seed-programas.xml"/>
+    <include file="db/changelog/0014-17082025-seed-nombrefecha.xml"/>
 </databaseChangeLog>

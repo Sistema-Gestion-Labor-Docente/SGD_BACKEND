@@ -23,5 +23,10 @@
       <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
       <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
     </createTable>
+
+    <addUniqueConstraint
+        tableName="NOMBREFECHA"
+        columnNames="NOMBRE"
+        constraintName="UQ_NOMBREFECHA_NOMBRE"/>
   </changeSet>
 </databaseChangeLog>
