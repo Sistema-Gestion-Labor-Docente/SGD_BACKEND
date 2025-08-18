@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -38,6 +40,7 @@ public class Departamento {
   @Column(name = "FECHACREACION", updatable = false, nullable = false)
   private LocalDateTime fechaCreacion;
 
+  @CreatedBy
   @Column(name = "USUARIOCREACION", updatable = false, nullable = false, length = 100)
   private String usuarioCreacion;
 
@@ -45,6 +48,7 @@ public class Departamento {
   @Column(name = "FECHAACTUALIZACION")
   private LocalDateTime fechaActualizacion;
 
+  @LastModifiedBy
   @Column(name = "USUARIOACTUALIZACION", length = 100)
   private String usuarioActualizacion;
 

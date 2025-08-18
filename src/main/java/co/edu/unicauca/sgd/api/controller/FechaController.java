@@ -1,6 +1,5 @@
 package co.edu.unicauca.sgd.api.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -29,10 +28,9 @@ public class FechaController {
     @GetMapping
     @Operation(summary = "Listar fechas", description = "Obtiene todas las fechas con filtros opcionales")
     public ResponseEntity<ApiResponse<Page<FechaDTOResponse>>> findAll(
-            @RequestParam(required = false) String nombre,
             @RequestParam(required = false) TipoFechaEnum tipo,
             Pageable pageable) {
-        ApiResponse<Page<FechaDTOResponse>> response = fechaService.obtenerTodas(nombre, tipo, pageable);
+        ApiResponse<Page<FechaDTOResponse>> response = fechaService.obtenerTodas(tipo, pageable);
         return ResponseEntity.status(response.getCodigo()).body(response);
     }
 

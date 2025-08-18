@@ -10,7 +10,7 @@ import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
 
 public interface FechaService {
 
-    ApiResponse<Page<FechaDTOResponse>> obtenerTodas(String nombre, TipoFechaEnum tipo, Pageable pageable);
+    ApiResponse<Page<FechaDTOResponse>> obtenerTodas(TipoFechaEnum tipo, Pageable pageable);
 
     ApiResponse<FechaDTOResponse> buscarPorId(Integer oid);
 

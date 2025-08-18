@@ -14,9 +14,7 @@
       <column name="FECHAINICIAL" type="DATE">
         <constraints nullable="false"/>
       </column>
-      <column name="FECHAFIN" type="DATE">
-        <constraints nullable="false"/>
-      </column>
+      <column name="FECHAFIN" type="DATE"/>
       <column name="TIPO" type="TIPO_FECHA">
         <constraints nullable="false"/>
       </column>
@@ -26,6 +24,14 @@
       <column name="OIDCALENDARIO" type="INT">
         <constraints nullable="false"/>
       </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="USUARIOCREACION" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+      <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
     </createTable>
 
     <!-- CHECKS por SQL para máxima compatibilidad -->
@@ -37,9 +43,14 @@
     <sql>
       ALTER TABLE FECHA
       ADD CONSTRAINT CKC_TIPO_FECHA CHECK (
-        TIPO in ('Resaltadas','No Resaltadas','Administrativas','Clases','Ocasional','Catedra','Planta','Becario y practicante')
+        TIPO in ('RESALTADAS','NO_RESALTADAS','ADMINISTRATIVAS','CLASES','OCASIONAL','CATEDRA','PLANTA','BECARIO_Y_PRACTICANTE')
       );
     </sql>
+
+    <addUniqueConstraint 
+      tableName="FECHA"
+      columnNames="OIDNOMBREFECHA, OIDCALENDARIO"
+      constraintName="UQ_FECHA_NOMBRE_CALENDARIO"/>
 
     <addForeignKeyConstraint
         baseTableName="FECHA" baseColumnNames="OIDNOMBREFECHA"

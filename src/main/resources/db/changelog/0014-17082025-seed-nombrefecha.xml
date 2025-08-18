@@ -40,7 +40,15 @@
         ('Solicitud de presentación de nuevas electivas al consejo de facultad'),
         ('Reporte de las electivas a ofrecer por el departamento'),
         ('Presentación de electivas y líneas de énfasis'),
-        ('Pre-inscripción de electivas y líneas de énfasis')
+        ('Pre-inscripción de electivas y líneas de énfasis'),
+
+        -- Caracter adicional
+        ('SEMANAS DE CLASE'),
+        ('SEMANAS DE OCASIONALES'),
+        ('SEMANAS DE CATEDRA'),
+        ('SEMANAS DE PLANTA'),
+        ('SEMANAS DE BECARIO Y PRACTICANTE')
+
       ) AS t(n)
       ON CONFLICT (NOMBRE) DO NOTHING;
     </sql>
