@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0011-17082025-indexes" author="Jesus Edwin Adrada Ruiz">
+    <createIndex tableName="FECHA" indexName="IX_FECHA_OIDCALENDARIO">
+      <column name="OIDCALENDARIO"/>
+    </createIndex>
+
+    <createIndex tableName="FECHA" indexName="IX_FECHA_OIDNOMBREFECHA">
+      <column name="OIDNOMBREFECHA"/>
+    </createIndex>
+
+    <createIndex tableName="PLAN" indexName="IX_PLAN_OIDPROGRAMA">
+      <column name="OIDPROGRAMA"/>
+    </createIndex>
+
+    <createIndex tableName="MATERIA" indexName="IX_MATERIA_OIDPLAN">
+      <column name="OIDPLAN"/>
+    </createIndex>
+
+    <createIndex tableName="MATERIA" indexName="IX_MATERIA_OIDDEP">
+      <column name="OIDDEPARTAMENTO"/>
+    </createIndex>
+
+    <createIndex tableName="USUARIODEPARTAMENTO" indexName="IX_USRDEP_DEP">
+      <column name="OIDDEPARTAMENTO"/>
+    </createIndex>
+
+    <createIndex tableName="DEPARTAMENTO" indexName="IX_DEPARTAMENTO_JEFE">
+      <column name="JEFE_OIDUSUARIO"/>
+    </createIndex>
+
+    <createIndex tableName="PROGRAMA" indexName="IX_PROGRAMA_COORD">
+      <column name="COORDINADOR_OIDUSUARIO"/>
+    </createIndex>
+  </changeSet>
+</databaseChangeLog>

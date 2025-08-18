@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0008-17082025-plan" author="Jesus Edwin Adrada Ruiz">
+    <createTable tableName="PLAN">
+      <column name="OIDPLAN" type="INT" defaultValueComputed="nextval('SEQ_OIDPLAN')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NUMERO" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="ESTADO" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAAPROBACION" type="DATE"/>
+      <column name="ACUERDO" type="VARCHAR(255)"/>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="USUARIOCREACION" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+      <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+      <column name="OIDPROGRAMA" type="INT">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+    <addUniqueConstraint
+        tableName="PLAN"
+        columnNames="NUMERO"
+        constraintName="UQ_PLAN_NUMERO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="PLAN" baseColumnNames="OIDPROGRAMA"
+        referencedTableName="PROGRAMA" referencedColumnNames="OIDPROGRAMA"
+        constraintName="FK_PLAN_PROGRAMA"/>
+  </changeSet>
+</databaseChangeLog>

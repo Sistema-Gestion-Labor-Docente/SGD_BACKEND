@@ -16,6 +16,9 @@ spring:
     username: ${DESARROLLO_DATASOURCE_USER}
     password: ${DESARROLLO_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+  liquibase:
+    enabled: ${LIQUIBASE_ENABLED:true}
+    change-log: ${LIQUIBASE_CHANGELOG:classpath:db/changelog/db.changelog-master.xml}
   servlet:
     multipart:
       enabled: true
@@ -49,6 +52,7 @@ logging:
   level:
     root: ${LOG_LEVEL_ROOT}
     'co.edu.unicauca.sed.api': ${LOG_LEVEL_API}
+    liquibase: ${LOG_LEVEL_LIQUIBASE:INFO}
   file:
     name: ${LOG_FILE_NAME}
     max-size: ${LOG_FILE_MAX_SIZE}

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0007-17082025-departamento" author="Jesus Edwin Adrada Ruiz">
+    <createTable tableName="DEPARTAMENTO">
+      <column name="OIDDEPARTAMENTO" type="INT" defaultValueComputed="nextval('SEQ_OIDDEPARTAMENTO')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NOMBRE" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FACULTAD" type="VARCHAR(255)"/>
+      <column name="FECHACREACION" type="TIMESTAMP">
+        <constraints nullable="false"/>
+      </column>
+      <column name="USUARIOCREACION" type="VARCHAR(100)" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+      <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+      <column name="OIDUSUARIO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="JEFE_OIDUSUARIO" type="INT"/>
+    </createTable>
+
+    <addUniqueConstraint
+        tableName="DEPARTAMENTO"
+        columnNames="NOMBRE"
+        constraintName="UQ_DEPARTAMENTO_NOMBRE"/>
+
+    <addForeignKeyConstraint
+        baseTableName="DEPARTAMENTO" baseColumnNames="OIDUSUARIO"
+        referencedTableName="USUARIO" referencedColumnNames="OIDUSUARIO"
+        constraintName="FK_DEPARTAMENTO_USUARIO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="DEPARTAMENTO" baseColumnNames="JEFE_OIDUSUARIO"
+        referencedTableName="USUARIO" referencedColumnNames="OIDUSUARIO"
+        constraintName="FK_DEPARTAMENTO_JEFE"/>
+  </changeSet>
+</databaseChangeLog>

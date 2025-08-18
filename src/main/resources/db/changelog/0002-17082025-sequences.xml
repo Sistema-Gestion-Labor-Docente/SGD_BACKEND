@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0002-17082025-sequences" author="Jesus Edwin Adrada Ruiz">
+    <createSequence sequenceName="SEQ_OIDCALENDARIO" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDFECHA"        startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDPROGRAMA"     startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDDEPARTAMENTO" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDPLAN"         startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_IDMATERIA"       startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDNOMBREFECHA"  startValue="1" incrementBy="1"/>
+  </changeSet>
+</databaseChangeLog>

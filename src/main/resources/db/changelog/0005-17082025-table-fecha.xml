@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0005-17082025-fecha" author="Jesus Edwin Adrada Ruiz">
+    <createTable tableName="FECHA">
+      <column name="OIDFECHA" type="INT" defaultValueComputed="nextval('SEQ_OIDFECHA')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="FECHAINICIAL" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAFIN" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="TIPO" type="TIPO_FECHA">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDNOMBREFECHA" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDCALENDARIO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+    <!-- CHECKS por SQL para máxima compatibilidad -->
+    <sql>
+      ALTER TABLE FECHA
+      ADD CONSTRAINT CK_FECHA_RANGO CHECK (FECHAINICIAL &lt;= FECHAFIN);
+    </sql>
+
+    <sql>
+      ALTER TABLE FECHA
+      ADD CONSTRAINT CKC_TIPO_FECHA CHECK (
+        TIPO in ('Resaltadas','No Resaltadas','Administrativas','Clases','Ocasional','Catedra','Planta','Becario y practicante')
+      );
+    </sql>
+
+    <addForeignKeyConstraint
+        baseTableName="FECHA" baseColumnNames="OIDNOMBREFECHA"
+        referencedTableName="NOMBREFECHA" referencedColumnNames="OIDNOMBREFECHA"
+        constraintName="FK_FECHA_NOMBREFECHA"/>
+
+    <addForeignKeyConstraint
+        baseTableName="FECHA" baseColumnNames="OIDCALENDARIO"
+        referencedTableName="CALENDARIO" referencedColumnNames="OIDCALENDARIO"
+        constraintName="FK_FECHA_CALENDARIO"/>
+
+  </changeSet>
+</databaseChangeLog>

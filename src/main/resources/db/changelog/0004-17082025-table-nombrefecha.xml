@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0004-17082025-nombrefecha" author="Jesus Edwin Adrada Ruiz">
+    <createTable tableName="NOMBREFECHA">
+      <column name="OIDNOMBREFECHA" type="INT" defaultValueComputed="nextval('SEQ_OIDNOMBREFECHA')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NOMBRE" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="USUARIOCREACION" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+      <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+    </createTable>
+  </changeSet>
+</databaseChangeLog>
