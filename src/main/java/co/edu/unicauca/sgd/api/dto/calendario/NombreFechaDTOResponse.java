@@ -1,4 +1,4 @@
-package co.edu.unicauca.sgd.api.dto.materias;
+package co.edu.unicauca.sgd.api.dto.calendario;
 
 import java.time.LocalDateTime;
 
@@ -7,15 +7,15 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class ProgramaDTOResponse {
-    private Integer oidPrograma;
+public class NombreFechaDTOResponse {
+
+    private Integer oidNombreFecha;
     private String nombre;
 
-    private Integer coordinadorOidUsuario;
-    private String coordinadorNombre;
-    
+    // Auditoría
     private LocalDateTime fechaCreacion;
-    private LocalDateTime fechaActualizacion;
     private String usuarioCreacion;
+    private LocalDateTime fechaActualizacion;
     private String usuarioActualizacion;
+
 }

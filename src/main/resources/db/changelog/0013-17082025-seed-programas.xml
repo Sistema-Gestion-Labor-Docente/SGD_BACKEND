@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0013-17082025-seed-programas" author="Jesus Edwin Adrada Ruiz">
+    <sql>
+      WITH owner AS (
+        SELECT MIN(OIDUSUARIO) AS oid FROM USUARIO
+      )
+      INSERT INTO PROGRAMA (NOMBRE, FECHACREACION, USUARIOCREACION, COORDINADOR_OIDUSUARIO)
+      SELECT n, NOW(), 'seeder', (SELECT oid FROM owner)
+      FROM (VALUES
+        ('INGENIERÍA ELECTRÓNICA Y TELECOMUNICACIONES'),
+        ('INGENIERÍA DE SISTEMAS'),
+        ('INGENIERÍA EN AUTOMÁTICA INDUSTRIAL'),
+        ('TECNOLOGÍA EN TELEMÁTICA'),
+        -- Posgrados
+        ('MAESTRÍA EN COMPUTACIÓN'),
+        ('MAESTRÍA EN ELECTRÓNICA Y TELECOMUNICACIONES'),
+        ('MAESTRÍA EN INGENIERÍA TELEMÁTICA'),
+        ('MAESTRÍA EN AUTOMÁTICA'),
+        ('DOCTORADO EN CIENCIAS DE LA ELECTRÓNICA')
+      ) AS t(n)
+      ON CONFLICT (NOMBRE) DO NOTHING;
+    </sql>
+  </changeSet>
+</databaseChangeLog>

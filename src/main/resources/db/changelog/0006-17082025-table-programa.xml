@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0006-17082025-programa" author="Jesus Edwin Adrada Ruiz">
+    <createTable tableName="PROGRAMA">
+      <column name="OIDPROGRAMA" type="INT" defaultValueComputed="nextval('SEQ_OIDPROGRAMA')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NOMBRE" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="USUARIOCREACION" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+      <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+      <column name="COORDINADOR_OIDUSUARIO" type="INT"/>
+    </createTable>
+
+    <addUniqueConstraint
+        tableName="PROGRAMA"
+        columnNames="NOMBRE"
+        constraintName="UQ_PROGRAMA_NOMBRE"/>
+
+    <addForeignKeyConstraint
+        baseTableName="PROGRAMA" baseColumnNames="COORDINADOR_OIDUSUARIO"
+        referencedTableName="USUARIO" referencedColumnNames="OIDUSUARIO"
+        constraintName="FK_PROGRAMA_COORDINADOR"/>
+  </changeSet>
+</databaseChangeLog>

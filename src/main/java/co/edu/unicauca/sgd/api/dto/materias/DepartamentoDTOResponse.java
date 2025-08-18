@@ -11,6 +11,11 @@ public class DepartamentoDTOResponse {
 
     private Integer oidDepartamento;
     private String nombre;
+    private String facultad;
+
+    private Integer jefeOidUsuario;
+    private String jefeNombre;
+
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
     private String usuarioCreacion;

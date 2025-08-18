@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+          http://www.liquibase.org/xml/ns/dbchangelog
+          https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <include file="db/changelog/0001-17082025-domain-tipo-fecha.xml"/>
+    <include file="db/changelog/0002-17082025-sequences.xml"/>
+    <include file="db/changelog/0003-17082025-table-calendario.xml"/>
+    <include file="db/changelog/0004-17082025-table-nombrefecha.xml"/>
+    <include file="db/changelog/0005-17082025-table-fecha.xml"/>
+    <include file="db/changelog/0006-17082025-table-programa.xml"/>
+    <include file="db/changelog/0007-17082025-table-departamento.xml"/>
+    <include file="db/changelog/0008-17082025-table-plan.xml"/>
+    <include file="db/changelog/0009-17082025-table-materia.xml"/>
+    <include file="db/changelog/0010-17082025-table-usuariodepartamento.xml"/>
+    <include file="db/changelog/0011-17082025-indexes.xml"/>
+    <include file="db/changelog/0012-17082025-seed-departamentos.xml"/>
+    <include file="db/changelog/0013-17082025-seed-programas.xml"/>
+    <include file="db/changelog/0014-17082025-seed-nombrefecha.xml"/>
+</databaseChangeLog>

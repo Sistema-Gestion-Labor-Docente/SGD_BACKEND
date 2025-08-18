@@ -59,15 +59,5 @@ public class Materia {
 
   @Column(name = "USUARIOACTUALIZACION", length = 100)
   private String usuarioActualizacion;
-
-  /* Co-requisitos: pares simétricos (A<->B). Guardamos solo una fila por par. */
-  @ManyToMany
-  @JoinTable(
-    name = "MATERIACORREQUISITO",
-    joinColumns = @JoinColumn(name = "IDMATERIA_A", referencedColumnName = "IDMATERIA"),
-    inverseJoinColumns = @JoinColumn(name = "IDMATERIA_B", referencedColumnName = "IDMATERIA")
-  )
-  @JsonIgnore
-  private List<Materia> correquisitos;
 }
 

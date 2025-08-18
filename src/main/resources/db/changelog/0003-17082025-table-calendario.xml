@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0003-17082025-calendario" author="Jesus Edwin Adrada Ruiz">
+    <createTable tableName="CALENDARIO">
+      <column name="OIDCALENDARIO" type="INT" defaultValueComputed="nextval('SEQ_OIDCALENDARIO')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="ANIOCALENDARIO" type="VARCHAR(5)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="NUMEROCALENDARIO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="SEMANASCLASE" type="DOUBLE PRECISION"/>
+      <column name="SEMANASPREPARACION" type="DOUBLE PRECISION"/>
+      <column name="HORASTOTALES" type="DOUBLE PRECISION"/>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="USUARIOCREACION" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+      <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+      <column name="ESTADO" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OBSERVACION" type="VARCHAR(400)"/>
+    </createTable>
+
+    <addUniqueConstraint
+        tableName="CALENDARIO"
+        columnNames="ANIOCALENDARIO, NUMEROCALENDARIO"
+        constraintName="UQ_CALENDARIO_ANIO_NUMERO"/>
+  </changeSet>
+</databaseChangeLog>

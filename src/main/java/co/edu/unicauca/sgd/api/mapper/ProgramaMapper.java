@@ -23,6 +23,21 @@ public class ProgramaMapper {
         ProgramaDTOResponse dto = new ProgramaDTOResponse();
         dto.setOidPrograma(entidad.getOidPrograma());
         dto.setNombre(entidad.getNombre());
+
+        if (entidad.getCoordinador() != null) {
+            dto.setCoordinadorOidUsuario(entidad.getCoordinador().getOidUsuario());
+            try {
+                String nombres = entidad.getCoordinador().getNombres();
+                String apellidos = entidad.getCoordinador().getApellidos();
+                dto.setCoordinadorNombre(
+                    (nombres != null ? nombres : "") +
+                    (apellidos != null ? " " + apellidos : "")
+                );
+            } catch (Exception ignored) { 
+                dto.setCoordinadorNombre("");
+            }
+        }
+
         dto.setFechaCreacion(entidad.getFechaCreacion());
         dto.setUsuarioCreacion(entidad.getUsuarioCreacion());
         dto.setFechaActualizacion(entidad.getFechaActualizacion());

@@ -2,12 +2,19 @@ package co.edu.unicauca.sgd.api.domain;
 
 import java.time.LocalDateTime;
 
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "FECHA")
 public class Fecha {
 
@@ -17,8 +24,9 @@ public class Fecha {
     @Column(name = "OIDFECHA")
     private Integer oidFecha;
 
-    @Column(name = "NOMBRE", nullable = false, length = 255)
-    private String nombre;
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "OIDNOMBREFECHA", nullable = false)
+    private NombreFecha nombreFecha;
 
     @Column(name = "FECHAINICIAL", nullable = false)
     private LocalDateTime fechaInicial;
@@ -29,6 +37,22 @@ public class Fecha {
     @Enumerated(EnumType.STRING)
     @Column(name = "TIPO", nullable = false)
     private TipoFechaEnum tipo;
+
+    @CreatedDate
+    @Column(name = "FECHACREACION", nullable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
+
+    @CreatedBy
+    @Column(name = "USUARIOCREACION", nullable = false, updatable = false, length = 100)
+    private String usuarioCreacion;
+
+    @LastModifiedDate
+    @Column(name = "FECHAACTUALIZACION")
+    private LocalDateTime fechaActualizacion;
+
+    @LastModifiedBy
+    @Column(name = "USUARIOACTUALIZACION", length = 100)
+    private String usuarioActualizacion;
 
     @ManyToOne
     @JoinColumn(name = "OIDCALENDARIO", nullable = false)

@@ -8,5 +8,7 @@ import lombok.NoArgsConstructor;
 public class DepartamentoDTORequest {
 
     private String nombre;
+    private String facultad;
+    private Integer jefeOidUsuario;
 
 }
