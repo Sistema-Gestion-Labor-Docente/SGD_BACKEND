@@ -34,7 +34,7 @@ public class FechaMapper {
         FechaDTOResponse dto = new FechaDTOResponse();
         dto.setOidFecha(entidad.getOidFecha());
         dto.setOidNombreFecha(entidad.getNombreFecha().getOidNombreFecha());
-        dto.setNombre(entidad.getNombreFecha().getNombre());
+        dto.setNombre(entidad.getNombreResuelto());
         dto.setFechaInicial(entidad.getFechaInicial());
         dto.setFechaFin(entidad.getFechaFin());
         dto.setTipo(entidad.getTipo());

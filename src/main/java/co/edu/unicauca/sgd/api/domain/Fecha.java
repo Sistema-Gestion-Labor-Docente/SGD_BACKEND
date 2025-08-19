@@ -57,4 +57,18 @@ public class Fecha {
     @ManyToOne
     @JoinColumn(name = "OIDCALENDARIO", nullable = false)
     private Calendario calendario;
+
+    @Transient
+    public String getNombreResuelto() {
+        String periodo = getPeriodo();
+        String base = this.getNombreFecha().getNombre();
+        return base
+            .replace("{calendar}", periodo)
+            .replace("{identificador del período}", periodo);
+    }
+
+    @Transient
+    public String getPeriodo() {
+        return this.calendario.getAnioCalendario() + " - " + this.calendario.getNumeroCalendario();
+    }
 }
