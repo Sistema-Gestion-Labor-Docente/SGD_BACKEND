@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 
 import java.util.List;
 
@@ -40,5 +41,5 @@ public interface UsuarioService {
      */
     ApiResponse<Void> eliminar(Integer oid);
 
-    Usuario obtenerUsuarioActual(String correo);
+    UsuarioDTO obtenerUsuarioActual(String correo);
 }

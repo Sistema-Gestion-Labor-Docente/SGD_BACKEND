@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.service.calendario.impl;
 
+import java.time.LocalDateTime;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -9,12 +11,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.Fecha;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.dto.calendario.FechaDTORequest;
+import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
 import co.edu.unicauca.sgd.api.mapper.CalendarioMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.service.calendario.CalendarioService;
+import co.edu.unicauca.sgd.api.service.calendario.FechaService;
 import co.edu.unicauca.sgd.api.specification.CalendarioSpecs;
 import co.edu.unicauca.sgd.api.utils.StringUtils;
 
@@ -27,9 +33,14 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private CalendarioMapper calendarioMapper;
 
-    public CalendarioServiceImpl(CalendarioRepository calendarioRepository, CalendarioMapper calendarioMapper) {
+    private FechaService fechaService;
+
+    public CalendarioServiceImpl(CalendarioRepository calendarioRepository,
+                                CalendarioMapper calendarioMapper,
+                                FechaService fechaService) {
         this.calendarioRepository = calendarioRepository;
         this.calendarioMapper = calendarioMapper;
+        this.fechaService = fechaService;
     }
 
     @Override
@@ -79,6 +90,9 @@ public class CalendarioServiceImpl implements CalendarioService {
                 StringUtils.hasText(calendario.getEstado()) ? calendario.getEstado() : "PENDIENTE"
             );
             Calendario guardado = calendarioRepository.save(calendario);
+            if (guardado != null) {
+                crearPrimerasFechas(guardado.getOidcalendario());
+            }
             CalendarioDTOResponse dto = calendarioMapper.toResponse(guardado);
 
             logger.info("Calendario guardado con ID: {}", guardado.getOidcalendario());
@@ -122,6 +136,23 @@ public class CalendarioServiceImpl implements CalendarioService {
             return new ApiResponse<>(204, "Calendario eliminado correctamente.", null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar el calendario: " + e.getMessage(), null);
+        }
+    }
+
+    /* Funciones auxiliares */
+
+    private void crearPrimerasFechas(Integer oidCalendario) {
+        logger.info("Creando primeras fechas para el calendario con ID: {}", oidCalendario);
+        FechaDTORequest fechaInicial = new FechaDTORequest();
+        fechaInicial.setOidNombreFecha(1);
+        fechaInicial.setTipo(TipoFechaEnum.RESALTADAS);
+        fechaInicial.setOidCalendario(oidCalendario);
+
+        try {
+            fechaService.guardar(fechaInicial);
+            logger.info("Fecha inicial creada para el calendario con ID: {}", oidCalendario);
+        } catch (Exception e) {
+            logger.error("Error al crear la fecha inicial: {}", e.getMessage());
         }
     }
 }

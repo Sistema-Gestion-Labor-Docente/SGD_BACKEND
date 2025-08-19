@@ -28,8 +28,8 @@ public class Programa {
   @Column(name = "NOMBRE", nullable = false, unique = true)
   private String nombre;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = true)
-  @JoinColumn(name = "COORDINADOR_OIDUSUARIO")
+  @OneToOne(fetch = FetchType.LAZY, optional = true)
+  @JoinColumn(name = "COORDINADOR_OIDUSUARIO", unique = true)
   private Usuario coordinador;
 
   @CreationTimestamp 

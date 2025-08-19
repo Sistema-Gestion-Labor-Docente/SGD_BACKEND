@@ -28,7 +28,7 @@ public class Fecha {
     @JoinColumn(name = "OIDNOMBREFECHA", nullable = false)
     private NombreFecha nombreFecha;
 
-    @Column(name = "FECHAINICIAL", nullable = false)
+    @Column(name = "FECHAINICIAL")
     private LocalDateTime fechaInicial;
 
     @Column(name = "FECHAFIN")

@@ -75,7 +75,6 @@ public class FechaServiceImpl implements FechaService {
     @Override
     @Transactional
     public ApiResponse<FechaDTOResponse> guardar(FechaDTORequest dto) {
-        System.out.println("Guardando fecha: " + dto);
         try {
             if (dto.getFechaFin() != null) {
                 validarRango(dto.getFechaInicial(), dto.getFechaFin());
