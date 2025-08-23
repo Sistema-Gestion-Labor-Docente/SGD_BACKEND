@@ -27,7 +27,6 @@ public class FechaMapper {
         existente.setFechaInicial(dto.getFechaInicial());
         existente.setFechaFin(dto.getFechaFin());
         existente.setTipo(dto.getTipo());
-        existente.setCalendario(calendario);
     }
 
     public FechaDTOResponse toResponse(Fecha entidad) {

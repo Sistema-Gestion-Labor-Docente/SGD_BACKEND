@@ -55,7 +55,7 @@ public class Fecha {
     private String usuarioActualizacion;
 
     @ManyToOne
-    @JoinColumn(name = "OIDCALENDARIO", nullable = false)
+    @JoinColumn(name = "OIDCALENDARIO", nullable = false, updatable = false)
     private Calendario calendario;
 
     @Transient

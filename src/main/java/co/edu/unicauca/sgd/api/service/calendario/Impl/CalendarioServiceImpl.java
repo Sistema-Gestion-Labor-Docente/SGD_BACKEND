@@ -147,6 +147,13 @@ public class CalendarioServiceImpl implements CalendarioService {
             Calendario existente = calendarioRepository.findById(oid)
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
 
+            if (request.getAnioCalendario() != null && !request.getAnioCalendario().equals(existente.getAnioCalendario())) {
+                throw new RuntimeException("El año (anio) no es editable.");
+            }
+            if (request.getNumeroCalendario() != null && !request.getNumeroCalendario().equals(existente.getNumeroCalendario())) {
+                throw new RuntimeException("El número (numero) no es editable.");
+            }
+
             calendarioMapper.actualizarCamposBasicos(existente, request);
             existente.setUsuarioActualizacion("UsuarioActualizacion");
 

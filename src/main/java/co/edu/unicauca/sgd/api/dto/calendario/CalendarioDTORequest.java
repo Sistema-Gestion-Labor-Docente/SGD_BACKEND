@@ -12,12 +12,15 @@ public class CalendarioDTORequest {
     private String anioCalendario;
 
     @NotNull
+    @Min(1)
     private Integer numeroCalendario;
 
     @NotBlank
+    @Min(1)
     private Float semanasClase;
 
     @NotBlank
+    @Min(1)
     private Float semanasPreparacion;
 
     @NotBlank
