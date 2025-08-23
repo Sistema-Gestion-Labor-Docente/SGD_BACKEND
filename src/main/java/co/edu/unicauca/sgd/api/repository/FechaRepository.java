@@ -1,10 +1,23 @@
 package co.edu.unicauca.sgd.api.repository;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import co.edu.unicauca.sgd.api.domain.Fecha;
+import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
 
 public interface FechaRepository extends JpaRepository<Fecha, Integer>, JpaSpecificationExecutor<Fecha> {
+
+    List<Fecha> findByCalendario_Oidcalendario(Integer oidCalendario);
+
+    long countByCalendario_OidcalendarioAndTipo(Integer oidCalendario, TipoFechaEnum tipo);
+
+    long countByCalendario_OidcalendarioAndTipoAndOidFechaNot(Integer oidCalendario, TipoFechaEnum tipo, Integer oidFecha);
+
+    Optional<Fecha> findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(Integer oidCalendario, Integer oidNombreFecha);
+
 }
 

@@ -1,21 +1,33 @@
 package co.edu.unicauca.sgd.api.service.usuario;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import co.edu.unicauca.sgd.api.domain.Departamento;
 import co.edu.unicauca.sgd.api.domain.EstadoUsuario;
 import co.edu.unicauca.sgd.api.domain.Rol;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.RolDTO;
+import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
+import co.edu.unicauca.sgd.api.dto.materias.DepartamentoDTOResponse;
+import co.edu.unicauca.sgd.api.dto.materias.ProgramaDTOResponse;
+import co.edu.unicauca.sgd.api.mapper.DepartamentoMapper;
+import co.edu.unicauca.sgd.api.mapper.ProgramaMapper;
 import co.edu.unicauca.sgd.api.mapper.UsuarioMapper;
+import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.EstadoUsuarioRepository;
+import co.edu.unicauca.sgd.api.repository.ProgramaRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.actividad.Impl.ActividadDateServiceImpl;
 import co.edu.unicauca.sgd.api.specification.UsuarioSpecification;
@@ -33,17 +45,39 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ActividadDateServiceImpl.class);
 
-    @Autowired
     private UsuarioRepository usuarioRepository;
 
-    @Autowired
     private EstadoUsuarioRepository estadoUsuarioRepository;
 
-    @Autowired
     private UsuarioMapper usuarioMapper;
 
-    @Autowired
     private UsuarioDetalleService usuarioDetalleService;
+
+    private UsuarioDepartamentoRepository usuarioDepartamentoRepository;
+
+    private ProgramaRepository programaRepository;
+
+    private ProgramaMapper programaMapper;
+
+    private DepartamentoRepository departamentoRepository;
+
+    private DepartamentoMapper departamentoMapper;
+
+    public UsuarioServiceImpl(UsuarioRepository usuarioRepository,
+            EstadoUsuarioRepository estadoUsuarioRepository, UsuarioMapper usuarioMapper,
+            UsuarioDetalleService usuarioDetalleService, UsuarioDepartamentoRepository usuarioDepartamentoRepository,
+            ProgramaRepository programaRepository, ProgramaMapper programaMapper,
+            DepartamentoRepository departamentoRepository, DepartamentoMapper departamentoMapper) {
+        this.usuarioRepository = usuarioRepository;
+        this.estadoUsuarioRepository = estadoUsuarioRepository;
+        this.usuarioMapper = usuarioMapper;
+        this.usuarioDetalleService = usuarioDetalleService;
+        this.usuarioDepartamentoRepository = usuarioDepartamentoRepository;
+        this.programaRepository = programaRepository;
+        this.programaMapper = programaMapper;
+        this.departamentoRepository = departamentoRepository;
+        this.departamentoMapper = departamentoMapper;
+    }
 
     @Override
     public ApiResponse<Page<Usuario>> obtenerTodos(String identificacion, String nombre, String facultad,
@@ -172,11 +206,64 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
-    public Usuario obtenerUsuarioActual(String correo) {
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreo(correo);
+    public UsuarioDTO obtenerUsuarioActual(String correo) {
+        Usuario usuario = usuarioRepository.findByCorreo(correo)
+            .orElseThrow(() -> new RuntimeException("Usuario no encontrado con correo: " + correo));
 
-        Usuario usuario = usuarioOpt.orElseThrow(() -> new RuntimeException("Usuario no encontrado con correo: " + correo));
+        LOGGER.info("Obteniendo usuario actual: {}", usuario.getIdentificacion());
 
-        return usuario;
+        // ===== Mapeo base a DTO =====
+        UsuarioDTO dto = new UsuarioDTO();
+        dto.setOidUsuario(usuario.getOidUsuario());
+        dto.setIdentificacion(usuario.getIdentificacion());
+        dto.setNombres(usuario.getNombres());
+        dto.setApellidos(usuario.getApellidos());
+
+        List<RolDTO> rolesDto = usuario.getRoles() == null ? Collections.emptyList()
+            : usuario.getRoles().stream()
+                .map(r -> new RolDTO(r.getNombre()))
+                .collect(Collectors.toList());
+        dto.setRoles(rolesDto);
+
+        // ===== Departamento al que pertenece el usuario (UsuarioDepartamento) =====
+        usuarioDepartamentoRepository.findById(usuario.getOidUsuario()).ifPresent(ud -> {
+            Departamento dep = ud.getDepartamento();
+            DepartamentoDTOResponse depDto = new DepartamentoDTOResponse();
+            depDto.setOidDepartamento(dep.getOidDepartamento());
+            depDto.setNombre(dep.getNombre());
+            depDto.setFacultad(dep.getFacultad());
+            dto.setDepartamento(depDto);
+        });
+
+        // ===== Enriquecimiento según rol =====
+        Set<String> nombresRol = rolesDto.stream()
+            .map(r -> r.getNombre() == null ? "" : r.getNombre().trim().toUpperCase())
+            .collect(Collectors.toSet());
+
+        // COORDINADOR → programas que coordina
+        if (nombresRol.contains("COORDINADOR")) {
+            programaRepository.findByCoordinador_OidUsuario(usuario.getOidUsuario())
+                .ifPresent(p -> {
+                    ProgramaDTOResponse programaDTO = programaMapper.toResponse(p);
+                    dto.setProgramaCoordinador(programaDTO);
+                });
+        } else {
+            dto.setProgramaCoordinador(null);
+        }
+
+        // JEFE DE DEPARTAMENTO → departamentos donde es jefe
+        if (nombresRol.contains("JEFE DE DEPARTAMENTO")) {
+            departamentoRepository.findByJefe_OidUsuario(usuario.getOidUsuario())
+                .ifPresent(dep -> {
+                    DepartamentoDTOResponse depDto = departamentoMapper.toResponse(dep);
+                    dto.setDepartamentoJefatura(depDto);
+                });
+        } else {
+            dto.setDepartamentoJefatura(null);
+        }
+
+        LOGGER.info("Usuario actual obtenido: {}", dto.getIdentificacion());
+
+        return dto;
     }
 }

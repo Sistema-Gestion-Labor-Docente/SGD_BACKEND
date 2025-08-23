@@ -28,7 +28,7 @@ public class Fecha {
     @JoinColumn(name = "OIDNOMBREFECHA", nullable = false)
     private NombreFecha nombreFecha;
 
-    @Column(name = "FECHAINICIAL", nullable = false)
+    @Column(name = "FECHAINICIAL")
     private LocalDateTime fechaInicial;
 
     @Column(name = "FECHAFIN")
@@ -55,6 +55,20 @@ public class Fecha {
     private String usuarioActualizacion;
 
     @ManyToOne
-    @JoinColumn(name = "OIDCALENDARIO", nullable = false)
+    @JoinColumn(name = "OIDCALENDARIO", nullable = false, updatable = false)
     private Calendario calendario;
+
+    @Transient
+    public String getNombreResuelto() {
+        String periodo = getPeriodo();
+        String base = this.getNombreFecha().getNombre();
+        return base
+            .replace("{calendar}", periodo)
+            .replace("{identificador del período}", periodo);
+    }
+
+    @Transient
+    public String getPeriodo() {
+        return this.calendario.getAnioCalendario() + " - " + this.calendario.getNumeroCalendario();
+    }
 }

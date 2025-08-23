@@ -11,9 +11,7 @@
       <column name="OIDFECHA" type="INT" defaultValueComputed="nextval('SEQ_OIDFECHA')">
         <constraints primaryKey="true" nullable="false"/>
       </column>
-      <column name="FECHAINICIAL" type="DATE">
-        <constraints nullable="false"/>
-      </column>
+      <column name="FECHAINICIAL" type="DATE"/>
       <column name="FECHAFIN" type="DATE"/>
       <column name="TIPO" type="TIPO_FECHA">
         <constraints nullable="false"/>

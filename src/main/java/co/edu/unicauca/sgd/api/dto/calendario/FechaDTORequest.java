@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
 
 @Data
@@ -15,10 +17,10 @@ public class FechaDTORequest {
     @NotNull
     private Integer oidNombreFecha;
 
-    @NotNull
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime fechaInicial;
 
-    @NotBlank
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime fechaFin;
 
     @NotNull

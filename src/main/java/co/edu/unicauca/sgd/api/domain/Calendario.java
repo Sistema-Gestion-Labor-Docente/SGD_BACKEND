@@ -26,10 +26,10 @@ public class Calendario {
     @Column(name = "OIDCALENDARIO")
     private Integer oidcalendario;
 
-    @Column(name = "ANIOCALENDARIO", nullable = false, length = 5)
+    @Column(name = "ANIOCALENDARIO", nullable = false, length = 5, updatable = false)
     private String anioCalendario;
 
-    @Column(name = "NUMEROCALENDARIO", nullable = false)
+    @Column(name = "NUMEROCALENDARIO", nullable = false, updatable = false)
     private Integer numeroCalendario;
 
     @Column(name = "SEMANASCLASE")

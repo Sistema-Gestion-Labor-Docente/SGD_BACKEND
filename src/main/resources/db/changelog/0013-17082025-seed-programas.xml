@@ -8,11 +8,8 @@
 
   <changeSet id="0013-17082025-seed-programas" author="Jesus Edwin Adrada Ruiz">
     <sql>
-      WITH owner AS (
-        SELECT MIN(OIDUSUARIO) AS oid FROM USUARIO
-      )
-      INSERT INTO PROGRAMA (NOMBRE, FECHACREACION, USUARIOCREACION, COORDINADOR_OIDUSUARIO)
-      SELECT n, NOW(), 'seeder', (SELECT oid FROM owner)
+      INSERT INTO PROGRAMA (NOMBRE, FECHACREACION, USUARIOCREACION)
+      SELECT n, NOW(), 'seeder'
       FROM (VALUES
         ('INGENIERÍA ELECTRÓNICA Y TELECOMUNICACIONES'),
         ('INGENIERÍA DE SISTEMAS'),

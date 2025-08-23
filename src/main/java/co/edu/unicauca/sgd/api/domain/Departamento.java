@@ -32,8 +32,8 @@ public class Departamento {
   @Column(name = "FACULTAD", nullable = false)
   private String facultad;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = true)
-  @JoinColumn(name = "JEFE_OIDUSUARIO")
+  @OneToOne(fetch = FetchType.LAZY, optional = true)
+  @JoinColumn(name = "JEFE_OIDUSUARIO", unique = true)
   private Usuario jefe;
 
   @CreationTimestamp

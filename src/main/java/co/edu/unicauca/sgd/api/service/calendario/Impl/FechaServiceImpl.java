@@ -1,6 +1,7 @@
 package co.edu.unicauca.sgd.api.service.calendario.impl;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,10 +21,16 @@ import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
 import co.edu.unicauca.sgd.api.repository.NombreFechaRepository;
 import co.edu.unicauca.sgd.api.service.calendario.FechaService;
-import co.edu.unicauca.sgd.api.utils.StringUtils;
 
 @Service
 public class FechaServiceImpl implements FechaService {
+
+    // IDs fijos en la tabla NombreFecha
+    private static final int NOMBRE_PERIODO_INICIO = 1;   // "Inicio de periodo"
+    private static final int NOMBRE_PERIODO_FIN    = 10;  // "Finalización de periodo"
+    private static final int NOMBRE_CLASES_INICIO  = 3;   // "Inicio de clases"
+    private static final int NOMBRE_CLASES_FIN     = 7;   // "Finalización de clases"
+
 
     private final FechaRepository fechaRepository;
 
@@ -45,8 +52,7 @@ public class FechaServiceImpl implements FechaService {
     @Override
     public ApiResponse<Page<FechaDTOResponse>> obtenerTodas(TipoFechaEnum tipo, Pageable pageable) {
         try {
-            Specification<Fecha> spec = Specification.where(null);
-
+            Specification<Fecha> spec = (root, query, cb) -> cb.conjunction();
             if (tipo != null) {
                 spec = spec.and((root, query, cb) -> cb.equal(root.get("tipo"), tipo));
             }
@@ -75,14 +81,24 @@ public class FechaServiceImpl implements FechaService {
     @Override
     @Transactional
     public ApiResponse<FechaDTOResponse> guardar(FechaDTORequest dto) {
-        System.out.println("Guardando fecha: " + dto);
         try {
-            if (dto.getFechaFin() != null) {
-                validarRango(dto.getFechaInicial(), dto.getFechaFin());
-            }
+            validarRangoSiPresentes(dto.getFechaInicial(), dto.getFechaFin());
 
             Calendario calendario = calendarioRepository.findById(dto.getOidCalendario())
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + dto.getOidCalendario()));
+
+            // Validaciones
+            validarAnioConCalendarioSiPresente(dto.getFechaInicial(), calendario, "fechaInicial");
+            validarAnioConCalendarioSiPresente(dto.getFechaFin(), calendario, "fechaFin");
+
+            // NUEVO: reglas de período (sin excluir ID porque es insert)
+            validarPeriodoDefinidoYLimites(dto, calendario.getOidcalendario());
+
+            // NUEVO: reglas de CLASES (si aplica)
+            validarRelacionesClases(dto, calendario.getOidcalendario(), null);
+
+            // Capacidad por tipo (lo que ya agregaste antes)
+            validarCapacidadPorTipo(dto.getTipo(), calendario.getOidcalendario(), null);
 
             NombreFecha nombreFecha = nombreFechaRepository.findById(dto.getOidNombreFecha())
                     .orElseThrow(() -> new RuntimeException("NombreFecha no encontrado con ID: " + dto.getOidNombreFecha()));
@@ -101,18 +117,28 @@ public class FechaServiceImpl implements FechaService {
     @Transactional
     public ApiResponse<FechaDTOResponse> actualizar(Integer id, FechaDTORequest dto) {
         try {
-            if (dto.getFechaFin() != null) {
-                validarRango(dto.getFechaInicial(), dto.getFechaFin());
-            }
+            validarRangoSiPresentes(dto.getFechaInicial(), dto.getFechaFin());
 
             Fecha existente = fechaRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Fecha no encontrada con ID: " + id));
 
-            Calendario calendario = calendarioRepository.findById(dto.getOidCalendario())
-                    .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + dto.getOidCalendario()));
+            if (dto.getOidCalendario() != null 
+            && !dto.getOidCalendario().equals(existente.getCalendario().getOidcalendario())) {
+                throw new RuntimeException("El calendario no puede cambiar en una actualización.");
+            }
+
+            Calendario calendario = existente.getCalendario();
+
+            validarAnioConCalendarioSiPresente(dto.getFechaInicial(), calendario, "fechaInicial");
+            validarAnioConCalendarioSiPresente(dto.getFechaFin(), calendario, "fechaFin");
 
             NombreFecha nombreFecha = nombreFechaRepository.findById(dto.getOidNombreFecha())
                     .orElseThrow(() -> new RuntimeException("NombreFecha no encontrado con ID: " + dto.getOidNombreFecha()));
+
+            validarPeriodoDefinidoYLimites(dto, calendario.getOidcalendario());
+            validarRelacionesClases(dto, calendario.getOidcalendario(), id);
+
+            validarCapacidadPorTipo(dto.getTipo(), calendario.getOidcalendario(), id);
 
             fechaMapper.actualizarCamposBasicos(existente, dto, calendario, nombreFecha);
             Fecha actualizada = fechaRepository.save(existente);
@@ -138,9 +164,190 @@ public class FechaServiceImpl implements FechaService {
     }
 
     /* ------------ Helpers ------------ */
-    private void validarRango(LocalDateTime inicio, LocalDateTime fin) {
-        if (inicio.isAfter(fin)) {
+    private static boolean esRango(FechaDTORequest dto) {
+        return dto.getFechaFin() != null;
+    }
+
+    private static String etiquetaInicio(boolean esRango) {
+        return esRango ? "El inicio del rango" : "La fecha";
+    }
+
+    private static String etiquetaFin() {
+        return "El fin del rango";
+    }
+
+    private static String msgAntesDe(String etiqueta, String hito) {
+        return etiqueta + " no puede ser anterior a " + hito + ".";
+    }
+
+    private static String msgDespuesDe(String etiqueta, String hito) {
+        return etiqueta + " no puede ser posterior a " + hito + ".";
+    }
+
+    /**
+     * Valida que si ambos inician y fin están presentes, entonces inicio <= fin.
+     * Si uno o ambos son nulos, no hace nada.
+     */
+    private void validarRangoSiPresentes(LocalDateTime inicio, LocalDateTime fin) {
+        if (inicio != null && fin != null && inicio.isAfter(fin)) {
             throw new RuntimeException("La fecha inicial no puede ser mayor que la fecha fin.");
         }
     }
+
+    /**
+     * Valida que la fecha (si está presente) tenga el mismo año que el calendario.
+     */
+    private void validarAnioConCalendarioSiPresente(LocalDateTime fecha, Calendario cal, String etiquetaCampo) {
+        if (fecha == null) return;
+
+        int anioCalendario;
+        try {
+            anioCalendario = Integer.parseInt(cal.getAnioCalendario());
+        } catch (NumberFormatException ex) {
+            throw new RuntimeException("El año del calendario es inválido: " + cal.getAnioCalendario());
+        }
+
+        if (fecha.getYear() != anioCalendario) {
+            throw new RuntimeException(
+                String.format("El año de %s (%d) debe coincidir con el año del calendario (%d).",
+                              etiquetaCampo, fecha.getYear(), anioCalendario)
+            );
+        }
+    }
+
+    /**
+     * Valida la capacidad máxima de fechas por tipo en un calendario.
+     * - CLASES: máximo 2 (Inicio y Fin de clases)
+     */
+    private void validarCapacidadPorTipo(TipoFechaEnum tipo, Integer oidCalendario, Integer oidFechaExcluida) {
+        if (tipo == TipoFechaEnum.RESALTADAS 
+            || tipo == TipoFechaEnum.NO_RESALTADAS 
+            || tipo == TipoFechaEnum.ADMINISTRATIVAS) {
+            return; // no aplica validación de capacidad
+        }
+
+        int maxPorCalendario = (tipo == TipoFechaEnum.CLASES) ? 2 : 1;
+
+        long existentes = (oidFechaExcluida == null)
+            ? fechaRepository.countByCalendario_OidcalendarioAndTipo(oidCalendario, tipo)
+            : fechaRepository.countByCalendario_OidcalendarioAndTipoAndOidFechaNot(oidCalendario, tipo, oidFechaExcluida);
+
+        if (existentes >= maxPorCalendario) {
+            String detalle = (tipo == TipoFechaEnum.CLASES)
+                ? "Solo se permiten 2 registros de tipo CLASES por calendario."
+                : String.format("Solo se permite 1 registro de tipo %s por calendario.", tipo.name());
+            throw new RuntimeException(detalle);
+        }
+    }
+
+    /**
+     * 1) Exige que el Inicio de período (Nombre 1) exista antes de crear/editar cualquier otra fecha.
+     * 2) Valida que las fechas no sean anteriores al Inicio de período.
+     * 3) Si Fin de período (Nombre 10) existe, valida que no excedan ese fin.
+     */
+    private void validarPeriodoDefinidoYLimites(FechaDTORequest dto, Integer oidCalendario) {
+        final Integer nombre = dto.getOidNombreFecha();
+        final boolean esNombreInicio = java.util.Objects.equals(nombre, NOMBRE_PERIODO_INICIO);
+        final boolean esNombreFin    = java.util.Objects.equals(nombre, NOMBRE_PERIODO_FIN);
+        final boolean rango          = esRango(dto);
+
+        if (dto.getFechaInicial() == null && dto.getFechaFin() == null) return;
+
+        // --- Límite inferior (Nombre 1) ---
+        Optional<Fecha> inicioPeriodoOpt =
+            fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(
+                oidCalendario, NOMBRE_PERIODO_INICIO);
+
+        if (!esNombreInicio) {
+            Fecha inicio = inicioPeriodoOpt.orElseThrow(() ->
+                new RuntimeException("Debe definir primero la fecha con Nombre 1 (Inicio de período) para este calendario.")
+            );
+
+            LocalDateTime min = (inicio.getFechaInicial() != null) ? inicio.getFechaInicial() : inicio.getFechaFin();
+            if (min == null) {
+                throw new RuntimeException("El 'Inicio de período' (Nombre 1) debe tener al menos una fecha definida.");
+            }
+
+            if (dto.getFechaInicial() != null && dto.getFechaInicial().isBefore(min)) {
+                throw new RuntimeException(msgAntesDe(etiquetaInicio(rango), "el Inicio de período (Nombre 1)"));
+            }
+            if (dto.getFechaFin() != null && dto.getFechaFin().isBefore(min)) {
+                throw new RuntimeException(msgAntesDe(etiquetaFin(), "el Inicio de período (Nombre 1)"));
+            }
+        }
+
+        // --- Límite superior (Nombre 10) ---
+        Optional<Fecha> finPeriodoOpt =
+            fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(
+                oidCalendario, NOMBRE_PERIODO_FIN);
+
+        if (!esNombreFin && finPeriodoOpt.isPresent()) {
+            Fecha fin = finPeriodoOpt.get();
+            LocalDateTime max = (fin.getFechaFin() != null) ? fin.getFechaFin() : fin.getFechaInicial();
+
+            if (max != null) {
+                if (dto.getFechaInicial() != null && dto.getFechaInicial().isAfter(max)) {
+                    throw new RuntimeException(msgDespuesDe(etiquetaInicio(rango), "la Finalización de período (Nombre 10)"));
+                }
+                if (dto.getFechaFin() != null && dto.getFechaFin().isAfter(max)) {
+                    throw new RuntimeException(msgDespuesDe(etiquetaFin(), "la Finalización de período (Nombre 10)"));
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Reglas específicas para CLASES:
+     * - Si guardo/actualizo Nombre 3 (inicio de clases) y ya existe Nombre 7 (fin de clases),
+     *   entonces las fechas de Nombre 3 no pueden quedar después de las de Nombre 7.
+     * - Si guardo/actualizo Nombre 7 (fin de clases) y ya existe Nombre 3 (inicio de clases),
+     *   entonces las fechas de Nombre 7 no pueden quedar antes de las de Nombre 3.
+     * Nota: valida los campos presentes; si vienen nulos, se omite esa comparación.
+     */
+    private void validarRelacionesClases(FechaDTORequest dto, Integer oidCalendario, Integer oidFechaExcluida) {
+        if (dto.getTipo() != TipoFechaEnum.CLASES) return;
+
+        final boolean rango = esRango(dto);
+        Integer nombre = dto.getOidNombreFecha();
+        if (nombre == null) return;
+
+        if (nombre == NOMBRE_CLASES_INICIO) {
+            Optional<Fecha> finClasesOpt =
+                fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(oidCalendario, NOMBRE_CLASES_FIN);
+
+            if (finClasesOpt.isPresent() && (oidFechaExcluida == null || !finClasesOpt.get().getOidFecha().equals(oidFechaExcluida))) {
+                Fecha finClases = finClasesOpt.get();
+                LocalDateTime max = (finClases.getFechaFin() != null) ? finClases.getFechaFin() : finClases.getFechaInicial();
+
+                if (max != null) {
+                    if (dto.getFechaInicial() != null && dto.getFechaInicial().isAfter(max)) {
+                        throw new RuntimeException(msgDespuesDe(etiquetaInicio(rango), "el Fin de clases (Nombre 7) existente"));
+                    }
+                    if (dto.getFechaFin() != null && dto.getFechaFin().isAfter(max)) {
+                        throw new RuntimeException(msgDespuesDe(etiquetaFin(), "el Fin de clases (Nombre 7) existente"));
+                    }
+                }
+            }
+
+        } else if (nombre == NOMBRE_CLASES_FIN) {
+            Optional<Fecha> inicioClasesOpt =
+                fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(oidCalendario, NOMBRE_CLASES_INICIO);
+
+            if (inicioClasesOpt.isPresent() && (oidFechaExcluida == null || !inicioClasesOpt.get().getOidFecha().equals(oidFechaExcluida))) {
+                Fecha inicioClases = inicioClasesOpt.get();
+                LocalDateTime min = (inicioClases.getFechaInicial() != null) ? inicioClases.getFechaInicial() : inicioClases.getFechaFin();
+
+                if (min != null) {
+                    if (dto.getFechaInicial() != null && dto.getFechaInicial().isBefore(min)) {
+                        throw new RuntimeException(msgAntesDe(etiquetaInicio(rango), "el Inicio de clases (Nombre 3) existente"));
+                    }
+                    if (dto.getFechaFin() != null && dto.getFechaFin().isBefore(min)) {
+                        throw new RuntimeException(msgAntesDe(etiquetaFin(), "el Inicio de clases (Nombre 3) existente"));
+                    }
+                }
+            }
+        }
+    }
+
 }

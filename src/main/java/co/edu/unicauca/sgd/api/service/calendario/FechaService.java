@@ -19,4 +19,5 @@ public interface FechaService {
     ApiResponse<FechaDTOResponse> actualizar(Integer id, FechaDTORequest dto);
 
     ApiResponse<Void> eliminar(Integer oid);
+    
 }

@@ -30,6 +30,11 @@
         columnNames="NOMBRE"
         constraintName="UQ_PROGRAMA_NOMBRE"/>
 
+    <addUniqueConstraint
+      tableName="PROGRAMA"
+      columnNames="COORDINADOR_OIDUSUARIO"
+      constraintName="UQ_PROGRAMA_COORDINADOR"/>
+
     <addForeignKeyConstraint
         baseTableName="PROGRAMA" baseColumnNames="COORDINADOR_OIDUSUARIO"
         referencedTableName="USUARIO" referencedColumnNames="OIDUSUARIO"

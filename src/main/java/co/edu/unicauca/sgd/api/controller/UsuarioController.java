@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import co.edu.unicauca.sgd.api.service.usuario.UsuarioService;
 
 import java.util.List;
@@ -83,10 +84,10 @@ public class UsuarioController {
 
     @GetMapping("/logueado")
     @Operation(summary = "Obtener usuario actual", description = "Obtiene el usuario actualmente autenticado")
-    public ResponseEntity<ApiResponse<Usuario>> obtenerUsuarioActual(Authentication authentication) {
+    public ResponseEntity<ApiResponse<UsuarioDTO>> obtenerUsuarioActual(Authentication authentication) {
         try {
             String correo = authentication.getName();
-            Usuario usuario = usuarioService.obtenerUsuarioActual(correo);
+            UsuarioDTO usuario = usuarioService.obtenerUsuarioActual(correo);
             return ResponseEntity.ok(new ApiResponse<>(200, "Usuario obtenido correctamente", usuario));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ApiResponse<>(500, "Error al obtener el usuario: " + e.getMessage(), null));
