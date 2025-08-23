@@ -190,7 +190,11 @@ public class CalendarioServiceImpl implements CalendarioService {
             FechaDTORequest fecha = new FechaDTORequest();
             fecha.setOidCalendario(oidCalendario);
             fecha.setOidNombreFecha(oidNombreFecha);
-            fecha.setTipo(TipoFechaEnum.RESALTADAS);
+            if (oidNombreFecha.equals(3) || oidNombreFecha.equals(7)) {
+                fecha.setTipo(TipoFechaEnum.CLASES);
+            } else {
+                fecha.setTipo(TipoFechaEnum.RESALTADAS);
+            }
 
             try {
                 fechaService.guardar(fecha);

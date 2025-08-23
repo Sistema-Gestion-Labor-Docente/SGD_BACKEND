@@ -34,8 +34,8 @@
 
     <addUniqueConstraint
         tableName="PLAN"
-        columnNames="NUMERO"
-        constraintName="UQ_PLAN_NUMERO"/>
+        columnNames="NUMERO, OIDPROGRAMA"
+        constraintName="UQ_PLAN_NUMERO_PROGRAMA"/>
 
     <addForeignKeyConstraint
         baseTableName="PLAN" baseColumnNames="OIDPROGRAMA"
