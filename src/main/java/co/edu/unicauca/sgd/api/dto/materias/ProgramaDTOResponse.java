@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 public class ProgramaDTOResponse {
     private Integer oidPrograma;
     private String nombre;
+    private String nombreCorto;
 
     private Integer coordinadorOidUsuario;
     private String coordinadorNombre;
