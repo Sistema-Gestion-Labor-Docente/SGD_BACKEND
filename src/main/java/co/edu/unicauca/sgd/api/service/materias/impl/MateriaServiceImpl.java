@@ -113,7 +113,11 @@ public class MateriaServiceImpl implements MateriaService {
             Plan plan = planRepository.findById(request.getOidPlan())
                     .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + request.getOidPlan()));
 
+            Materia correquisito = materiaRepository.findById(request.getIdMateria())
+                    .orElseThrow(() -> new RuntimeException("Correquisito no encontrado con ID: " + request.getIdMateria()));
+
             entity.setPlan(plan);
+            entity.setCorrequisito(correquisito);
 
             entity.setUsuarioCreacion("Usuario");
             Materia saved = materiaRepository.save(entity);
@@ -147,6 +151,11 @@ public class MateriaServiceImpl implements MateriaService {
                 Plan plan = planRepository.findById(request.getOidPlan())
                         .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + request.getOidPlan()));
                 existente.setPlan(plan);
+            }
+            if (request.getIdMateria() != null) {
+                Materia correquisito = materiaRepository.findById(request.getIdMateria())
+                        .orElseThrow(() -> new RuntimeException("Correquisito no encontrado con ID: " + request.getIdMateria()));
+                existente.setCorrequisito(correquisito);
             }
 
             existente.setUsuarioActualizacion("UsuarioActualizacion");

@@ -22,6 +22,10 @@ public class MateriaDTOResponse {
     private Integer oidPlan;
     private String numeroPlan;
 
+    private Integer idCorrequisito;
+    private String oidCorrequisito;
+    private String nombreCorrequisito;
+
     private LocalDateTime fechaCreacion;
     private String usuarioCreacion;
     private LocalDateTime fechaActualizacion;

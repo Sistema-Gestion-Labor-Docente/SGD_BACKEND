@@ -46,6 +46,11 @@ public class MateriaMapper {
             dto.setOidPlan(e.getPlan().getOidPlan());
             dto.setNumeroPlan(e.getPlan().getNumero());
         }
+        if (e.getCorrequisito() != null) {
+            dto.setIdCorrequisito(e.getCorrequisito().getIdMateria());
+            dto.setOidCorrequisito(e.getCorrequisito().getOidMateria());
+            dto.setNombreCorrequisito(e.getCorrequisito().getNombre());
+        }
 
         dto.setFechaCreacion(e.getFechaCreacion());
         dto.setUsuarioCreacion(e.getUsuarioCreacion());
