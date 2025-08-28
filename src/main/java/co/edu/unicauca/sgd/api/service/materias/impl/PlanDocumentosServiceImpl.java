@@ -3,6 +3,7 @@ package co.edu.unicauca.sgd.api.service.materias.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,10 +67,13 @@ public class PlanDocumentosServiceImpl implements PlanDocumentosService {
             // 3. Insertar validación y valores en hoja principal
             configurarValidacionYDefault(workbook);
 
-            // 4. Ocultar valor oidPlan en hoja oculta
+            // 4. Precargar datos de las materias del plan en el formato
+            precargarMateriasEnFormato(workbook, oidPlan);
+
+            // 5. Ocultar valor oidPlan en hoja oculta
             ocultarOidPlan(workbook, oidPlan);
 
-            // 5. Escribir y retornar archivo
+            // 6. Escribir y retornar archivo
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
             logger.info("Formato de adición generado exitosamente para oidPlan: {}", oidPlan);
@@ -164,6 +168,60 @@ public class PlanDocumentosServiceImpl implements PlanDocumentosService {
         XSSFSheet hiddenSheet = workbook.createSheet("OIDPLAN_OCULTO");
         hiddenSheet.createRow(0).createCell(0).setCellValue(oidPlan);
         workbook.setSheetHidden(workbook.getSheetIndex(hiddenSheet), true);
+    }
+
+    /**
+     * Precarga las materias del plan en el formato Excel.
+     */
+    private void precargarMateriasEnFormato(XSSFWorkbook workbook, Integer oidPlan) {
+        // Consigue la lista de materias del plan
+        List<Materia> materias = materiaRepository.findAllByPlanOidPlan(oidPlan)
+            .stream()
+            .sorted(Comparator.comparing(Materia::getSemestre, Comparator.nullsLast(Integer::compareTo)))
+            .toList();
+        XSSFSheet hoja = workbook.getSheetAt(0);
+
+        int rowIdx = 1; // Fila 1 es la primera después del encabezado
+        for (Materia materia : materias) {
+            Row row = hoja.getRow(rowIdx);
+            if (row == null) row = hoja.createRow(rowIdx);
+
+            // OIDMATERIA (A)
+            Cell cellA = row.getCell(0) == null ? row.createCell(0) : row.getCell(0);
+            cellA.setCellValue(materia.getOidMateria());
+
+            // CODIGO (B)
+            Cell cellB = row.getCell(1) == null ? row.createCell(1) : row.getCell(1);
+            cellB.setCellValue(materia.getCodigo());
+
+            // NOMBRE (C)
+            Cell cellC = row.getCell(2) == null ? row.createCell(2) : row.getCell(2);
+            cellC.setCellValue(materia.getNombre());
+
+            // SEMESTRE (D)
+            Cell cellD = row.getCell(3) == null ? row.createCell(3) : row.getCell(3);
+            if (materia.getSemestre() != null)
+                cellD.setCellValue(materia.getSemestre());
+
+            // HORAS SEMANA (E)
+            Cell cellE = row.getCell(4) == null ? row.createCell(4) : row.getCell(4);
+            if (materia.getHorasSemana() != null)
+                cellE.setCellValue(materia.getHorasSemana());
+
+            // OID CORREQUISITO (F)
+            Cell cellF = row.getCell(5) == null ? row.createCell(5) : row.getCell(5);
+            if (materia.getCorrequisito() != null)
+                cellF.setCellValue(materia.getCorrequisito().getOidMateria());
+
+            // DEPARTAMENTO OFERTANTE (G)
+            Cell cellG = row.getCell(6) == null ? row.createCell(6) : row.getCell(6);
+            if (materia.getDepartamento() != null)
+                cellG.setCellValue(materia.getDepartamento().getNombre());
+            else
+                cellG.setCellValue("NINGUNO"); // o "" si prefieres vacío
+
+            rowIdx++;
+        }
     }
 
 
