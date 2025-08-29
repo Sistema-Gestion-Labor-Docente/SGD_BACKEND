@@ -37,7 +37,8 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**",
                     "/swagger-ui/**",
-                    "/v3/api-docs/**"
+                    "/v3/api-docs/**",
+                    "/api/**" //TODO: Remove this line in production
                 ).permitAll()
                 .anyRequest().authenticated()
             )
