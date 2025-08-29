@@ -28,6 +28,9 @@ public class Programa {
   @Column(name = "NOMBRE", nullable = false, unique = true)
   private String nombre;
 
+  @Column(name = "NOMBRE_CORTO", nullable = false)
+  private String nombreCorto;
+
   @OneToOne(fetch = FetchType.LAZY, optional = true)
   @JoinColumn(name = "COORDINADOR_OIDUSUARIO", unique = true)
   private Usuario coordinador;

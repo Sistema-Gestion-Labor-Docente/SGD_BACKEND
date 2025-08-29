@@ -1,7 +1,6 @@
 package co.edu.unicauca.sgd.api.domain;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -9,7 +8,6 @@ import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -47,6 +45,10 @@ public class Materia {
   @ManyToOne
   @JoinColumn(name = "OIDPLAN", nullable = false)
   private Plan plan;
+
+  @ManyToOne
+  @JoinColumn(name = "CORREQUISITO_IDMATERIA")
+  private Materia correquisito;
 
   @CreationTimestamp 
   @Column(name = "FECHACREACION", updatable = false, nullable = false)

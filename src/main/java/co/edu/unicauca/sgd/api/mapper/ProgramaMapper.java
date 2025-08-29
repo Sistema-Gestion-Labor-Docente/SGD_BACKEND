@@ -12,17 +12,20 @@ public class ProgramaMapper {
     public Programa convertToEntity(ProgramaDTORequest dto) {
         Programa programa = new Programa();
         programa.setNombre(dto.getNombre());
+        programa.setNombreCorto(dto.getNombreCorto());
         return programa;
     }
 
     public void actualizarCamposBasicos(Programa existente, ProgramaDTORequest dto) {
         existente.setNombre(dto.getNombre());
+        existente.setNombreCorto(dto.getNombreCorto());
     }
 
     public ProgramaDTOResponse toResponse(Programa entidad) {
         ProgramaDTOResponse dto = new ProgramaDTOResponse();
         dto.setOidPrograma(entidad.getOidPrograma());
         dto.setNombre(entidad.getNombre());
+        dto.setNombreCorto(entidad.getNombreCorto());
 
         if (entidad.getCoordinador() != null) {
             dto.setCoordinadorOidUsuario(entidad.getCoordinador().getOidUsuario());

@@ -14,5 +14,6 @@ public class MateriaDTORequest {
     private Integer horasSemana;
     private Integer oidDepartamento;
     private Integer oidPlan;
+    private Integer idMateria;
 
 }

@@ -14,6 +14,7 @@
       <column name="NOMBRE" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
+      <column name="NOMBRE_CORTO" type="VARCHAR(50)"/>
       <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
         <constraints nullable="false"/>
       </column>

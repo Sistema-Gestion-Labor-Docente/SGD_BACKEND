@@ -11,4 +11,6 @@ public interface DepartamentoRepository extends JpaRepository<Departamento, Inte
 
     Optional<Departamento> findByJefe_OidUsuario(Integer oidUsuario);
 
+    Optional<Departamento> findByNombre(String nombre);
+
 }
