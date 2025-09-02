@@ -26,10 +26,10 @@ public class Calendario {
     @Column(name = "OIDCALENDARIO")
     private Integer oidcalendario;
 
-    @Column(name = "ANIOCALENDARIO", nullable = false, length = 5, updatable = false)
+    @Column(name = "ANIOCALENDARIO", nullable = false, length = 5)
     private String anioCalendario;
 
-    @Column(name = "NUMEROCALENDARIO", nullable = false, updatable = false)
+    @Column(name = "NUMEROCALENDARIO", nullable = false)
     private Integer numeroCalendario;
 
     @Column(name = "SEMANASCLASE")
@@ -38,8 +38,17 @@ public class Calendario {
     @Column(name = "SEMANASPREPARACION")
     private Float semanasPreparacion;
 
-    @Column(name = "HORASTOTALES")
-    private Float horasTotales;
+    @Column(name = "HORASPLANTA")
+    private Float horasPlanta;
+
+    @Column(name = "HORASCATEDRA")
+    private Float horasCatedra;
+
+    @Column(name = "HORASOCASIONALES")
+    private Float horasOcasionales;
+
+    @Column(name = "HORASBECARIOPRACTICANTE")
+    private Float horasBecarioPracticante;
 
     @Column(name = "FECHACREACION", updatable = false, nullable = false)
     @CreationTimestamp

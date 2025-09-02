@@ -43,7 +43,6 @@
         ('Pre-inscripción de electivas y líneas de énfasis'),
 
         -- Caracter adicional
-        ('SEMANAS DE CLASE'),
         ('SEMANAS DE OCASIONALES'),
         ('SEMANAS DE CATEDRA'),
         ('SEMANAS DE PLANTA'),

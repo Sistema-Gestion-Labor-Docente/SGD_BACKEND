@@ -82,6 +82,8 @@ public class FechaServiceImpl implements FechaService {
     @Transactional
     public ApiResponse<FechaDTOResponse> guardar(FechaDTORequest dto) {
         try {
+            validarAlAgregarFechaEspecial(dto, dto.getOidCalendario());
+            validarUnicidadFechasEspeciales(dto);
             validarRangoSiPresentes(dto.getFechaInicial(), dto.getFechaFin());
 
             Calendario calendario = calendarioRepository.findById(dto.getOidCalendario())
@@ -105,6 +107,7 @@ public class FechaServiceImpl implements FechaService {
 
             Fecha entidad = fechaMapper.convertToEntity(dto, calendario, nombreFecha);
             Fecha guardada = fechaRepository.save(entidad);
+            ajustarDatosCalendarioSiAplica(dto, calendario);
             return new ApiResponse<>(200, "Fecha guardada correctamente", fechaMapper.toResponse(guardada));
         } catch (RuntimeException e) {
             return new ApiResponse<>(400, e.getMessage(), null);
@@ -117,6 +120,7 @@ public class FechaServiceImpl implements FechaService {
     @Transactional
     public ApiResponse<FechaDTOResponse> actualizar(Integer id, FechaDTORequest dto) {
         try {
+            validarUnicidadFechasEspeciales(dto);
             validarRangoSiPresentes(dto.getFechaInicial(), dto.getFechaFin());
 
             Fecha existente = fechaRepository.findById(id)
@@ -142,6 +146,7 @@ public class FechaServiceImpl implements FechaService {
 
             fechaMapper.actualizarCamposBasicos(existente, dto, calendario, nombreFecha);
             Fecha actualizada = fechaRepository.save(existente);
+            ajustarDatosCalendarioSiAplica(dto, calendario);
             return new ApiResponse<>(200, "Fecha actualizada correctamente", fechaMapper.toResponse(actualizada));
         } catch (RuntimeException e) {
             return new ApiResponse<>(400, e.getMessage(), null);
@@ -153,6 +158,17 @@ public class FechaServiceImpl implements FechaService {
     @Override
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
+            Fecha fecha = fechaRepository.findById(oid)
+                .orElseThrow(() -> new RuntimeException("Fecha no encontrada con ID: " + oid));
+        
+            // Validar si es especial
+            if (fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_PERIODO_INICIO ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_PERIODO_FIN ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_CLASES_INICIO ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_CLASES_FIN) {
+                throw new RuntimeException("No se permite eliminar esta fecha especial: " + fecha.getNombreFecha().getNombre());
+            }
+
             if (!fechaRepository.existsById(oid)) {
                 return new ApiResponse<>(404, "Fecha no encontrada con ID: " + oid, null);
             }
@@ -349,5 +365,111 @@ public class FechaServiceImpl implements FechaService {
             }
         }
     }
+
+    /**
+     * Ajusta datos del calendario relacionados con semanas y horas según las fechas de ciertos tipos.
+     * Se llama después de guardar o actualizar una fecha.
+     */
+    private void ajustarDatosCalendarioSiAplica(FechaDTORequest dto, Calendario calendario) {
+        // Para obtener otros registros si faltan fechas.
+        Optional<Fecha> inicioClasesOpt = fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(
+            calendario.getOidcalendario(), NOMBRE_CLASES_INICIO);
+        Optional<Fecha> finClasesOpt = fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(
+            calendario.getOidcalendario(), NOMBRE_CLASES_FIN);
+
+        // 1. Calcular semanas de clases
+        if (dto.getTipo() == TipoFechaEnum.CLASES) {
+            // ¿Estoy guardando inicio o fin?
+            LocalDateTime inicio = (dto.getOidNombreFecha() == NOMBRE_CLASES_INICIO) ? dto.getFechaInicial() : inicioClasesOpt.map(Fecha::getFechaInicial).orElse(null);
+            LocalDateTime fin = (dto.getOidNombreFecha() == NOMBRE_CLASES_FIN) ? dto.getFechaInicial() : finClasesOpt.map(Fecha::getFechaFin).orElse(null);
+
+            if (inicio != null && fin != null) {
+                long semanas = java.time.temporal.ChronoUnit.WEEKS.between(inicio.toLocalDate(), fin.toLocalDate()) + 1;
+                calendario.setSemanasClase((float) semanas);
+            }
+        }
+
+        // 2. Calcular semanas de preparación (del inicio de periodo a inicio de clases)
+        if (dto.getTipo() == TipoFechaEnum.CLASES || dto.getOidNombreFecha() == NOMBRE_PERIODO_INICIO) {
+            // Buscar inicio de periodo
+            Optional<Fecha> inicioPeriodoOpt = fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(
+                calendario.getOidcalendario(), NOMBRE_PERIODO_INICIO);
+
+            LocalDateTime inicioPeriodo = (dto.getOidNombreFecha() == NOMBRE_PERIODO_INICIO) ? dto.getFechaInicial() : inicioPeriodoOpt.map(Fecha::getFechaInicial).orElse(null);
+            LocalDateTime inicioClases = (dto.getOidNombreFecha() == NOMBRE_CLASES_INICIO) ? dto.getFechaInicial() : inicioClasesOpt.map(Fecha::getFechaInicial).orElse(null);
+
+            if (inicioPeriodo != null && inicioClases != null) {
+                long semanasPrep = java.time.temporal.ChronoUnit.WEEKS.between(inicioPeriodo.toLocalDate(), inicioClases.toLocalDate());
+                calendario.setSemanasPreparacion((float) semanasPrep);
+            }
+        }
+
+        // 3. Horas según tipo
+        if (dto.getTipo() == TipoFechaEnum.OCASIONAL || dto.getTipo() == TipoFechaEnum.CATEDRA ||
+            dto.getTipo() == TipoFechaEnum.PLANTA || dto.getTipo() == TipoFechaEnum.BECARIO_Y_PRACTICANTE) {
+
+            // Si no hay fecha fin, no se puede calcular
+            if (dto.getFechaInicial() != null && dto.getFechaFin() != null) {
+                long dias = java.time.temporal.ChronoUnit.DAYS.between(dto.getFechaInicial().toLocalDate(), dto.getFechaFin().toLocalDate()) + 1;
+                // Suponiendo 8 horas por día (ajusta esto si tu lógica es diferente)
+                float horas = dias * 8.0f;
+
+                switch (dto.getTipo()) {
+                    case OCASIONAL:
+                        calendario.setHorasOcasionales(horas);
+                        break;
+                    case CATEDRA:
+                        calendario.setHorasCatedra(horas);
+                        break;
+                    case BECARIO_Y_PRACTICANTE:
+                        calendario.setHorasBecarioPracticante(horas);
+                        break;
+                    case PLANTA:
+                        calendario.setHorasPlanta(horas);
+                        break;
+                }
+            }
+        }
+
+        // Guardar cambios en el calendario
+        calendarioRepository.save(calendario);
+    }
+
+    /**
+     * Valida que ciertas fechas especiales (Inicio de período y Finalización de período)
+     * no tengan fechaFin definida.
+     */
+    private void validarUnicidadFechasEspeciales(FechaDTORequest dto) {
+        if (dto.getOidNombreFecha() == NOMBRE_PERIODO_FIN
+            || dto.getOidNombreFecha() == NOMBRE_PERIODO_INICIO
+            || dto.getOidNombreFecha() == NOMBRE_CLASES_INICIO
+            || dto.getOidNombreFecha() == NOMBRE_CLASES_FIN) {
+            if (dto.getFechaFin() != null) {
+                throw new RuntimeException("No se permite fechaFin para esta fecha especial, solo fechaInicial.");
+            }
+        }
+    }
+    
+    /**
+     * Versión para validación al agregar (sin ID de exclusión).
+     */
+    private void validarAlAgregarFechaEspecial(FechaDTORequest dto, Integer oidCalendario) {
+        if (dto.getOidNombreFecha() == NOMBRE_PERIODO_FIN
+            || dto.getOidNombreFecha() == NOMBRE_PERIODO_INICIO
+            || dto.getOidNombreFecha() == NOMBRE_CLASES_INICIO
+            || dto.getOidNombreFecha() == NOMBRE_CLASES_FIN) {
+            // No permitir fechaFin
+            if (dto.getFechaFin() != null) {
+                throw new RuntimeException("No se permite fechaFin para este tipo de fecha especial, solo fechaInicial.");
+            }
+
+            // No permitir duplicados en el mismo calendario
+            boolean yaExiste = fechaRepository.existsByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(
+                oidCalendario, dto.getOidNombreFecha());
+            if (yaExiste) {
+                throw new RuntimeException("Ya existe una fecha especial de este tipo para este calendario.");
+            }
+        }
+}
 
 }
