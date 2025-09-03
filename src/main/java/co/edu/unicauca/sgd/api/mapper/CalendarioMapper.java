@@ -15,7 +15,10 @@ public class CalendarioMapper {
         calendario.setNumeroCalendario(dto.getNumeroCalendario());
         calendario.setSemanasClase(dto.getSemanasClase());
         calendario.setSemanasPreparacion(dto.getSemanasPreparacion());
-        calendario.setHorasTotales(dto.getHorasTotales());
+        calendario.setHorasPlanta(dto.getHorasPlanta());
+        calendario.setHorasCatedra(dto.getHorasCatedra());
+        calendario.setHorasOcasionales(dto.getHorasOcasionales());
+        calendario.setHorasBecarioPracticante(dto.getHorasBecarioPracticante());
         calendario.setEstado(dto.getEstado());
         calendario.setObservacion(dto.getObservacion());
         return calendario;
@@ -26,7 +29,10 @@ public class CalendarioMapper {
         existente.setNumeroCalendario(dto.getNumeroCalendario());
         existente.setSemanasClase(dto.getSemanasClase());
         existente.setSemanasPreparacion(dto.getSemanasPreparacion());
-        existente.setHorasTotales(dto.getHorasTotales());
+        existente.setHorasPlanta(dto.getHorasPlanta());
+        existente.setHorasCatedra(dto.getHorasCatedra());
+        existente.setHorasBecarioPracticante(dto.getHorasBecarioPracticante());
+        existente.setHorasOcasionales(dto.getHorasOcasionales());
         existente.setEstado(dto.getEstado());
         existente.setObservacion(dto.getObservacion());
     }
@@ -38,7 +44,10 @@ public class CalendarioMapper {
         dto.setNumeroCalendario(entidad.getNumeroCalendario());
         dto.setSemanasClase(entidad.getSemanasClase());
         dto.setSemanasPreparacion(entidad.getSemanasPreparacion());
-        dto.setHorasTotales(entidad.getHorasTotales());
+        dto.setHorasPlanta(entidad.getHorasPlanta());
+        dto.setHorasCatedra(entidad.getHorasCatedra());
+        dto.setHorasOcasionales(entidad.getHorasOcasionales());
+        dto.setHorasBecarioPracticante(entidad.getHorasBecarioPracticante());
         dto.setFechaCreacion(entidad.getFechaCreacion());
         dto.setUsuarioCreacion(entidad.getUsuarioCreacion());
         dto.setFechaActualizacion(entidad.getFechaActualizacion());

@@ -19,7 +19,10 @@
       </column>
       <column name="SEMANASCLASE" type="DOUBLE PRECISION"/>
       <column name="SEMANASPREPARACION" type="DOUBLE PRECISION"/>
-      <column name="HORASTOTALES" type="DOUBLE PRECISION"/>
+      <column name="HORASPLANTA" type="DOUBLE PRECISION"/>
+      <column name="HORASCATEDRA" type="DOUBLE PRECISION"/>
+      <column name="HORASOCASIONALES" type="DOUBLE PRECISION"/>
+      <column name="HORASBECARIOPRACTICANTE" type="DOUBLE PRECISION"/>
       <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
         <constraints nullable="false"/>
       </column>

@@ -10,7 +10,8 @@ public enum TipoFechaEnum implements EnumUtils.ValorEnum {
     OCASIONAL("OCASIONAL"),
     CATEDRA("CATEDRA"),
     PLANTA("PLANTA"),
-    BECARIO_Y_PRACTICANTE("BECARIO Y PRACTICANTE"),;
+    BECARIO_Y_PRACTICANTE("BECARIO Y PRACTICANTE"),
+    PLANIFICACION("PLANIFICACION");
 
     private final String valor;
 

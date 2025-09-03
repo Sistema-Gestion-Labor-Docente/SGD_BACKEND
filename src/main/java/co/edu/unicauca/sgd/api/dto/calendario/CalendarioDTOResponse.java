@@ -15,7 +15,10 @@ public class CalendarioDTOResponse {
     private Integer numeroCalendario;
     private Float semanasClase;
     private Float semanasPreparacion;
-    private Float horasTotales;
+    private Float horasPlanta;
+    private Float horasCatedra;
+    private Float horasOcasionales;
+    private Float horasBecarioPracticante;
 
     private LocalDateTime fechaCreacion;
     private String usuarioCreacion;

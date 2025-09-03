@@ -1,5 +1,6 @@
 package co.edu.unicauca.sgd.api.dto.calendario;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,16 +16,21 @@ public class CalendarioDTORequest {
     @Min(1)
     private Integer numeroCalendario;
 
-    @NotBlank
+    @Nullable
     @Min(1)
     private Float semanasClase;
 
-    @NotBlank
+    @Nullable
     @Min(1)
     private Float semanasPreparacion;
 
-    @NotBlank
-    private Float horasTotales;
+    private Float horasPlanta;
+
+    private Float horasCatedra;
+
+    private Float horasOcasionales;
+
+    private Float horasBecarioPracticante;
 
     private String estado;
 

@@ -19,5 +19,7 @@ public interface FechaRepository extends JpaRepository<Fecha, Integer>, JpaSpeci
 
     Optional<Fecha> findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(Integer oidCalendario, Integer oidNombreFecha);
 
+    Boolean existsByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(Integer oidCalendario, Integer oidNombreFecha);
+
 }
 
