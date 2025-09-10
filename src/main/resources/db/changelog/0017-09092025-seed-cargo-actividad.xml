@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="0017-09092025-seed-cargo-actividad" author="Jesus Edwin Adrada Ruiz" context="data">
+        <!-- DOCENCIA -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Dirección trabajos de Docencia - Pregrado (máx 5 trabajos)"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="9"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- INVESTIGACIÓN - PROYECTOS DE INVESTIGACIÓN -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Proyectos de investigación"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="20"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="2"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- INVESTIGACIÓN - TRABAJO DE INVESTIGACIÓN -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Dirección de trabajo de Investigación para Maestría"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="3"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="7"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Dirección de trabajo de Investigación para Doctorado"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="3"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="7"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- INVESTIGACIÓN - SEMILLEROS DE INVESTIGACIÓN -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Mentor de Semillero (siempre y cuando se encuentren registrados y ACTIVOS en la VRI)"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="2"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="11"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- seederISTRACIÓN - Jefe de Departamento (hasta 20 profesores) -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Coordinador Grupo de investigación (siempre y cuando se encuentren registrados y ACTIVOS en la VRI)"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="2"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Coordinador Posgrados"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Coordinador Pregrado"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Coordinador Programa Transversal"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Coordinador Unilingua"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Director de Escuela o Centro, Jefes de División"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="20"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Jefe de Departamento (hasta 20 profesores)"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="15"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Jefe de Departamento (más de 20 profesores)"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="20"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Rector (a), Vicerrector (a), Decano (a)"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="20"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- ASESORIA  -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Gestor de Calidad"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="5"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Integrante Comité Curricular Central"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="1"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Miembro Comité de Investigación"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="2"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Miembro Comité de Programa de pregrado o posgrado"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="2"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Representante al consejo de Investigaciones, Consejo de Cultura y Bienestar, Consejo de la Unidad de Salud y consejo de Facultad"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="2"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Representante al Consejo Superior"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="12"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- Este corresponde a PROGRAMA/DEPARTAMENTO, 15 horas máximo -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Miembro Comité de Programa para Acreditación (debe pertenecer al comité de programa de pregrado o posgrado para asignarle las horas para acreditación)"/>
+            <column name="TIPO" value="PROGRAMADEPARTAMENTO"/>
+            <column name="MAXHORASSEMANA" value="15"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- SERVICIOS - Planeación y Evaluación Curricular e Institucional - Planta -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Auditor Interno de calidad (requeridos por el Centro de Gestión de la Calidad y Acreditación Institucional)"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="5"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="10"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Planeación y Evaluación Curricular e Institucional - Planta"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="40"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="10"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- EXTENSIÓN -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Proyectos de Extensión o Interacción Social"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="6"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- CAPACITACIÓN -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Capacitación - Estudios de posgrados"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="8"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="3"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <!-- OTROS SERVICIOS -->
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Reunión de Departamento"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="2"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="5"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
