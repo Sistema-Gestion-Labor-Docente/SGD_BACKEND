@@ -24,7 +24,11 @@
             <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
                 <constraints nullable="false"/>
             </column>
+            <column name="USUARIOCREACION" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
             <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+            <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
         </createTable>
 
         <addForeignKeyConstraint

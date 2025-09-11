@@ -20,7 +20,7 @@ import jakarta.persistence.Table;
 import lombok.Data;
 
 @Entity
-@Table(name = "USUARIO_ACTIVIDAD_CALENDARIO")
+@Table(name = "USUARIOACTIVIDADCALENDARIO")
 @Data
 public class UsuarioActividadCalendario {
 
