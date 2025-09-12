@@ -30,19 +30,19 @@ public class Actividad {
     @Column(name = "NOMBREACTIVIDAD", nullable = false, length = 255)
     private String nombreActividad;
 
-    @Column(name = "HORAS", nullable = false)
+    @Column(name = "HORAS")
     private Float horas;
 
-    @Column(name = "SEMANAS", nullable = false)
+    @Column(name = "SEMANAS")
     private Float semanas;
 
-    @Column(name = "ASIGNACIONDEFAULT", nullable = false)
+    @Column(name = "ASIGNACIONDEFAULT")
     private Boolean asignacionDefault = false;
 
     @Column(name = "IDLABORDOCENTE")
     private Integer idLaborDocente;
 
-    @Column(name = "INFORMEEJECUTIVO", nullable = false)
+    @Column(name = "INFORMEEJECUTIVO")
     private Boolean informeEjecutivo;
 
     @Column(name = "FECHACREACION", updatable = false, nullable = false)

@@ -5,7 +5,6 @@ import java.util.List;
 
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
-import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

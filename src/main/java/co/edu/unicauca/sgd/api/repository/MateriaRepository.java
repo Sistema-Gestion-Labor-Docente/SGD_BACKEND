@@ -5,9 +5,11 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.stereotype.Repository;
 
 import co.edu.unicauca.sgd.api.domain.Materia;
 
+@Repository
 public interface MateriaRepository extends JpaRepository<Materia, Integer>, JpaSpecificationExecutor<Materia> {
 
     List<Materia> findAllByPlanOidPlan(Integer oidPlan);

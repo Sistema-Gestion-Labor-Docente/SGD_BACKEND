@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="0016-09092025-cargo-actividad" author="Jesus Edwin Adrada Ruiz">
+        <createSequence sequenceName="SEQ_OIDCARGOACTIVIDAD" startValue="1" incrementBy="1"/>
+
+        <createTable tableName="CARGOACTIVIDAD">
+            <column name="OIDCARGOACTIVIDAD" type="INT" defaultValueComputed="nextval('SEQ_OIDCARGOACTIVIDAD')">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="NOMBRE" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="TIPO" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MAXHORASSEMANA" type="FLOAT8">
+                <constraints nullable="false"/>
+            </column>
+            <column name="OIDTIPOACTIVIDAD" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USUARIOCREACION" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+            <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+        </createTable>
+        <addUniqueConstraint tableName="CARGOACTIVIDAD" columnNames="NOMBRE, TIPO" constraintName="UQ_CARGO_ACTIVIDAD_NOMBRE_TIPO"/>
+
+        <addForeignKeyConstraint
+            constraintName="FK_CARGO_ACTIVIDAD_TIPOACT"
+            baseTableName="CARGOACTIVIDAD"
+            baseColumnNames="OIDTIPOACTIVIDAD"
+            referencedTableName="TIPOACTIVIDAD"
+            referencedColumnNames="OIDTIPOACTIVIDAD"
+            onDelete="RESTRICT"
+            onUpdate="RESTRICT"/>
+    </changeSet>
+
+</databaseChangeLog>
