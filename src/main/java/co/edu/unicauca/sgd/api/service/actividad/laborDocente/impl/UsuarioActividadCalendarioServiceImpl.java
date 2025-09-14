@@ -1,28 +1,23 @@
 package co.edu.unicauca.sgd.api.service.actividad.laborDocente.impl;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.apache.poi.ss.formula.functions.T;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
-import co.edu.unicauca.sgd.api.domain.ActividadBoolean;
-import co.edu.unicauca.sgd.api.domain.ActividadDate;
-import co.edu.unicauca.sgd.api.domain.ActividadDecimal;
-import co.edu.unicauca.sgd.api.domain.ActividadInt;
-import co.edu.unicauca.sgd.api.domain.ActividadVarchar;
+import co.edu.unicauca.sgd.api.domain.ActividadCalendario;
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import co.edu.unicauca.sgd.api.domain.EavAtributo;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
-import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
@@ -31,17 +26,18 @@ import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.mapper.UsuarioActividadCalendarioMapper;
+import co.edu.unicauca.sgd.api.repository.ActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.CargoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.EavAtributoRepository;
 import co.edu.unicauca.sgd.api.repository.EstadoActividadRepository;
-import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.EavAtributoService;
 import co.edu.unicauca.sgd.api.service.actividad.laborDocente.UsuarioActividadCalendarioService;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 
 @Service
 public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCalendarioService {
@@ -49,6 +45,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     private final ActividadRepository actividadRepository;
     private final UsuarioRepository usuarioRepository;
     private final CalendarioRepository calendarioRepository;
+    private final ActividadCalendarioRepository actividadCalendarioRepository;
     private final UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository;
     private final UsuarioActividadCalendarioMapper mapper;
     private final CargoActividadRepository cargoActividadRepository;
@@ -59,6 +56,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     public UsuarioActividadCalendarioServiceImpl(ActividadRepository actividadRepository,
             UsuarioRepository usuarioRepository,
             CalendarioRepository calendarioRepository,
+            ActividadCalendarioRepository actividadCalendarioRepository,
             UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository,
             UsuarioActividadCalendarioMapper mapper,
             CargoActividadRepository cargoActividadRepository,
@@ -68,6 +66,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         this.actividadRepository = actividadRepository;
         this.usuarioRepository = usuarioRepository;
         this.calendarioRepository = calendarioRepository;
+        this.actividadCalendarioRepository = actividadCalendarioRepository;
         this.usuarioActividadCalendarioRepository = usuarioActividadCalendarioRepository;
         this.mapper = mapper;
         this.cargoActividadRepository = cargoActividadRepository;
@@ -76,9 +75,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         this.eavAtributoRepository = eavAtributoRepository;
     }
 
-    @Override
-    @Transactional
-    public ApiResponse<UsuarioActividadCalendarioDTOResponse> crearActividadConRelaciones(UsuarioActividadCalendarioDTORequest request) {
+    public ApiResponse<UsuarioActividadCalendarioDTOResponse> crearActividadConRelaciones(@Valid UsuarioActividadCalendarioDTORequest request) {
 
         CargoActividad cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
                 .orElseThrow(() -> new RuntimeException("Cargo de actividad no encontrado"));
@@ -95,23 +92,44 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         actividad.setSemanas(request.getSemanas());
         actividad = actividadRepository.save(actividad);
 
-        // 2. Crear relaciones UsuarioActividadCalendario
+        final Actividad actividadFinal = actividad;
+
+        // 2. Obtener Calendario y crear/obtener ActividadCalendario
         Calendario calendario = calendarioRepository.findById(request.getOidCalendario())
                 .orElseThrow(() -> new RuntimeException("Calendario no encontrado"));
 
+        ActividadCalendario actividadCalendario = actividadCalendarioRepository
+                .findByActividad_OidActividadAndCalendario_Oidcalendario(actividad.getOidActividad(), calendario.getOidcalendario())
+                .orElseGet(() -> {
+                    ActividadCalendario ac = new ActividadCalendario();
+                    ac.setActividad(actividadFinal);
+                    ac.setCalendario(calendario);
+                    ac.setUsuarioCreacion("system");
+                    return actividadCalendarioRepository.save(ac);
+                });
+
+        // Si la actividadCalendario ya existía pero el cargo es distinto, actualizamos
+        if (actividadCalendario.getCargoActividad() == null || !actividadCalendario.getCargoActividad().getOidCargoActividad().equals(cargoActividad.getOidCargoActividad())) {
+            actividadCalendario.setCargoActividad(cargoActividad);
+            actividadCalendario = actividadCalendarioRepository.save(actividadCalendario);
+        }
+
+        // 3. Crear relaciones UsuarioActividadCalendario apuntando a actividadCalendario
         for (Integer oidUsuario : request.getOidsUsuarios()) {
             Usuario usuario = usuarioRepository.findById(oidUsuario)
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-            UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
-            relacion.setUsuario(usuario);
-            relacion.setActividad(actividad);
-            relacion.setCalendario(calendario);
-            relacion.setUsuarioCreacion("system");
-            relacion.setCargoActividad(cargoActividad);
-            usuarioActividadCalendarioRepository.save(relacion);
+            // No crear duplicados
+            boolean exists = usuarioActividadCalendarioRepository.existsByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(actividadCalendario.getOidActividadCalendario(), oidUsuario);
+            if (!exists) {
+                UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
+                relacion.setUsuario(usuario);
+                relacion.setActividadCalendario(actividadCalendario);
+                relacion.setUsuarioCreacion("system");
+                usuarioActividadCalendarioRepository.save(relacion);
+            }
         }
 
-        // 3. Guardar atributos EAV usando el servicio central
+        // 4. Guardar atributos EAV usando el servicio central (igual que antes)
         if (request.getAtributos() != null && !request.getAtributos().isEmpty()) {
             Map<String, EavAtributo> cacheAtributos = eavAtributoRepository.findAll().stream()
                     .collect(Collectors.toMap(EavAtributo::getNombre, Function.identity()));
@@ -127,8 +145,8 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             eavAtributoService.guardarAtributosDinamicos(actividadBaseDTO, actividad, cacheAtributos);
         }
 
-        // 4. Devolver DTOResponse
-        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividad_OidActividad(actividad.getOidActividad());
+        // 5. Devolver DTOResponse (solo relaciones del actividadCalendario creado)
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_OidActividadCalendario(actividadCalendario.getOidActividadCalendario());
         UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(
                 actividad, relaciones, calendario,
                 (request.getAtributos() != null) ? request.getAtributos().stream()
@@ -141,7 +159,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
     @Override
     @Transactional
-    public ApiResponse<UsuarioActividadCalendarioDTOResponse> actualizarActividadConRelaciones(Integer oidActividad, UsuarioActividadCalendarioDTORequest request) {
+    public ApiResponse<UsuarioActividadCalendarioDTOResponse> actualizarActividadConRelaciones(Integer oidActividad, @Valid UsuarioActividadCalendarioDTORequest request) {
         Actividad actividad = actividadRepository.findById(oidActividad)
                 .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
 
@@ -151,7 +169,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
                 .orElseThrow(() -> new RuntimeException("Estado de actividad no encontrado"));
 
-        // Actualizar datos base
+        // Actualizar datos base de Actividad
         actividad.setTipoActividad(cargoActividad.getTipoActividad());
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
@@ -159,23 +177,72 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         actividad.setSemanas(request.getSemanas());
         actividad = actividadRepository.save(actividad);
 
-        // Eliminar relaciones existentes y crear nuevas
-        usuarioActividadCalendarioRepository.deleteAll(usuarioActividadCalendarioRepository.findByActividad_OidActividad(oidActividad));
-        Calendario calendario = calendarioRepository.findById(request.getOidCalendario())
+        final Actividad actividadFinal = actividad;
+
+        // Obtener/crear ActividadCalendario destino (puede ser el mismo o uno nuevo si cambió el calendario)
+        Calendario calendarioDestino = calendarioRepository.findById(request.getOidCalendario())
                 .orElseThrow(() -> new RuntimeException("Calendario no encontrado"));
 
-        for (Integer oidUsuario : request.getOidsUsuarios()) {
-            Usuario usuario = usuarioRepository.findById(oidUsuario)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-            UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
-            relacion.setUsuario(usuario);
-            relacion.setActividad(actividad);
-            relacion.setCalendario(calendario);
-            relacion.setCargoActividad(cargoActividad);
-            usuarioActividadCalendarioRepository.save(relacion);
+        ActividadCalendario actividadCalendarioDestino = actividadCalendarioRepository
+                .findByActividad_OidActividadAndCalendario_Oidcalendario(actividad.getOidActividad(), calendarioDestino.getOidcalendario())
+                .orElseGet(() -> {
+                    ActividadCalendario ac = new ActividadCalendario();
+                    ac.setActividad(actividadFinal);
+                    ac.setCalendario(calendarioDestino);
+                    ac.setUsuarioCreacion("system");
+                    return actividadCalendarioRepository.save(ac);
+                });
+
+
+        // Si existe pero cargo distinto, actualizar
+        if (actividadCalendarioDestino.getCargoActividad() == null || !actividadCalendarioDestino.getCargoActividad().getOidCargoActividad().equals(cargoActividad.getOidCargoActividad())) {
+            actividadCalendarioDestino.setCargoActividad(cargoActividad);
+            actividadCalendarioDestino = actividadCalendarioRepository.save(actividadCalendarioDestino);
         }
 
-        // Actualizar atributos EAV usando el servicio central
+        // Sincronizar relaciones de usuarios:
+        //  - obtener relaciones existentes para la actividad en el calendario destino
+        List<UsuarioActividadCalendario> relacionesExistentes = usuarioActividadCalendarioRepository.findByActividadCalendario_OidActividadCalendario(actividadCalendarioDestino.getOidActividadCalendario());
+        Set<Integer> existentesOids = relacionesExistentes.stream()
+                .map(r -> r.getUsuario().getOidUsuario())
+                .collect(Collectors.toSet());
+
+        Set<Integer> solicitados = new HashSet<>(request.getOidsUsuarios() == null ? List.of() : request.getOidsUsuarios());
+
+        // Añadir nuevos
+        for (Integer oidUsuario : solicitados) {
+            if (!existentesOids.contains(oidUsuario)) {
+                Usuario usuario = usuarioRepository.findById(oidUsuario)
+                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
+                relacion.setUsuario(usuario);
+                relacion.setActividadCalendario(actividadCalendarioDestino);
+                relacion.setUsuarioCreacion("system");
+                usuarioActividadCalendarioRepository.save(relacion);
+            }
+        }
+
+        // Eliminar relaciones que ya no están solicitadas (solo en el calendario destino)
+        for (UsuarioActividadCalendario exist : relacionesExistentes) {
+            Integer oidUsuarioExistente = exist.getUsuario().getOidUsuario();
+            if (!solicitados.contains(oidUsuarioExistente)) {
+                usuarioActividadCalendarioRepository.deleteByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(actividadCalendarioDestino.getOidActividadCalendario(), oidUsuarioExistente);
+            }
+        }
+
+        // Si el calendario cambió respecto a otras ActividadCalendario existentes, limpiamos actividadCalendario vacíos
+        List<ActividadCalendario> actividadCalendariosPrevios = actividadCalendarioRepository.findByActividad_OidActividad(actividad.getOidActividad());
+        for (ActividadCalendario acPrev : actividadCalendariosPrevios) {
+            // si es distinto al destino, y no tiene relaciones, lo borramos
+            if (!acPrev.getOidActividadCalendario().equals(actividadCalendarioDestino.getOidActividadCalendario())) {
+                List<UsuarioActividadCalendario> rels = usuarioActividadCalendarioRepository.findByActividadCalendario_OidActividadCalendario(acPrev.getOidActividadCalendario());
+                if (rels.isEmpty()) {
+                    actividadCalendarioRepository.deleteById(acPrev.getOidActividadCalendario());
+                }
+            }
+        }
+
+        // Actualizar atributos EAV
         if (request.getAtributos() != null && !request.getAtributos().isEmpty()) {
             Map<String, EavAtributo> cacheAtributos = eavAtributoRepository.findAll().stream()
                     .collect(Collectors.toMap(EavAtributo::getNombre, Function.identity()));
@@ -191,9 +258,10 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             eavAtributoService.actualizarAtributosDinamicos(actividadBaseDTO, actividad, cacheAtributos);
         }
 
-        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividad_OidActividad(oidActividad);
+        // Construir respuesta: relaciones actuales del actividadCalendarioDestino
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_OidActividadCalendario(actividadCalendarioDestino.getOidActividadCalendario());
         UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(
-                actividad, relaciones, calendario,
+                actividad, relaciones, calendarioDestino,
                 (request.getAtributos() != null) ? request.getAtributos().stream()
                         .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
                         .collect(Collectors.toList()) : List.of()
@@ -207,8 +275,9 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         Page<Actividad> actividades = actividadRepository.findAll(pageable);
 
         Page<UsuarioActividadCalendarioDTOResponse> page = actividades.map(actividad -> {
-            List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividad_OidActividad(actividad.getOidActividad());
-            Calendario calendario = relaciones.isEmpty() ? null : relaciones.get(0).getCalendario();
+            List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_Actividad_OidActividad(actividad.getOidActividad());
+            Calendario calendario = relaciones.isEmpty() ? null
+                    : relaciones.get(0).getActividadCalendario().getCalendario();
             // Obtener los atributos desde el servicio EAV para cada actividad:
             List<AtributoDTO> atributos = eavAtributoService.obtenerAtributosPorActividad(actividad);
             return mapper.toResponse(actividad, relaciones, calendario, atributos);
@@ -221,8 +290,8 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     public ApiResponse<UsuarioActividadCalendarioDTOResponse> obtenerActividadConRelaciones(Integer oidActividad) {
         Actividad actividad = actividadRepository.findById(oidActividad)
                 .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
-        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividad_OidActividad(oidActividad);
-        Calendario calendario = relaciones.isEmpty() ? null : relaciones.get(0).getCalendario();
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_Actividad_OidActividad(oidActividad);
+        Calendario calendario = relaciones.isEmpty() ? null : relaciones.get(0).getActividadCalendario().getCalendario();
         List<AtributoDTO> atributos = eavAtributoService.obtenerAtributosPorActividad(actividad);
         UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(actividad, relaciones, calendario, atributos);
         return new ApiResponse<>(200, "Actividad encontrada", dto);
@@ -234,18 +303,47 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         if (!actividadRepository.existsById(oidActividad)) {
             return new ApiResponse<>(404, "Actividad no encontrada", null);
         }
-        usuarioActividadCalendarioRepository.deleteAll(usuarioActividadCalendarioRepository.findByActividad_OidActividad(oidActividad));
+        // Eliminar todas relaciones de usuario asociadas a la actividad (todas las actividadCalendario)
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_Actividad_OidActividad(oidActividad);
+        if (!relaciones.isEmpty()) {
+            usuarioActividadCalendarioRepository.deleteAll(relaciones);
+        }
+
+        // Borrar todas las filas de ACTIVIDADCALENDARIO para esa actividad
+        List<ActividadCalendario> actividadCalendarios = actividadCalendarioRepository.findByActividad_OidActividad(oidActividad);
+        if (!actividadCalendarios.isEmpty()) {
+            actividadCalendarioRepository.deleteAll(actividadCalendarios);
+        }
+
+        // Finalmente borrar la Actividad
         actividadRepository.deleteById(oidActividad);
+
         return new ApiResponse<>(204, "Actividad y relaciones eliminadas", null);
     }
 
     @Override
     @Transactional
     public ApiResponse<Void> eliminarRelacion(Integer oidActividad, Integer oidUsuario, Integer oidCalendario) {
-        if (!usuarioActividadCalendarioRepository.existsByActividad_OidActividadAndUsuario_OidUsuarioAndCalendario_Oidcalendario(oidActividad, oidUsuario, oidCalendario)) {
+        // buscar el ActividadCalendario correspondiente
+        Optional<ActividadCalendario> optAc = actividadCalendarioRepository.findByActividad_OidActividadAndCalendario_Oidcalendario(oidActividad, oidCalendario);
+        if (optAc.isEmpty()) {
+            return new ApiResponse<>(404, "Relación no encontrada (actividad+calendario)", null);
+        }
+        ActividadCalendario ac = optAc.get();
+
+        boolean exists = usuarioActividadCalendarioRepository.existsByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(ac.getOidActividadCalendario(), oidUsuario);
+        if (!exists) {
             return new ApiResponse<>(404, "Relación no encontrada", null);
         }
-        usuarioActividadCalendarioRepository.deleteByActividad_OidActividadAndUsuario_OidUsuarioAndCalendario_Oidcalendario(oidActividad, oidUsuario, oidCalendario);
+
+        usuarioActividadCalendarioRepository.deleteByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(ac.getOidActividadCalendario(), oidUsuario);
+
+        // Si quedan 0 relaciones para el actividadCalendario, opcionalmente podríamos borrar la fila actividadCalendario
+        List<UsuarioActividadCalendario> restantes = usuarioActividadCalendarioRepository.findByActividadCalendario_OidActividadCalendario(ac.getOidActividadCalendario());
+        if (restantes.isEmpty()) {
+            actividadCalendarioRepository.deleteById(ac.getOidActividadCalendario());
+        }
+
         return new ApiResponse<>(204, "Relación eliminada correctamente", null);
     }
 }

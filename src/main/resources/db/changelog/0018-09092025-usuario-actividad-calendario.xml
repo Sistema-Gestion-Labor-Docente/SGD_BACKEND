@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+    <changeSet id="0018-09092025-usuario-actividad-calendario" author="Jesus Edwin Adrada Ruiz">
+        <!-- Secuencia para USUARIOACTIVIDADCALENDARIO -->
+        <createSequence sequenceName="SEQ_OIDUSUARIOACTIVIDADCALENDARIO" startValue="1" incrementBy="1"/>
+
+        <!-- Tabla USUARIOACTIVIDADCALENDARIO (referencia a ACTIVIDADCALENDARIO) -->
+        <createTable tableName="USUARIOACTIVIDADCALENDARIO">
+        <column name="OIDUSUARIOACTIVIDADCALENDARIO" type="INT" defaultValueComputed="nextval('SEQ_OIDUSUARIOACTIVIDADCALENDARIO')">
+            <constraints primaryKey="true" nullable="false"/>
+        </column>
+
+        <column name="OIDUSUARIO" type="INT">
+            <constraints nullable="false"/>
+        </column>
+
+        <!-- Referencia a la nueva tabla ACTIVIDADCALENDARIO -->
+        <column name="OIDACTIVIDADCALENDARIO" type="INT">
+            <constraints nullable="false"/>
+        </column>
+
+        <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+            <constraints nullable="false"/>
+        </column>
+
+        <column name="USUARIOCREACION" type="VARCHAR(100)">
+            <constraints nullable="false"/>
+        </column>
+
+        <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+        <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+        </createTable>
+
+        <!-- FKs para USUARIOACTIVIDADCALENDARIO -->
+        <addForeignKeyConstraint
+            baseTableName="USUARIOACTIVIDADCALENDARIO"
+            baseColumnNames="OIDUSUARIO"
+            referencedTableName="USUARIO"
+            referencedColumnNames="OIDUSUARIO"
+            constraintName="FK_UAC_USUARIO"
+            onDelete="RESTRICT"
+            onUpdate="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="USUARIOACTIVIDADCALENDARIO"
+            baseColumnNames="OIDACTIVIDADCALENDARIO"
+            referencedTableName="ACTIVIDADCALENDARIO"
+            referencedColumnNames="OIDACTIVIDADCALENDARIO"
+            constraintName="FK_UAC_ACTIVIDADCALENDARIO"
+            onDelete="RESTRICT"
+            onUpdate="RESTRICT"/>
+
+        <!-- Unicidad por usuario + actividadCalendario para evitar duplicados de la misma relación -->
+        <addUniqueConstraint tableName="USUARIOACTIVIDADCALENDARIO"
+                            columnNames="OIDUSUARIO,OIDACTIVIDADCALENDARIO"
+                            constraintName="UQ_USUARIO_ACTIVIDADCALENDARIO"/>
+    </changeSet>
+</databaseChangeLog>
