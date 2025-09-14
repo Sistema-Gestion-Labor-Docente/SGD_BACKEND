@@ -19,6 +19,7 @@ import co.edu.unicauca.sgd.api.domain.ActividadDecimal;
 import co.edu.unicauca.sgd.api.domain.ActividadInt;
 import co.edu.unicauca.sgd.api.domain.ActividadVarchar;
 import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import co.edu.unicauca.sgd.api.domain.EavAtributo;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
@@ -32,6 +33,7 @@ import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalend
 import co.edu.unicauca.sgd.api.mapper.UsuarioActividadCalendarioMapper;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
+import co.edu.unicauca.sgd.api.repository.CargoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.EavAtributoRepository;
 import co.edu.unicauca.sgd.api.repository.EstadoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
@@ -49,28 +51,26 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     private final CalendarioRepository calendarioRepository;
     private final UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository;
     private final UsuarioActividadCalendarioMapper mapper;
-    private final TipoActividadRepository tipoActividadRepository;
+    private final CargoActividadRepository cargoActividadRepository;
     private final EstadoActividadRepository estadoActividadRepository;
     private final EavAtributoService eavAtributoService;
     private final EavAtributoRepository eavAtributoRepository;
 
-    public UsuarioActividadCalendarioServiceImpl(
-            ActividadRepository actividadRepository,
+    public UsuarioActividadCalendarioServiceImpl(ActividadRepository actividadRepository,
             UsuarioRepository usuarioRepository,
             CalendarioRepository calendarioRepository,
             UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository,
             UsuarioActividadCalendarioMapper mapper,
-            TipoActividadRepository tipoActividadRepository,
+            CargoActividadRepository cargoActividadRepository,
             EstadoActividadRepository estadoActividadRepository,
             EavAtributoService eavAtributoService,
-            EavAtributoRepository eavAtributoRepository
-    ) {
+            EavAtributoRepository eavAtributoRepository) {
         this.actividadRepository = actividadRepository;
         this.usuarioRepository = usuarioRepository;
         this.calendarioRepository = calendarioRepository;
         this.usuarioActividadCalendarioRepository = usuarioActividadCalendarioRepository;
         this.mapper = mapper;
-        this.tipoActividadRepository = tipoActividadRepository;
+        this.cargoActividadRepository = cargoActividadRepository;
         this.estadoActividadRepository = estadoActividadRepository;
         this.eavAtributoService = eavAtributoService;
         this.eavAtributoRepository = eavAtributoRepository;
@@ -80,15 +80,15 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     @Transactional
     public ApiResponse<UsuarioActividadCalendarioDTOResponse> crearActividadConRelaciones(UsuarioActividadCalendarioDTORequest request) {
 
-        TipoActividad tipoActividad = tipoActividadRepository.findById(request.getOidTipoActividad())
-                .orElseThrow(() -> new RuntimeException("Tipo de actividad no encontrado"));
+        CargoActividad cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
+                .orElseThrow(() -> new RuntimeException("Cargo de actividad no encontrado"));
 
         EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
                 .orElseThrow(() -> new RuntimeException("Estado de actividad no encontrado"));
 
         // 1. Crear Actividad
         Actividad actividad = new Actividad();
-        actividad.setTipoActividad(tipoActividad);
+        actividad.setTipoActividad(cargoActividad.getTipoActividad());
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
         actividad.setHoras(request.getHoras());
@@ -107,6 +107,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             relacion.setActividad(actividad);
             relacion.setCalendario(calendario);
             relacion.setUsuarioCreacion("system");
+            relacion.setCargoActividad(cargoActividad);
             usuarioActividadCalendarioRepository.save(relacion);
         }
 
@@ -144,14 +145,14 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         Actividad actividad = actividadRepository.findById(oidActividad)
                 .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
 
-        TipoActividad tipoActividad = tipoActividadRepository.findById(request.getOidTipoActividad())
-                .orElseThrow(() -> new RuntimeException("Tipo de actividad no encontrado"));
+        CargoActividad cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
+                .orElseThrow(() -> new RuntimeException("Cargo de actividad no encontrado"));
 
         EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
                 .orElseThrow(() -> new RuntimeException("Estado de actividad no encontrado"));
 
         // Actualizar datos base
-        actividad.setTipoActividad(tipoActividad);
+        actividad.setTipoActividad(cargoActividad.getTipoActividad());
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
         actividad.setHoras(request.getHoras());
@@ -170,6 +171,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             relacion.setUsuario(usuario);
             relacion.setActividad(actividad);
             relacion.setCalendario(calendario);
+            relacion.setCargoActividad(cargoActividad);
             usuarioActividadCalendarioRepository.save(relacion);
         }
 

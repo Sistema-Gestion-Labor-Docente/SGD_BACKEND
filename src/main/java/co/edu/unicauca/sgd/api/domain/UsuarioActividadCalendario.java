@@ -39,6 +39,10 @@ public class UsuarioActividadCalendario {
     private Actividad actividad;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "OIDCARGOACTIVIDAD")
+    private CargoActividad cargoActividad;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "OIDCALENDARIO", nullable = false)
     private Calendario calendario;
 
