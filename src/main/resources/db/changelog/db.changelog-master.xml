@@ -24,4 +24,5 @@
     <include file="db/changelog/0016-09092025-seed-cargo-actividad.xml" context="data"/>
     <include file="db/changelog/0017-14092025-actividad-calendario.xml"/>
     <include file="db/changelog/0018-09092025-usuario-actividad-calendario.xml"/>
+    <include file="db/changelog/0019-15092025-seleccionado.xml"/>
 </databaseChangeLog>

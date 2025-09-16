@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+      http://www.liquibase.org/xml/ns/dbchangelog
+      https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <!-- ChangeSet: Estructura para SELECCIONADOS -->
+  <changeSet id="0018-15092025-seleccionados" author="Jesus Edwin Adrada Ruiz">
+
+    <!-- Secuencia para SELECCIONADOS -->
+    <createSequence sequenceName="SEQ_OIDSELECCIONADO" startValue="1" incrementBy="1"/>
+
+    <!-- Tabla SELECCIONADOS -->
+    <createTable tableName="SELECCIONADO">
+      <column name="OIDSELECCIONADO" type="INT" defaultValueComputed="nextval('SEQ_OIDSELECCIONADO')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="OIDCALENDARIO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="OIDUSUARIO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+
+      <!-- Guardamos el name() del enum ContratacionEnum (PLANTA, OCASIONAL, BECARIOS_Y_PRACTICANTES, BECARIOS_POSTGRADO, CATEDRA) -->
+      <column name="TIPO" type="VARCHAR(50)"/>
+
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="USUARIOCREACION" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+      <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+    </createTable>
+
+    <!-- FKs -->
+    <addForeignKeyConstraint
+      baseTableName="SELECCIONADO"
+      baseColumnNames="OIDCALENDARIO"
+      referencedTableName="CALENDARIO"
+      referencedColumnNames="OIDCALENDARIO"
+      constraintName="FK_SEL_CALENDARIO"
+      onDelete="RESTRICT"
+      onUpdate="RESTRICT"/>
+
+    <addForeignKeyConstraint
+      baseTableName="SELECCIONADO"
+      baseColumnNames="OIDUSUARIO"
+      referencedTableName="USUARIO"
+      referencedColumnNames="OIDUSUARIO"
+      constraintName="FK_SEL_USUARIO"
+      onDelete="RESTRICT"
+      onUpdate="RESTRICT"/>
+
+    <!-- Unicidad por (OIDCALENDARIO, OIDUSUARIO) -->
+    <addUniqueConstraint tableName="SELECCIONADO"
+                         columnNames="OIDCALENDARIO,OIDUSUARIO"
+                         constraintName="UQ_SELEC_CAL_USR"/>
+
+  </changeSet>
+
+</databaseChangeLog>
