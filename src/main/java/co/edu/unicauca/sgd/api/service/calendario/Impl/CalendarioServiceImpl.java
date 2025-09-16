@@ -1,6 +1,5 @@
 package co.edu.unicauca.sgd.api.service.calendario.impl;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -12,15 +11,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.Departamento;
+import co.edu.unicauca.sgd.api.domain.Seleccionado;
+import co.edu.unicauca.sgd.api.domain.Usuario;
+import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.dto.calendario.FechaDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.FechaDTOResponse;
+import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
 import co.edu.unicauca.sgd.api.mapper.CalendarioMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
+import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
+import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 import co.edu.unicauca.sgd.api.service.calendario.CalendarioService;
 import co.edu.unicauca.sgd.api.service.calendario.FechaService;
 import co.edu.unicauca.sgd.api.specification.CalendarioSpecs;
@@ -52,15 +59,27 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private FechaRepository fechaRepository;
 
+    private final SeleccionadoRepository seleccionadoRepository;
+
+    private final DepartamentoRepository departamentoRepository;
+
+    private final UsuarioDepartamentoRepository usuarioDepartamentoRepository;
+
     public CalendarioServiceImpl(
             CalendarioRepository calendarioRepository,
             CalendarioMapper calendarioMapper,
             FechaService fechaService,
-            FechaRepository fechaRepository) {
+            FechaRepository fechaRepository,
+            SeleccionadoRepository seleccionadoRepository,
+            DepartamentoRepository departamentoRepository,
+            UsuarioDepartamentoRepository usuarioDepartamentoRepository) {
         this.calendarioRepository = calendarioRepository;
         this.calendarioMapper = calendarioMapper;
         this.fechaService = fechaService;
         this.fechaRepository = fechaRepository;
+        this.seleccionadoRepository = seleccionadoRepository;
+        this.departamentoRepository = departamentoRepository;
+        this.usuarioDepartamentoRepository = usuarioDepartamentoRepository;
     }
 
     @Override
@@ -129,6 +148,7 @@ public class CalendarioServiceImpl implements CalendarioService {
 
             if (guardado != null) {
                 crearFechasResaltadasIniciales(guardado.getOidcalendario());
+                crearSeleccionadosIniciales(guardado);
             }
 
             CalendarioDTOResponse dto = calendarioMapper.toResponse(guardado);
@@ -212,6 +232,85 @@ public class CalendarioServiceImpl implements CalendarioService {
             }
         }
         logger.info("Fechas resaltadas iniciales creadas para calendario ID: {}", oidCalendario);
+    }
+
+    /**
+     * Crea listas de seleccionados iniciales para cada departamento.
+     * Regla: todos los usuarios del departamento que NO tengan roles ESTUDIANTE, SECRETARIA, FACULTAD, DECANO.
+     */
+    private void crearSeleccionadosIniciales(Calendario calendario) {
+        logger.info("Creando listas de seleccionados iniciales para calendario ID: {}", calendario.getOidcalendario());
+
+        // Roles a excluir (case-insensitive)
+        final List<String> rolesExcluidos = List.of("ESTUDIANTE", "SECRETARIA", "FACULTAD", "DECANO");
+
+        // Obtenemos todos los departamentos
+        List<Departamento> departamentos = departamentoRepository.findAll();
+
+        for (Departamento dept : departamentos) {
+            try {
+                // Obtenemos las relaciones UsuarioDepartamento para el departamento
+                List<UsuarioDepartamento> uds = usuarioDepartamentoRepository.findByDepartamento(dept);
+
+                if (uds == null || uds.isEmpty()) {
+                    logger.debug("Departamento sin usuarios, saltando: {}", dept);
+                    continue;
+                }
+
+                for (UsuarioDepartamento ud : uds) {
+                    Usuario usuario = ud.getUsuario();
+                    if (usuario == null) {
+                        logger.debug("UsuarioDepartamento sin usuario asociado, salto. ud={}", ud);
+                        continue;
+                    }
+
+                    // Verificamos roles: si tiene algún rol excluido, no lo seleccionamos
+                    boolean tieneRolExcluido = usuario.getRoles() != null
+                            && usuario.getRoles().stream()
+                                .map(r -> r.getNombre() == null ? "" : r.getNombre().toUpperCase())
+                                .anyMatch(rolesExcluidos::contains);
+
+                    if (tieneRolExcluido) {
+                        // No lo incluimos
+                        continue;
+                    }
+
+                    // Evitar duplicados por (calendario, usuario)
+                    try {
+                        Integer oidCalendario = calendario.getOidcalendario();
+                        Integer oidUsuario = usuario.getOidUsuario();
+
+                        if (seleccionadoRepository.existsByCalendarioOidcalendarioAndUsuarioOidUsuario(oidCalendario, oidUsuario)) {
+                            logger.debug("Seleccionado ya existe (calendario={}, usuario={}), skip", oidCalendario, oidUsuario);
+                            continue;
+                        }
+
+                        // Crear seleccionado (usamos objeto Calendario y Usuario ya existentes para persistencia)
+                        Seleccionado s = new Seleccionado();
+                        s.setCalendario(calendario);
+                        s.setUsuario(usuario);
+
+                        // Default para TIPO: PLANTA (ajusta si prefieres otra lógica)
+                        s.setTipo(ContratacionEnum.PLANTA);
+
+                        // UsuarioCreacion: usamos quien creó el calendario si está, si no "SYSTEM"
+                        s.setUsuarioCreacion(StringUtils.hasText(calendario.getUsuarioCreacion()) ? calendario.getUsuarioCreacion() : "SYSTEM");
+
+                        seleccionadoRepository.save(s);
+                        logger.debug("Seleccionado creado: calendario={}, usuario={}", oidCalendario, oidUsuario);
+                    } catch (Exception exUsuario) {
+                        // Capturamos por usuario para no abortar todo el proceso
+                        logger.error("No se pudo crear seleccionado para usuario {} en departamento {}: {}",
+                                usuario.getOidUsuario(), dept, exUsuario.getMessage());
+                    }
+                }
+            } catch (Exception exDept) {
+                // Capturamos por departamento para que un fallo no detenga los demás
+                logger.error("Error creando seleccionados para departamento {}: {}", dept, exDept.getMessage());
+            }
+        }
+
+        logger.info("Terminado de crear listas de seleccionados para calendario ID: {}", calendario.getOidcalendario());
     }
 }
 
