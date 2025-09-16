@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class UsuarioActividadCalendarioDTORequest {
 
     private Integer oidActividad;
-    private Integer oidTipoActividad;
+    private Integer oidCargoActividad;
     private Integer oidEstadoActividad;
     private String nombreActividad;
     private Float horas;

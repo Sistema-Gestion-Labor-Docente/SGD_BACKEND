@@ -34,13 +34,9 @@ public class UsuarioActividadCalendario {
     @JoinColumn(name = "OIDUSUARIO", nullable = false)
     private Usuario usuario;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "OIDACTIVIDAD", nullable = false)
-    private Actividad actividad;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "OIDCALENDARIO", nullable = false)
-    private Calendario calendario;
+   @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "OIDACTIVIDADCALENDARIO", nullable = false)
+    private ActividadCalendario actividadCalendario;
 
     @Column(name = "FECHACREACION", updatable = false, nullable = false)
     @CreationTimestamp
