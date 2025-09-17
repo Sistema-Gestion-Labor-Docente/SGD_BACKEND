@@ -1,11 +1,15 @@
 package co.edu.unicauca.sgd.api.service.usuario.laborDocente.impl;
 
+import co.edu.unicauca.sgd.api.domain.Departamento;
 import co.edu.unicauca.sgd.api.domain.Seleccionado;
+import co.edu.unicauca.sgd.api.domain.Usuario;
+import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTOResponse;
 import co.edu.unicauca.sgd.api.mapper.SeleccionadoMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
+import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
@@ -21,7 +25,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,6 +39,7 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
     private final SeleccionadoMapper seleccionadoMapper;
     private final UsuarioRepository usuarioRepository;
     private final UsuarioDepartamentoRepository usuarioDepartamentoRepository;
+    private final DepartamentoRepository departamentoRepository;
     private final CalendarioRepository calendarioRepository;
 
     @Override
@@ -97,6 +101,9 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
             validarCalendarioExiste(request.getOidCalendario());
             validarUsuarioExiste(request.getOidUsuario());
             validarNoDuplicado(request.getOidCalendario(), request.getOidUsuario());
+            if (request.getOidDepartamento() != null) {
+                validarPerteneceDepartamento(request.getOidUsuario(), request.getOidDepartamento());
+            }
 
             // preparar entidad
             Seleccionado entidad = seleccionadoMapper.convertToEntity(request);
@@ -196,5 +203,26 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
         int end = Math.min((start + pageable.getPageSize()), list.size());
         List<SeleccionadoDTOResponse> content = (start <= end) ? list.subList(start, end) : List.of();
         return new PageImpl<>(content, pageable, list.size());
+    }
+
+    private void validarPerteneceDepartamento(Integer oidUsuario, Integer oidDepartamento) {
+        boolean pertenece = usuarioDepartamentoRepository.existsByUsuarioOidUsuarioAndDepartamentoOidDepartamento(oidUsuario, oidDepartamento);
+        
+        if (pertenece) {
+            return;
+        }
+
+        // Cargar usuario y departamento — si no existen, lanzar (evita crear registros incompletos)
+        Usuario usuario = usuarioRepository.findById(oidUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuario no existe con ID: " + oidUsuario));
+
+        Departamento departamento = departamentoRepository.findById(oidDepartamento)
+                .orElseThrow(() -> new RuntimeException("Departamento no existe con ID: " + oidDepartamento));
+
+        // Crear y guardar la relación correctamente
+        UsuarioDepartamento ud = new UsuarioDepartamento();
+        ud.setUsuario(usuario);            // @MapsId copiará el id en oidUsuario
+        ud.setDepartamento(departamento);
+        usuarioDepartamentoRepository.save(ud);
     }
 }

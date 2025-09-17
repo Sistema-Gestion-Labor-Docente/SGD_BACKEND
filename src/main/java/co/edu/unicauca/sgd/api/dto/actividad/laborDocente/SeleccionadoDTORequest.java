@@ -23,4 +23,6 @@ public class SeleccionadoDTORequest {
     private Integer oidUsuario;
 
     private ContratacionEnum tipo;
+
+    private Integer oidDepartamento;
 }
