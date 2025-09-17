@@ -12,4 +12,6 @@ public interface UsuarioDepartamentoRepository extends JpaRepository<UsuarioDepa
 
     List<UsuarioDepartamento> findByDepartamento(Departamento departamento);
 
+    boolean existsByUsuarioOidUsuarioAndDepartamentoOidDepartamento(Integer oidUsuario, Integer oidDepartamento);
+
 }
