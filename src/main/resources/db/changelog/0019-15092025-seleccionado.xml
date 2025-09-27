@@ -7,7 +7,7 @@
       https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
 
   <!-- ChangeSet: Estructura para SELECCIONADOS -->
-  <changeSet id="0018-15092025-seleccionados" author="Jesus Edwin Adrada Ruiz">
+  <changeSet id="0019-15092025-seleccionados" author="Jesus Edwin Adrada Ruiz">
 
     <!-- Secuencia para SELECCIONADOS -->
     <createSequence sequenceName="SEQ_OIDSELECCIONADO" startValue="1" incrementBy="1"/>

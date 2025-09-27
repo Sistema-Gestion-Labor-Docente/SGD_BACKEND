@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+      http://www.liquibase.org/xml/ns/dbchangelog
+      https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <!-- ChangeSet: Estructura para NUEVOS ATRIBUTOS -->
+  <changeSet id="0020-24092025-seed-new-eav-atributos" author="Jesus Edwin Adrada Ruiz">
+
+    <insert tableName="EAVATRIBUTO">
+        <column name="OIDEAVATRIBUTO" value="12"></column>
+        <column name="NOMBRE" value="F_INICIAL"/>
+        <column name="TIPODATO" value="DATE"/>
+        <column name="FECHACREACION" valueDate="NOW()"/>
+        <column name="FECHAACTUALIZACION" value="NOW()"/>
+    </insert>
+
+    <insert tableName="EAVATRIBUTO">
+        <column name="OIDEAVATRIBUTO" value="13"></column>
+        <column name="NOMBRE" value="F_FINAL"/>
+        <column name="TIPODATO" value="DATE"/>
+        <column name="FECHACREACION" valueDate="NOW()"/>
+        <column name="FECHAACTUALIZACION" value="NOW()"/>
+    </insert>
+
+    <insert tableName="EAVATRIBUTO">
+        <column name="OIDEAVATRIBUTO" value="14"></column>
+        <column name="NOMBRE" value="AREA"/>
+        <column name="TIPODATO" value="VARCHAR"/>
+        <column name="FECHACREACION" valueDate="NOW()"/>
+        <column name="FECHAACTUALIZACION" value="NOW()"/>
+    </insert>
+
+    <insert tableName="EAVATRIBUTO">
+        <column name="OIDEAVATRIBUTO" value="15"></column>
+        <column name="NOMBRE" value="H. APROB."/>
+        <column name="TIPODATO" value="FLOAT"/>
+        <column name="FECHACREACION" valueDate="NOW()"/>
+        <column name="FECHAACTUALIZACION" value="NOW()"/>
+    </insert>
+
+    <insert tableName="EAVATRIBUTO">
+        <column name="OIDEAVATRIBUTO" value="16"></column>
+        <column name="NOMBRE" value="H. LABOR"/>
+        <column name="TIPODATO" value="FLOAT"/>
+        <column name="FECHACREACION" valueDate="NOW()"/>
+        <column name="FECHAACTUALIZACION" value="NOW()"/>
+    </insert>
+
+    <insert tableName="EAVATRIBUTO">
+        <column name="OIDEAVATRIBUTO" value="17"></column>
+        <column name="NOMBRE" value="UNIDAD ACADÉMICA"/>
+        <column name="TIPODATO" value="VARCHAR"/>
+        <column name="FECHACREACION" valueDate="NOW()"/>
+        <column name="FECHAACTUALIZACION" value="NOW()"/>
+    </insert>
+
+  </changeSet>
+
+</databaseChangeLog>

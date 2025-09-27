@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.service.actividad.laborDocente.UsuarioActividadCalendarioService;
@@ -34,9 +35,13 @@ public class UsuarioActividadCalendarioController {
 
     @GetMapping
     @Operation(summary = "Listar actividades con relaciones", description = "Lista todas las actividades y sus relaciones usuario/calendario")
-    public ResponseEntity<ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>>> findAll(Pageable pageable) {
+    public ResponseEntity<ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>>> findAll(
+            @RequestParam(name = "oidCalendario", required = true) Integer oidCalendario,
+            @RequestParam(name = "oidDepartamento", required = true) Integer oidDepartamento,
+            @RequestParam(name = "oidTipoActividad", required = true) Integer oidTipoActividad,
+            Pageable pageable) {
         ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> response =
-                usuarioActividadCalendarioService.listarActividadesConRelaciones(pageable);
+                usuarioActividadCalendarioService.listarActividadesConRelaciones(oidCalendario, oidDepartamento, oidTipoActividad, pageable);
         return ResponseEntity.status(response.getCodigo()).body(response);
     }
 
@@ -80,5 +85,15 @@ public class UsuarioActividadCalendarioController {
         ApiResponse<Void> response = usuarioActividadCalendarioService.eliminarRelacion(oidActividad, oidUsuario, oidCalendario);
         return ResponseEntity.status(response.getCodigo()).body(response);
     }
+
+    // Otros métodos específicos pueden ser añadidos aquí según sea necesario
+
+    @GetMapping("/tipo/docencia")
+    @Operation(summary = "Listar actividades de tipo Docencia", description = "Lista las actividades cuyo tipo es 'Docencia' con su DTO específico")
+    public ResponseEntity<ApiResponse<Page<DocenciaDTOResponse>>> listarDocencia(Pageable pageable) {
+        ApiResponse<Page<DocenciaDTOResponse>> response = usuarioActividadCalendarioService.listarPorTipoDocencia(pageable);
+        return ResponseEntity.status(response.getCodigo()).body(response);
+    }
+
 }
 

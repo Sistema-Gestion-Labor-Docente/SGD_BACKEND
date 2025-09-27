@@ -17,6 +17,7 @@ import co.edu.unicauca.sgd.api.dto.RolDTO;
 import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.CargoActividadDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.dto.materias.DepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
@@ -107,6 +108,45 @@ public class UsuarioActividadCalendarioMapper {
 
         return dto;
     }
+
+    // Otros métodos de mapeo si es necesario
+    // Docencia
+    public DocenciaDTOResponse toDocenciaResponse(Actividad actividad,
+                                                List<UsuarioActividadCalendario> relaciones,
+                                                Calendario calendario,
+                                                List<AtributoDTO> atributos) {
+        DocenciaDTOResponse dto = new DocenciaDTOResponse();
+        // Reusar parte común
+        UsuarioActividadCalendarioDTOResponse base = toResponse(actividad, relaciones, calendario, atributos);
+        dto.setActividad(base.getActividad());
+        dto.setUsuarios(base.getUsuarios());
+        dto.setOidCalendario(base.getOidCalendario());
+        dto.setNombreCalendario(base.getNombreCalendario());
+
+        // Campos específicos de Docencia (ejemplo)
+        // Por ejemplo: cargaHorariaDocencia, programa, asignatura — extraer de atributos EAV si aplica
+        dto.setCargaHorariaDocencia(extractAtributoFloat(atributos, "carga_horaria_docencia"));
+        dto.setAsignatura(extractAtributoString(atributos, "asignatura"));
+
+        return dto;
+    }
+
+    // Helpers para extraer atributos (puedes mover a utilidad propia)
+    private String extractAtributoString(List<AtributoDTO> atributos, String nombre) {
+        if (atributos == null) return null;
+        return atributos.stream()
+                .filter(a -> a.getCodigoAtributo().equalsIgnoreCase(nombre))
+                .map(AtributoDTO::getValor)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Float extractAtributoFloat(List<AtributoDTO> atributos, String nombre) {
+        String val = extractAtributoString(atributos, nombre);
+        if (val == null) return null;
+        try { return Float.valueOf(val); } catch (NumberFormatException e) { return null; }
+    }
+
 }
 
 

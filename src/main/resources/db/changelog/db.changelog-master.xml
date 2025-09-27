@@ -25,4 +25,5 @@
     <include file="db/changelog/0017-14092025-actividad-calendario.xml"/>
     <include file="db/changelog/0018-09092025-usuario-actividad-calendario.xml"/>
     <include file="db/changelog/0019-15092025-seleccionado.xml"/>
+    <include file="db/changelog/0020-24092025-seed-new-eav-atributos.xml" context="data"/>
 </databaseChangeLog>
