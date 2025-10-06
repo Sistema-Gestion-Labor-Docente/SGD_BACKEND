@@ -33,7 +33,7 @@ public class Necesidad {
     // relación a la materia (la materia contiene info del programa)
     // uso columna de FK IDMATERIA (ajusta referencedColumnName si tu PK de Materia se llama distinto)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "IDMATERIA", referencedColumnName = "OID")
+    @JoinColumn(name = "IDMATERIA", referencedColumnName = "IDMATERIA")
     private Materia materia;
 
     @Column(name = "GRUPO", length = 10, nullable = false)

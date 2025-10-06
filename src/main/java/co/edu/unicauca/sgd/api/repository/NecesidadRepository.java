@@ -14,9 +14,9 @@ import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
 public interface NecesidadRepository extends JpaRepository<Necesidad, Integer>, JpaSpecificationExecutor<Necesidad> {
 
     // para la validación del correquisito: verificar existencia de necesidad de la materia X
-    boolean existsByCalendario_OidcalendarioAndMateria_Oid(Integer oidCalendario, Integer oidMateria);
+    boolean existsByCalendario_OidcalendarioAndMateria_IdMateria(Integer oidCalendario, Integer idMateria);
 
-    Optional<Necesidad> findByCalendario_OidcalendarioAndMateria_Oid(Integer oidCalendario, Integer oidMateria);
+    Optional<Necesidad> findByCalendario_OidcalendarioAndMateria_IdMateria(Integer oidCalendario, Integer idMateria);
 
     List<Necesidad> findAllByCalendario_Oidcalendario(Integer oidCalendario);
 
