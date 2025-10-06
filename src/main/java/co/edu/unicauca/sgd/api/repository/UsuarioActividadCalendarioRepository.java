@@ -41,38 +41,19 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
 
     boolean existsByActividadCalendario_Actividad_OidActividadAndUsuario_OidUsuarioAndActividadCalendario_Calendario_Oidcalendario(Integer oidActividad, Integer oidUsuario, Integer oidCalendario);
 
+    List<UsuarioActividadCalendario> findByActividadCalendario_Actividad_OidActividadIn(List<Integer> oidActividades);
+
     @Query(
       value = """
-        SELECT
-          a.OIDACTIVIDAD                     AS oidActividad,
-          ac.OIDACTIVIDADCALENDARIO          AS oidActividadCalendario,
-          ac.OIDCARGOACTIVIDAD               AS oidCargoActividad,
-          ac.OIDCALENDARIO                   AS oidCalendario,
-          a.NOMBREACTIVIDAD                  AS nombreActividad,
-          a.HORAS                            AS horas,
-          a.SEMANAS                          AS semanas,
-          a.IDLABORDOCENTE                   AS idLaborDocente,
-          a.INFORMEEJECUTIVO                 AS informeEjecutivo,
-          -- agregamos usuarios que pertenecen al departamento (como JSON array)
-          json_agg(
-            json_build_object(
-              'oidUsuario', u.OIDUSUARIO,
-              'identificacion', u.IDENTIFICACION,
-              'nombres', u.NOMBRES,
-              'apellidos', u.APELLIDOS
-            )
-            ORDER BY u.OIDUSUARIO
-          ) FILTER (WHERE u.OIDUSUARIO IS NOT NULL) AS usuariosJson
+        SELECT DISTINCT a.OIDACTIVIDAD
         FROM USUARIOACTIVIDADCALENDARIO uac
         JOIN ACTIVIDADCALENDARIO ac ON uac.OIDACTIVIDADCALENDARIO = ac.OIDACTIVIDADCALENDARIO
         JOIN ACTIVIDAD a ON ac.OIDACTIVIDAD = a.OIDACTIVIDAD
         JOIN USUARIO u ON uac.OIDUSUARIO = u.OIDUSUARIO
         JOIN USUARIODEPARTAMENTO ud ON ud.OIDUSUARIO = u.OIDUSUARIO
         WHERE ac.OIDCALENDARIO = :oidCalendario
-          AND a.OIDTIPOACTIVIDAD = :oidTipoActividad
+          AND ( :oidTipoActividad IS NULL OR a.OIDTIPOACTIVIDAD = :oidTipoActividad )
           AND ud.OIDDEPARTAMENTO = :oidDepartamento
-        GROUP BY a.OIDACTIVIDAD, ac.OIDACTIVIDADCALENDARIO, ac.OIDCARGOACTIVIDAD, ac.OIDCALENDARIO,
-                 a.NOMBREACTIVIDAD, a.HORAS, a.SEMANAS, a.IDLABORDOCENTE, a.INFORMEEJECUTIVO
       """,
       countQuery = """
         SELECT COUNT(DISTINCT a.OIDACTIVIDAD)
@@ -82,16 +63,15 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
         JOIN USUARIO u ON uac.OIDUSUARIO = u.OIDUSUARIO
         JOIN USUARIODEPARTAMENTO ud ON ud.OIDUSUARIO = u.OIDUSUARIO
         WHERE ac.OIDCALENDARIO = :oidCalendario
-          AND a.OIDTIPOACTIVIDAD = :oidTipoActividad
+          AND ( :oidTipoActividad IS NULL OR a.OIDTIPOACTIVIDAD = :oidTipoActividad )
           AND ud.OIDDEPARTAMENTO = :oidDepartamento
       """,
       nativeQuery = true
     )
-    Page<ActividadUsuariosProjection> findActividadesWithUsersByFilters(
+    Page<Integer> findDistinctActividadIdsByFilters(
         @Param("oidCalendario") Integer oidCalendario,
         @Param("oidDepartamento") Integer oidDepartamento,
         @Param("oidTipoActividad") Integer oidTipoActividad,
         Pageable pageable);
-
 
 }

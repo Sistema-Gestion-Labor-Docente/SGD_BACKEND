@@ -1,5 +1,6 @@
 package co.edu.unicauca.sgd.api.service.actividad.laborDocente.impl;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -171,7 +172,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
     @Override
     @Transactional
-    public ApiResponse<UsuarioActividadCalendarioDTOResponse> actualizarActividadConRelaciones(Integer oidActividad, @Valid UsuarioActividadCalendarioDTORequest request) {
+    public ApiResponse<UsuarioActividadCalendarioDTOResponse> actualizarActividadConRelaciones(Integer oidActividad, @Valid UsuarioActividadCalendarioDTORequest request) {        
         Actividad actividad = actividadRepository.findById(oidActividad)
                 .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
 
@@ -289,105 +290,68 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             Integer oidTipoActividad,
             Pageable pageable) {
 
-        // Validaciones básicas
-        if (oidCalendario == null || oidDepartamento == null || oidTipoActividad == null) {
+         // Validaciones básicas
+        if (oidCalendario == null || oidDepartamento == null) {
             return new ApiResponse<>(400, "Los parámetros oidCalendario, oidDepartamento y oidTipoActividad son obligatorios", Page.empty());
         }
 
-        // Ejecuta la consulta nativa paginada (single function)
-        Page<ActividadUsuariosProjection> pageProj = usuarioActividadCalendarioRepository.findActividadesWithUsersByFilters(
+        // 1) Obtener page de ids de actividad (paginado)
+        Page<Integer> idsPage = usuarioActividadCalendarioRepository.findDistinctActividadIdsByFilters(
                 oidCalendario, oidDepartamento, oidTipoActividad, pageable);
 
-        // Convertir cada proyección a DTOResponse
-        List<UsuarioActividadCalendarioDTOResponse> dtos = pageProj.getContent().stream().map(proj -> {
-            // 1) Construir Actividad domain-lite (necesitamos al menos el OID para pedir atributos)
-            Actividad actividad = actividadRepository.findById(proj.getOidActividad())
-                    .orElseGet(() -> {
-                        // fallback parcial: crear objeto actividad mínimo (sin persistir)
-                        Actividad a = new Actividad();
-                        a.setOidActividad(proj.getOidActividad());
-                        a.setNombreActividad(proj.getNombreActividad());
-                        a.setHoras(proj.getHoras() == null ? null : proj.getHoras().floatValue());
-                        a.setSemanas(proj.getSemanas() == null ? null : proj.getSemanas().floatValue());
-                        a.setIdLaborDocente(proj.getIdLaborDocente());
-                        a.setInformeEjecutivo(proj.getInformeEjecutivo());
-                        return a;
-                    });
+        List<Integer> actividadIds = idsPage.getContent();
+        if (actividadIds.isEmpty()) {
+            Page<UsuarioActividadCalendarioDTOResponse> empty = new PageImpl<>(List.of(), pageable, idsPage.getTotalElements());
+            return new ApiResponse<>(200, "Actividades encontradas", empty);
+        }
 
-            // 2) Obtener atributos EAV por actividad (posible N+1, discuss later)
+        // 2) Traer actividades en bloque (mejor que findById en un loop)
+        List<Actividad> actividades = actividadRepository.findAllById(actividadIds);
+        Map<Integer, Actividad> actividadById = actividades.stream()
+                .collect(Collectors.toMap(Actividad::getOidActividad, Function.identity()));
+
+        // 3) Traer todas las relaciones para esas actividades (en un solo query)
+        List<UsuarioActividadCalendario> relacionesAll =
+                usuarioActividadCalendarioRepository.findByActividadCalendario_Actividad_OidActividadIn(actividadIds);
+
+        // Agrupar relaciones por OID actividad
+        Map<Integer, List<UsuarioActividadCalendario>> relacionesPorActividad = relacionesAll.stream()
+                .collect(Collectors.groupingBy(rel -> {
+                    Actividad act = rel.getActividadCalendario() != null ? rel.getActividadCalendario().getActividad() : null;
+                    return act != null ? act.getOidActividad() : null;
+                }));
+
+        // 4) Construir DTOs en el mismo orden que actividadIds (mantener paginación ordenada)
+        List<UsuarioActividadCalendarioDTOResponse> dtos = new ArrayList<>(actividadIds.size());
+        for (Integer oidAct : actividadIds) {
+            Actividad actividad = actividadById.get(oidAct);
+            if (actividad == null) {
+                // fallback: crear stub parcial (evita NPEs)
+                actividad = new Actividad();
+                actividad.setOidActividad(oidAct);
+            }
+
+            // relaciones para esta actividad (puede ser null o vacío)
+            List<UsuarioActividadCalendario> relaciones = relacionesPorActividad.getOrDefault(oidAct, List.of());
+
+            // calendario: tomar de la primera relación si existe
+            Calendario calendario = relaciones.isEmpty() ? null : relaciones.get(0).getActividadCalendario().getCalendario();
+
+            // atributos EAV (mantengo la llamada actual por actividad)
             List<AtributoDTO> atributos = eavAtributoService.obtenerAtributosPorActividad(actividad);
 
-            // 3) Parsear usuariosJson
-            List<UsuarioDTO> usuarios = List.of();
-            try {
-                String usuariosJson = proj.getUsuariosJson();
-                if (usuariosJson != null && !usuariosJson.isBlank()) {
-                    // Mapear JSON array a List<Map> y luego a UsuarioDTO
-                    var node = objectMapper.readTree(usuariosJson);
-                    if (node.isArray()) {
-                        usuarios = StreamSupport.stream(node.spliterator(), false)
-                            .map(n -> {
-                                UsuarioDTO u = new UsuarioDTO();
-                                u.setOidUsuario(n.path("oidUsuario").isInt() ? n.path("oidUsuario").asInt() : null);
-                                u.setIdentificacion(n.path("identificacion").isTextual() ? n.path("identificacion").asText() : null);
-                                u.setNombres(n.path("nombres").isTextual() ? n.path("nombres").asText() : null);
-                                u.setApellidos(n.path("apellidos").isTextual() ? n.path("apellidos").asText() : null);
-                                // NOTA: llenamos departamento/roles si los necesitas; aquí solo datos básicos
-                                return u;
-                            })
-                            .collect(Collectors.toList());
-                    }
-                }
-            } catch (Exception ex) {
-                // no queremos fallar la consulta por un parseo; fallback a lista vacía
-                usuarios = List.of();
-            }
-
-            // 4) Construir DTOResponse usando mapper existente pero adaptando inputs
-            // necesitamos construir un objeto Calendario parcial (solo OID)
-            Calendario calendario = new Calendario();
-            calendario.setOidcalendario(proj.getOidCalendario());
-
-            // Para compatibilidad con mapper.toResponse(Actividad, relaciones, calendario, atributos)
-            // construimos relaciones "simples" en memoria: convertir usuarios a UsuarioActividadCalendario con actividadCalendario stub
-            ActividadCalendario acStub = new ActividadCalendario();
-            acStub.setOidActividadCalendario(proj.getOidActividadCalendario());
-            acStub.setCargoActividad(null); // si quieres el cargo, puedes buscarlo luego por proj.getOidCargoActividad()
-
-            // build fake relaciones list
-            List<UsuarioActividadCalendario> relaciones = usuarios.stream().map(uDto -> {
-                Usuario u = new Usuario();
-                u.setOidUsuario(uDto.getOidUsuario());
-                u.setIdentificacion(uDto.getIdentificacion());
-                u.setNombres(uDto.getNombres());
-                u.setApellidos(uDto.getApellidos());
-                UsuarioActividadCalendario rel = new UsuarioActividadCalendario();
-                rel.setUsuario(u);
-                rel.setActividadCalendario(acStub);
-                return rel;
-            }).collect(Collectors.toList());
-
-            // Mapear con el mapper existente (usa primer relación para cargo si existe)
+            // Mapear usando el mapper existente
             UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(actividad, relaciones, calendario, atributos);
 
-            // Si necesitas incluir info de cargo desde proj.getOidCargoActividad, puedes recuperarlo:
-            if (proj.getOidCargoActividad() != null) {
-                cargoActividadRepository.findById(proj.getOidCargoActividad()).ifPresent(cargo -> {
-                    // mapper ya habrá colocado cargo si estaba en actividadCalendario; sino actualizamos el campo en DTO
-                    if (dto.getActividad() != null && dto.getActividad().getCargoActividad() == null) {
-                        var cargoDto = new CargoActividadDTOResponse();
-                        cargoDto.setOidCargoActividad(cargo.getOidCargoActividad());
-                        cargoDto.setNombre(cargo.getNombre());
-                        cargoDto.setMaxHorasSemana(cargo.getMaxHorasSemana());
-                        dto.getActividad().setCargoActividad(cargoDto);
-                    }
-                });
-            }
+            // Si necesitas colocar cargo desde actividadCalendario (si no viene por mapper)
+            // se puede rellenar aquí igual que antes (cargoActividadRepository.findById(...))
 
-            return dto;
-        }).collect(Collectors.toList());
+            dtos.add(dto);
+        }
 
-        Page<UsuarioActividadCalendarioDTOResponse> resultPage = new PageImpl<>(dtos, pageable, pageProj.getTotalElements());
+        Page<UsuarioActividadCalendarioDTOResponse> resultPage =
+                new PageImpl<>(dtos, pageable, idsPage.getTotalElements());
+
         return new ApiResponse<>(200, "Actividades encontradas", resultPage);
     }
 

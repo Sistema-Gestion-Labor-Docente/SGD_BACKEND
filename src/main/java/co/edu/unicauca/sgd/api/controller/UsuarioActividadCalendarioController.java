@@ -38,7 +38,7 @@ public class UsuarioActividadCalendarioController {
     public ResponseEntity<ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>>> findAll(
             @RequestParam(name = "oidCalendario", required = true) Integer oidCalendario,
             @RequestParam(name = "oidDepartamento", required = true) Integer oidDepartamento,
-            @RequestParam(name = "oidTipoActividad", required = true) Integer oidTipoActividad,
+            @RequestParam(name = "oidTipoActividad", required = false) Integer oidTipoActividad,
             Pageable pageable) {
         ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> response =
                 usuarioActividadCalendarioService.listarActividadesConRelaciones(oidCalendario, oidDepartamento, oidTipoActividad, pageable);
