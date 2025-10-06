@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -85,12 +86,18 @@ public class UsuarioController {
     @GetMapping("/logueado")
     @Operation(summary = "Obtener usuario actual", description = "Obtiene el usuario actualmente autenticado")
     public ResponseEntity<ApiResponse<UsuarioDTO>> obtenerUsuarioActual(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>(HttpStatus.UNAUTHORIZED.value(), "No se encontró una autenticación válida", null));
+        }
+
         try {
             String correo = authentication.getName();
             UsuarioDTO usuario = usuarioService.obtenerUsuarioActual(correo);
             return ResponseEntity.ok(new ApiResponse<>(200, "Usuario obtenido correctamente", usuario));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(new ApiResponse<>(500, "Error al obtener el usuario: " + e.getMessage(), null));
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse<>(500, "Error al obtener el usuario: " + e.getMessage(), null));
         }
     }
 }
