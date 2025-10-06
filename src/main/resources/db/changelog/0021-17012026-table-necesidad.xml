@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0021-17012026-necesidad" author="Jesus Edwin Adrada Ruiz">
+    <createSequence sequenceName="SEQ_OIDNECESIDAD" startValue="1" incrementBy="1"/>
+
+    <createTable tableName="NECESIDAD">
+      <column name="OIDNECESIDAD" type="INT" defaultValueComputed="nextval('SEQ_OIDNECESIDAD')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="OIDCALENDARIO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="IDMATERIA" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="GRUPO" type="VARCHAR(10)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="CUPO" type="INT"/>
+      <column name="ESTADO" type="VARCHAR(50)" defaultValue="BORRADOR">
+        <constraints nullable="false"/>
+      </column>
+      <column name="CORREQUISITO_OIDNECESIDAD" type="INT"/>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="USUARIOCREACION" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+      <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+    </createTable>
+
+    <addUniqueConstraint tableName="NECESIDAD"
+                         columnNames="OIDCALENDARIO, IDMATERIA"
+                         constraintName="UQ_NEC_CAL_MAT"/>
+
+    <addForeignKeyConstraint
+        baseTableName="NECESIDAD" baseColumnNames="OIDCALENDARIO"
+        referencedTableName="CALENDARIO" referencedColumnNames="OIDCALENDARIO"
+        constraintName="FK_NECESIDAD_CALENDARIO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="NECESIDAD" baseColumnNames="IDMATERIA"
+        referencedTableName="MATERIA" referencedColumnNames="IDMATERIA"
+        constraintName="FK_NECESIDAD_MATERIA"/>
+
+    <addForeignKeyConstraint
+        baseTableName="NECESIDAD" baseColumnNames="CORREQUISITO_OIDNECESIDAD"
+        referencedTableName="NECESIDAD" referencedColumnNames="OIDNECESIDAD"
+        constraintName="FK_NECESIDAD_CORREQUISITO"/>
+
+    <createIndex tableName="NECESIDAD" indexName="IX_NECESIDAD_CALENDARIO">
+      <column name="OIDCALENDARIO"/>
+    </createIndex>
+
+    <createIndex tableName="NECESIDAD" indexName="IX_NECESIDAD_MATERIA">
+      <column name="IDMATERIA"/>
+    </createIndex>
+
+  </changeSet>
+</databaseChangeLog>
