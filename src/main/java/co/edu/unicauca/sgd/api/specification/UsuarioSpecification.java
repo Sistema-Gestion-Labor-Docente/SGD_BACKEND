@@ -14,7 +14,10 @@ public class UsuarioSpecification {
             String identificacion, String nombre, String facultad, String departamento, String categoria,
             String contratacion, String dedicacion, String estudios, String rol, String estado, String programa) {
 
-        Specification<Usuario> spec = Specification.where(null);
+        Specification<Usuario> spec = Specification.where((root, query, criteriaBuilder) -> {
+            query.distinct(true);
+            return criteriaBuilder.conjunction();
+        });
 
         if (StringUtils.hasText(identificacion)) {
             spec = spec.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("identificacion"), identificacion));
