@@ -9,8 +9,6 @@ import co.edu.unicauca.sgd.api.repository.MateriaRepository;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.PlanRepository;
 import co.edu.unicauca.sgd.api.service.materias.MateriaService;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.slf4j.*;
 import org.springframework.data.domain.*;
@@ -53,7 +51,7 @@ public class MateriaServiceImpl implements MateriaService {
 
             if (StringUtils.hasText(oidmateria)) {
                 spec = spec.and((root, query, cb) ->
-                        cb.equal(cb.upper(root.get("oidmateria")), oidmateria.toUpperCase()));
+                        cb.equal(cb.upper(root.get("oidMateria")), oidmateria.toUpperCase()));
             }
             if (StringUtils.hasText(codigo)) {
                 spec = spec.and((root, query, cb) ->
@@ -113,8 +111,7 @@ public class MateriaServiceImpl implements MateriaService {
             Plan plan = planRepository.findById(request.getOidPlan())
                     .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + request.getOidPlan()));
 
-            Materia correquisito = materiaRepository.findById(request.getIdMateria())
-                    .orElseThrow(() -> new RuntimeException("Correquisito no encontrado con ID: " + request.getIdMateria()));
+            Materia correquisito = resolverCorrequisito(request, null);
 
             entity.setPlan(plan);
             entity.setCorrequisito(correquisito);
@@ -152,9 +149,8 @@ public class MateriaServiceImpl implements MateriaService {
                         .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + request.getOidPlan()));
                 existente.setPlan(plan);
             }
-            if (request.getIdMateria() != null) {
-                Materia correquisito = materiaRepository.findById(request.getIdMateria())
-                        .orElseThrow(() -> new RuntimeException("Correquisito no encontrado con ID: " + request.getIdMateria()));
+            if (request.getIdCorrequisito() != null) {
+                Materia correquisito = resolverCorrequisito(request, existente.getIdMateria());
                 existente.setCorrequisito(correquisito);
             }
 
@@ -181,6 +177,68 @@ public class MateriaServiceImpl implements MateriaService {
             return new ApiResponse<>(200, "Materia eliminada correctamente.", null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar la materia: " + e.getMessage(), null);
+        }
+    }
+
+    @Override
+    public ApiResponse<Page<MateriaDTOResponse>> obtenerMateriasSinCorrequisitoNiReferencias(
+            Integer oidDepartamento,
+            Integer oidPlan,
+            Pageable pageable) {
+        try {
+            if (oidPlan == null) {
+                return new ApiResponse<>(400, "Se requiere el plan para realizar la consulta.", null);
+            }
+            Page<Materia> materias = materiaRepository.findMateriasSinCorrequisitoNiReferencias(
+                    oidDepartamento,
+                    oidPlan,
+                    pageable);
+            Page<MateriaDTOResponse> response = materias.map(materiaMapper::toResponse);
+
+            logger.info("Materias sin correquisito encontradas: {}", response.getTotalElements());
+            return new ApiResponse<>(200, "Materias libres sin correquisito recuperadas correctamente.", response);
+        } catch (Exception e) {
+            logger.error("Error al obtener materias sin correquisito: {}", e.getMessage(), e);
+            return new ApiResponse<>(500, "Error al obtener materias sin correquisito: " + e.getMessage(), null);
+        }
+    }
+
+    private Materia resolverCorrequisito(MateriaDTORequest request, Integer idMateriaActual) {
+        Integer idCorrequisito = request.getIdCorrequisito();
+
+        if (idCorrequisito == null) {
+            return null;
+        }
+
+        Materia correquisito = materiaRepository.findById(idCorrequisito)
+                .orElseThrow(() -> new RuntimeException("Correquisito no encontrado con ID: " + idCorrequisito));
+
+        if (idMateriaActual != null && correquisito.getIdMateria() != null
+                && correquisito.getIdMateria().equals(idMateriaActual)) {
+            throw new RuntimeException("La materia no puede ser correquisito de sí misma.");
+        }
+        if (StringUtils.hasText(request.getOidMateria())
+                && correquisito.getOidMateria() != null
+                && correquisito.getOidMateria().equalsIgnoreCase(request.getOidMateria())) {
+            throw new RuntimeException("La materia no puede ser correquisito de sí misma.");
+        }
+
+        validarDisponibilidadCorrequisito(correquisito, idMateriaActual);
+        return correquisito;
+    }
+
+    private void validarDisponibilidadCorrequisito(Materia correquisito, Integer idMateriaActual) {
+        if (correquisito.getCorrequisito() != null) {
+            if (idMateriaActual == null || !correquisito.getCorrequisito().getIdMateria().equals(idMateriaActual)) {
+                throw new RuntimeException("La materia seleccionada como correquisito ya tiene un correquisito asignado.");
+            }
+        }
+
+        boolean asociadaAOtraMateria = (idMateriaActual == null)
+                ? materiaRepository.existsByCorrequisito(correquisito)
+                : materiaRepository.existsByCorrequisitoAndIdMateriaNot(correquisito, idMateriaActual);
+        if (asociadaAOtraMateria) {
+            throw new RuntimeException("La materia seleccionada como correquisito ya está relacionada con otra materia.");
         }
     }
 }

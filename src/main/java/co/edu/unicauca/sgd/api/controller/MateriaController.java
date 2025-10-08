@@ -31,7 +31,7 @@ public class MateriaController {
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) Integer semestre,
             @RequestParam(required = false) Integer oidDepartamento,
-            @RequestParam(required = false) Integer oidPlan,
+            @RequestParam(required = true) Integer oidPlan,
             Pageable pageable) {
 
         ApiResponse<Page<MateriaDTOResponse>> response =
@@ -65,6 +65,19 @@ public class MateriaController {
     @Operation(summary = "Eliminar materia", description = "Elimina una materia por su ID")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oid) {
         ApiResponse<Void> response = materiaService.eliminar(oid);
+        return ResponseEntity.status(response.getCodigo()).body(response);
+    }
+
+    @GetMapping("/libres")
+    @Operation(
+            summary = "Listar materias sin correquisito",
+            description = "Obtiene las materias que no tienen correquisito ni son correquisito de otra materia")
+    public ResponseEntity<ApiResponse<Page<MateriaDTOResponse>>> findFreeSubjects(
+            @RequestParam(required = false) Integer oidDepartamento,
+            @RequestParam(required = true) Integer oidPlan,
+            Pageable pageable) {
+        ApiResponse<Page<MateriaDTOResponse>> response =
+                materiaService.obtenerMateriasSinCorrequisitoNiReferencias(oidDepartamento, oidPlan, pageable);
         return ResponseEntity.status(response.getCodigo()).body(response);
     }
 }
