@@ -22,4 +22,9 @@ public interface MateriaService {
 
     ApiResponse<Void> eliminar(Integer id);
 
+    ApiResponse<Page<MateriaDTOResponse>> obtenerMateriasSinCorrequisitoNiReferencias(
+        Integer oidDepartamento,
+        Integer oidPlan,
+        Pageable pageable);
+
 }
