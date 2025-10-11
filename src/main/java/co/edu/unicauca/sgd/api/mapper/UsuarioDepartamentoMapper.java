@@ -6,9 +6,16 @@ import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.UsuarioDepartamentoDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.UsuarioDepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.domain.Departamento;
+import co.edu.unicauca.sgd.api.service.actividad.ActividadDTOService;
 
 @Component
 public class UsuarioDepartamentoMapper {
+
+    private final ActividadDTOService actividadDTOService;
+
+    public UsuarioDepartamentoMapper(ActividadDTOService actividadDTOService) {
+        this.actividadDTOService = actividadDTOService;
+    }
 
     public UsuarioDepartamento convertToEntity(UsuarioDepartamentoDTORequest dto) {
         UsuarioDepartamento ud = new UsuarioDepartamento();
@@ -30,7 +37,9 @@ public class UsuarioDepartamentoMapper {
 
     public UsuarioDepartamentoDTOResponse toResponse(UsuarioDepartamento entidad) {
         UsuarioDepartamentoDTOResponse dto = new UsuarioDepartamentoDTOResponse();
-        dto.setOidUsuario(entidad.getOidUsuario());
+        if (entidad.getUsuario() != null) {
+            dto.setUsuario(actividadDTOService.convertToUsuarioDTO(entidad.getUsuario()));
+        }
         if (entidad.getDepartamento() != null) {
             dto.setOidDepartamento(entidad.getDepartamento().getOidDepartamento());
             dto.setNombreDepartamento(entidad.getDepartamento().getNombre());

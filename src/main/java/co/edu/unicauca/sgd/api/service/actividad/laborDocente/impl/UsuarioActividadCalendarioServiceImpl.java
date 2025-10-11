@@ -369,20 +369,31 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     @Override
     @Transactional
     public ApiResponse<Void> eliminarActividad(Integer oidActividad) {
-        if (!actividadRepository.existsById(oidActividad)) {
+        Optional<Actividad> actividadOpt = actividadRepository.findById(oidActividad);
+        if (actividadOpt.isEmpty()) {
             return new ApiResponse<>(404, "Actividad no encontrada", null);
         }
+
         // Eliminar todas relaciones de usuario asociadas a la actividad (todas las actividadCalendario)
-        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_Actividad_OidActividad(oidActividad);
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
+                .findByActividadCalendario_Actividad_OidActividad(oidActividad);
         if (!relaciones.isEmpty()) {
             usuarioActividadCalendarioRepository.deleteAll(relaciones);
         }
 
         // Borrar todas las filas de ACTIVIDADCALENDARIO para esa actividad
-        List<ActividadCalendario> actividadCalendarios = actividadCalendarioRepository.findByActividad_OidActividad(oidActividad);
+        List<ActividadCalendario> actividadCalendarios = actividadCalendarioRepository
+                .findByActividad_OidActividad(oidActividad);
         if (!actividadCalendarios.isEmpty()) {
             actividadCalendarioRepository.deleteAll(actividadCalendarios);
         }
+
+        // Eliminar atributos EAV asociados a la actividad
+        Actividad actividad = actividadOpt.get();
+        ActividadBaseDTO vacio = new ActividadBaseDTO();
+        vacio.setAtributos(List.of());
+        // Borra los atributos actuales y no agrega ninguno
+        eavAtributoService.actualizarAtributosDinamicos(vacio, actividad, Map.of());
 
         // Finalmente borrar la Actividad
         actividadRepository.deleteById(oidActividad);

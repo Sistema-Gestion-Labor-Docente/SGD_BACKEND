@@ -2,6 +2,7 @@ package co.edu.unicauca.sgd.api.dto.materias;
 
 import java.time.LocalDateTime;
 
+import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UsuarioDepartamentoDTOResponse {
 
-    private Integer oidUsuario;
+    private UsuarioDTO usuario;
     private Integer oidDepartamento;
     private String nombreDepartamento;
     private LocalDateTime fechaCreacion;

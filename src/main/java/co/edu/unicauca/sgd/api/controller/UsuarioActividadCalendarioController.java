@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +44,7 @@ public class UsuarioActividadCalendarioController {
             Pageable pageable) {
         ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> response =
                 usuarioActividadCalendarioService.listarActividadesConRelaciones(oidCalendario, oidDepartamento, oidTipoActividad, pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @GetMapping("/{oidActividad}")
@@ -50,7 +52,7 @@ public class UsuarioActividadCalendarioController {
     public ResponseEntity<ApiResponse<UsuarioActividadCalendarioDTOResponse>> findByOid(@PathVariable Integer oidActividad) {
         ApiResponse<UsuarioActividadCalendarioDTOResponse> response =
                 usuarioActividadCalendarioService.obtenerActividadConRelaciones(oidActividad);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PostMapping
@@ -58,7 +60,7 @@ public class UsuarioActividadCalendarioController {
     public ResponseEntity<ApiResponse<UsuarioActividadCalendarioDTOResponse>> save(@Valid @RequestBody UsuarioActividadCalendarioDTORequest dto) {
         ApiResponse<UsuarioActividadCalendarioDTOResponse> response =
                 usuarioActividadCalendarioService.crearActividadConRelaciones(dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PutMapping("/{oidActividad}")
@@ -66,24 +68,44 @@ public class UsuarioActividadCalendarioController {
     public ResponseEntity<ApiResponse<UsuarioActividadCalendarioDTOResponse>> update(@PathVariable Integer oidActividad, @Valid @RequestBody UsuarioActividadCalendarioDTORequest dto) {
         ApiResponse<UsuarioActividadCalendarioDTOResponse> response =
                 usuarioActividadCalendarioService.actualizarActividadConRelaciones(oidActividad, dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @DeleteMapping("/{oidActividad}")
     @Operation(summary = "Eliminar actividad y todas sus relaciones", description = "Elimina la actividad y sus relaciones usuario/calendario")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oidActividad) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Integer oidActividad) {
         ApiResponse<Void> response = usuarioActividadCalendarioService.eliminarActividad(oidActividad);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oidActividad", oidActividad,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 
     @DeleteMapping("/{oidActividad}/relacion")
     @Operation(summary = "Eliminar una relación usuario-actividad-calendario", description = "Elimina solo la relación sin borrar la actividad")
-    public ResponseEntity<ApiResponse<Void>> deleteRelacion(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteRelacion(
             @PathVariable Integer oidActividad,
             @RequestParam Integer oidUsuario,
             @RequestParam Integer oidCalendario) {
         ApiResponse<Void> response = usuarioActividadCalendarioService.eliminarRelacion(oidActividad, oidUsuario, oidCalendario);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oidActividad", oidActividad,
+                "oidUsuario", oidUsuario,
+                "oidCalendario", oidCalendario,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 
     // Otros métodos específicos pueden ser añadidos aquí según sea necesario
@@ -92,8 +114,9 @@ public class UsuarioActividadCalendarioController {
     @Operation(summary = "Listar actividades de tipo Docencia", description = "Lista las actividades cuyo tipo es 'Docencia' con su DTO específico")
     public ResponseEntity<ApiResponse<Page<DocenciaDTOResponse>>> listarDocencia(Pageable pageable) {
         ApiResponse<Page<DocenciaDTOResponse>> response = usuarioActividadCalendarioService.listarPorTipoDocencia(pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
 }
+
 

@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -31,36 +33,46 @@ public class FechaController {
             @RequestParam(required = false) TipoFechaEnum tipo,
             Pageable pageable) {
         ApiResponse<Page<FechaDTOResponse>> response = fechaService.obtenerTodas(tipo, pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @GetMapping("/{oid}")
     @Operation(summary = "Buscar fecha por ID", description = "Consulta una fecha específica por su ID")
     public ResponseEntity<ApiResponse<FechaDTOResponse>> findByOid(@PathVariable Integer oid) {
         ApiResponse<FechaDTOResponse> response = fechaService.buscarPorId(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PostMapping
     @Operation(summary = "Guardar fecha", description = "Guarda una nueva fecha")
     public ResponseEntity<ApiResponse<FechaDTOResponse>> save(@Valid @RequestBody FechaDTORequest dto) {
         ApiResponse<FechaDTOResponse> response = fechaService.guardar(dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar fecha", description = "Actualiza una fecha existente")
     public ResponseEntity<ApiResponse<FechaDTOResponse>> update(@PathVariable Integer id, @Valid @RequestBody FechaDTORequest dto) {
         ApiResponse<FechaDTOResponse> response = fechaService.actualizar(id, dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @DeleteMapping("/{oid}")
     @Operation(summary = "Eliminar fecha", description = "Elimina una fecha por su ID")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oid) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Integer oid) {
         ApiResponse<Void> response = fechaService.eliminar(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oid", oid,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 }
+
 
 

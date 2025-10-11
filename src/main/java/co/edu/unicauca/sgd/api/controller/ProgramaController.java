@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -32,21 +34,21 @@ public class ProgramaController {
 
         ApiResponse<Page<ProgramaDTOResponse>> response =
                 programaService.obtenerTodos(nombre, pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @GetMapping("/{oid}")
     @Operation(summary = "Buscar programa por ID", description = "Consulta un programa por su ID")
     public ResponseEntity<ApiResponse<ProgramaDTOResponse>> findByOid(@PathVariable Integer oid) {
         ApiResponse<ProgramaDTOResponse> response = programaService.buscarPorId(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PostMapping
     @Operation(summary = "Guardar programa", description = "Crea un nuevo programa")
     public ResponseEntity<ApiResponse<ProgramaDTOResponse>> save(@Valid @RequestBody ProgramaDTORequest dto) {
         ApiResponse<ProgramaDTOResponse> response = programaService.guardar(dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PutMapping("/{id}")
@@ -55,13 +57,23 @@ public class ProgramaController {
             @PathVariable Integer id,
             @Valid @RequestBody ProgramaDTORequest dto) {
         ApiResponse<ProgramaDTOResponse> response = programaService.actualizar(id, dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @DeleteMapping("/{oid}")
     @Operation(summary = "Eliminar programa", description = "Elimina un programa por su ID")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oid) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Integer oid) {
         ApiResponse<Void> response = programaService.eliminar(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oid", oid,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 }
+

@@ -3,6 +3,9 @@ package co.edu.unicauca.sgd.api.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
@@ -33,21 +36,21 @@ public class UsuarioDepartamentoController {
 
         ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response =
                 service.obtenerTodos(oidUsuario, oidDepartamento, pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @GetMapping("/{oidUsuario}")
     @Operation(summary = "Buscar por usuario", description = "Obtiene la asignación del usuario")
     public ResponseEntity<ApiResponse<UsuarioDepartamentoDTOResponse>> findByUsuario(@PathVariable Integer oidUsuario) {
         ApiResponse<UsuarioDepartamentoDTOResponse> response = service.buscarPorUsuario(oidUsuario);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PostMapping
     @Operation(summary = "Crear asignación", description = "Asigna un departamento a un usuario")
     public ResponseEntity<ApiResponse<UsuarioDepartamentoDTOResponse>> save(@Valid @RequestBody UsuarioDepartamentoDTORequest dto) {
         ApiResponse<UsuarioDepartamentoDTOResponse> response = service.guardar(dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PutMapping("/{oidUsuario}")
@@ -57,13 +60,24 @@ public class UsuarioDepartamentoController {
             @Valid @RequestBody UsuarioDepartamentoDTORequest dto) {
 
         ApiResponse<UsuarioDepartamentoDTOResponse> response = service.actualizar(oidUsuario, dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @DeleteMapping("/{oidUsuario}")
     @Operation(summary = "Eliminar asignación", description = "Elimina la asignación del usuario")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oidUsuario) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Integer oidUsuario) {
         ApiResponse<Void> response = service.eliminar(oidUsuario);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oidUsuario", oidUsuario,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
+
+    
 }

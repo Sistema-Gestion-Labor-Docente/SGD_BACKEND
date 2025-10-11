@@ -3,6 +3,9 @@ package co.edu.unicauca.sgd.api.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -34,21 +37,21 @@ public class NecesidadController {
             Pageable pageable) {
         ApiResponse<Page<NecesidadDTOResponse>> response =
                 necesidadService.obtenerTodos(oidCalendario, idMateria, estado, pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @GetMapping("/{oid}")
     @Operation(summary = "Buscar necesidad por ID", description = "Consulta una necesidad por su identificador")
     public ResponseEntity<ApiResponse<NecesidadDTOResponse>> findByOid(@PathVariable Integer oid) {
         ApiResponse<NecesidadDTOResponse> response = necesidadService.buscarPorId(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PostMapping
     @Operation(summary = "Crear necesidad", description = "Registra una nueva necesidad para un calendario")
     public ResponseEntity<ApiResponse<NecesidadDTOResponse>> save(@Valid @RequestBody NecesidadDTORequest request) {
         ApiResponse<NecesidadDTOResponse> response = necesidadService.guardar(request);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PutMapping("/{oid}")
@@ -57,13 +60,23 @@ public class NecesidadController {
             @PathVariable Integer oid,
             @RequestBody NecesidadDTORequest request) {
         ApiResponse<NecesidadDTOResponse> response = necesidadService.actualizar(oid, request);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @DeleteMapping("/{oid}")
     @Operation(summary = "Eliminar necesidad", description = "Elimina una necesidad registrada")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oid) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Integer oid) {
         ApiResponse<Void> response = necesidadService.eliminar(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oid", oid,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 }
+

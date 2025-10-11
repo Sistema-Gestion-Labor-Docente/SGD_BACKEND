@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -33,14 +35,14 @@ public class CalendarioController {
             Pageable pageable) {
         ApiResponse<Page<CalendarioDTOResponse>> response =
                 calendarioService.obtenerTodos(anioCalendario, numeroCalendario, estado, pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @GetMapping("/{oid}")
     @Operation(summary = "Buscar calendario por ID", description = "Consulta un calendario específico por su ID")
     public ResponseEntity<ApiResponse<CalendarioDTOResponse>> findByOid(@PathVariable Integer oid) {
         ApiResponse<CalendarioDTOResponse> response = calendarioService.buscarPorId(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PostMapping
@@ -48,20 +50,30 @@ public class CalendarioController {
     public ResponseEntity<ApiResponse<CalendarioDTOResponse>> save(@Valid @RequestBody CalendarioDTORequest dto) {
         ApiResponse<CalendarioDTOResponse> response = calendarioService.guardar(dto);
         // Si tu ApiResponse ya pone 201, esto lo respeta:
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PutMapping("/{oid}")
     @Operation(summary = "Actualizar calendario", description = "Actualiza un calendario existente")
     public ResponseEntity<ApiResponse<CalendarioDTOResponse>> update(@PathVariable Integer oid, @Valid @RequestBody CalendarioDTORequest dto) {
         ApiResponse<CalendarioDTOResponse> response = calendarioService.actualizar(oid, dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @DeleteMapping("/{oid}")
     @Operation(summary = "Eliminar calendario", description = "Elimina un calendario por su ID")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oid) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Integer oid) {
         ApiResponse<Void> response = calendarioService.eliminar(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oid", oid,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 }
+

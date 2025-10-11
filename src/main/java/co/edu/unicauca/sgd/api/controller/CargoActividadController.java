@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -41,35 +43,45 @@ public class CargoActividadController {
             Pageable pageable) {
         ApiResponse<Page<CargoActividadDTOResponse>> response =
                 cargoActividadService.obtenerTodos(nombre, tipo, oidTipoActividad, pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @GetMapping("/{oid}")
     @Operation(summary = "Buscar cargo de actividad por ID")
     public ResponseEntity<ApiResponse<CargoActividadDTOResponse>> findByOid(@PathVariable Integer oid) {
         ApiResponse<CargoActividadDTOResponse> response = cargoActividadService.buscarPorId(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PostMapping
     @Operation(summary = "Guardar cargo de actividad")
     public ResponseEntity<ApiResponse<CargoActividadDTOResponse>> save(@Valid @RequestBody CargoActividadDTORequest dto) {
         ApiResponse<CargoActividadDTOResponse> response = cargoActividadService.guardar(dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PutMapping("/{oid}")
     @Operation(summary = "Actualizar cargo de actividad")
     public ResponseEntity<ApiResponse<CargoActividadDTOResponse>> update(@PathVariable Integer oid, @Valid @RequestBody CargoActividadDTORequest dto) {
         ApiResponse<CargoActividadDTOResponse> response = cargoActividadService.actualizar(oid, dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @DeleteMapping("/{oid}")
     @Operation(summary = "Eliminar cargo de actividad")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oid) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Integer oid) {
         ApiResponse<Void> response = cargoActividadService.eliminar(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oid", oid,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 }
+
 
