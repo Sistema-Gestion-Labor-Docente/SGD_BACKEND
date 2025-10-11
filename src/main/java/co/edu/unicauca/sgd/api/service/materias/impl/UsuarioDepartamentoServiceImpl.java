@@ -31,6 +31,7 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
     }
 
     @Override
+    @Transactional
     public ApiResponse<Page<UsuarioDepartamentoDTOResponse>> obtenerTodos(
             Integer oidUsuario, Integer oidDepartamento, Pageable pageable) {
         try {
@@ -54,6 +55,7 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
     }
 
     @Override
+    @Transactional
     public ApiResponse<UsuarioDepartamentoDTOResponse> buscarPorUsuario(Integer oidUsuario) {
         try {
             UsuarioDepartamento entity = repository.findById(oidUsuario)

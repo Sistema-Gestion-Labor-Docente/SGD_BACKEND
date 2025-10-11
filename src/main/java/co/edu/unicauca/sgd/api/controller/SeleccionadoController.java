@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -41,21 +43,21 @@ public class SeleccionadoController {
 
         ApiResponse<Page<SeleccionadoDTOResponse>> response =
                 seleccionadoService.obtenerTodos(oidCalendario, oidDepartamento, pageable);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @GetMapping("/{oid}")
     @Operation(summary = "Buscar seleccionado por ID", description = "Consulta un seleccionado por su ID")
     public ResponseEntity<ApiResponse<SeleccionadoDTOResponse>> findByOid(@PathVariable Integer oid) {
         ApiResponse<SeleccionadoDTOResponse> response = seleccionadoService.buscarPorId(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PostMapping
     @Operation(summary = "Guardar seleccionado", description = "Agrega un usuario a la lista de seleccionados para un calendario")
     public ResponseEntity<ApiResponse<SeleccionadoDTOResponse>> save(@Valid @RequestBody SeleccionadoDTORequest dto) {
         ApiResponse<SeleccionadoDTOResponse> response = seleccionadoService.guardar(dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @PutMapping("/{oid}")
@@ -63,13 +65,23 @@ public class SeleccionadoController {
     public ResponseEntity<ApiResponse<SeleccionadoDTOResponse>> update(@PathVariable Integer oid,
                                                                        @Valid @RequestBody SeleccionadoDTORequest dto) {
         ApiResponse<SeleccionadoDTOResponse> response = seleccionadoService.actualizar(oid, dto);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     @DeleteMapping("/{oid}")
     @Operation(summary = "Eliminar seleccionado", description = "Elimina un seleccionado por su ID")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer oid) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Integer oid) {
         ApiResponse<Void> response = seleccionadoService.eliminar(oid);
-        return ResponseEntity.status(response.getCodigo()).body(response);
+        if (response.getCodigo() >= 200 && response.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oid", oid,
+                "mensaje", response.getMensaje()
+            );
+            return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                    .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), info));
+        }
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
+                .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 }
+

@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -30,21 +32,21 @@ public class NombreFechaController {
             @RequestParam(required = false) String nombre,
             Pageable pageable) {
         ApiResponse<Page<NombreFechaDTOResponse>> resp = nombreFechaService.obtenerTodas(nombre, pageable);
-        return ResponseEntity.status(resp.getCodigo()).body(resp);
+        return ResponseEntity.status(resp.getCodigo() == 204 ? 200 : resp.getCodigo()).body(resp);
     }
 
     @GetMapping("/{oid}")
     @Operation(summary = "Buscar por ID")
     public ResponseEntity<ApiResponse<NombreFechaDTOResponse>> buscarPorId(@PathVariable Integer oid) {
         ApiResponse<NombreFechaDTOResponse> resp = nombreFechaService.buscarPorId(oid);
-        return ResponseEntity.status(resp.getCodigo()).body(resp);
+        return ResponseEntity.status(resp.getCodigo() == 204 ? 200 : resp.getCodigo()).body(resp);
     }
 
     @PostMapping
     @Operation(summary = "Crear")
     public ResponseEntity<ApiResponse<NombreFechaDTOResponse>> crear(@Valid @RequestBody NombreFechaDTORequest dto) {
         ApiResponse<NombreFechaDTOResponse> resp = nombreFechaService.guardar(dto);
-        return ResponseEntity.status(resp.getCodigo()).body(resp);
+        return ResponseEntity.status(resp.getCodigo() == 204 ? 200 : resp.getCodigo()).body(resp);
     }
 
     @PutMapping("/{oid}")
@@ -52,13 +54,23 @@ public class NombreFechaController {
     public ResponseEntity<ApiResponse<NombreFechaDTOResponse>> actualizar(@PathVariable Integer oid,
             @Valid @RequestBody NombreFechaDTORequest dto) {
         ApiResponse<NombreFechaDTOResponse> resp = nombreFechaService.actualizar(oid, dto);
-        return ResponseEntity.status(resp.getCodigo()).body(resp);
+        return ResponseEntity.status(resp.getCodigo() == 204 ? 200 : resp.getCodigo()).body(resp);
     }
 
     @DeleteMapping("/{oid}")
     @Operation(summary = "Eliminar")
-    public ResponseEntity<ApiResponse<Void>> eliminar(@PathVariable Integer oid) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> eliminar(@PathVariable Integer oid) {
         ApiResponse<Void> resp = nombreFechaService.eliminar(oid);
-        return ResponseEntity.status(resp.getCodigo()).body(resp);
+        if (resp.getCodigo() >= 200 && resp.getCodigo() < 300) {
+            java.util.Map<String, Object> info = java.util.Map.of(
+                "oid", oid,
+                "mensaje", resp.getMensaje()
+            );
+            return ResponseEntity.status(resp.getCodigo() == 204 ? 200 : resp.getCodigo())
+                    .body(new ApiResponse<>(resp.getCodigo(), resp.getMensaje(), info));
+        }
+        return ResponseEntity.status(resp.getCodigo() == 204 ? 200 : resp.getCodigo())
+                .body(new ApiResponse<>(resp.getCodigo(), resp.getMensaje(), null));
     }
 }
+
