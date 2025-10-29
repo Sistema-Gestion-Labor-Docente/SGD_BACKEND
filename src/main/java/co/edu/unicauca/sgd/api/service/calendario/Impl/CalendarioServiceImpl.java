@@ -23,6 +23,7 @@ import co.edu.unicauca.sgd.api.dto.calendario.FechaDTOResponse;
 import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
 import co.edu.unicauca.sgd.api.mapper.CalendarioMapper;
+import co.edu.unicauca.sgd.api.mapper.FechaMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
@@ -59,6 +60,8 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private FechaRepository fechaRepository;
 
+    private final FechaMapper fechaMapper;
+
     private final SeleccionadoRepository seleccionadoRepository;
 
     private final DepartamentoRepository departamentoRepository;
@@ -72,7 +75,8 @@ public class CalendarioServiceImpl implements CalendarioService {
             FechaRepository fechaRepository,
             SeleccionadoRepository seleccionadoRepository,
             DepartamentoRepository departamentoRepository,
-            UsuarioDepartamentoRepository usuarioDepartamentoRepository) {
+            UsuarioDepartamentoRepository usuarioDepartamentoRepository,
+            FechaMapper fechaMapper) {
         this.calendarioRepository = calendarioRepository;
         this.calendarioMapper = calendarioMapper;
         this.fechaService = fechaService;
@@ -80,6 +84,17 @@ public class CalendarioServiceImpl implements CalendarioService {
         this.seleccionadoRepository = seleccionadoRepository;
         this.departamentoRepository = departamentoRepository;
         this.usuarioDepartamentoRepository = usuarioDepartamentoRepository;
+        this.fechaMapper = fechaMapper;
+    }
+
+    private List<FechaDTOResponse> obtenerFechasDto(Integer oidCalendario) {
+        if (oidCalendario == null) {
+            return List.of();
+        }
+        return fechaRepository.findByCalendario_Oidcalendario(oidCalendario)
+                .stream()
+                .map(fechaMapper::toResponse)
+                .toList();
     }
 
     @Override
@@ -91,7 +106,8 @@ public class CalendarioServiceImpl implements CalendarioService {
                     .and(CalendarioSpecs.estadoEq(estado));
 
             Page<Calendario> calendarios = calendarioRepository.findAll(spec, pageable);
-            Page<CalendarioDTOResponse> responsePage = calendarios.map(calendarioMapper::toResponse);
+            Page<CalendarioDTOResponse> responsePage = calendarios.map(calendario ->
+                    calendarioMapper.toResponse(calendario, obtenerFechasDto(calendario.getOidcalendario())));
 
             logger.info("Calendarios encontrados: {}", responsePage.getTotalElements());
             return new ApiResponse<>(200, "Calendarios encontrados correctamente.", responsePage);
@@ -106,22 +122,7 @@ public class CalendarioServiceImpl implements CalendarioService {
             Calendario calendario = calendarioRepository.findById(oid)
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
 
-            CalendarioDTOResponse dto = calendarioMapper.toResponse(calendario);
-
-            List<FechaDTOResponse> fechas = fechaRepository.findByCalendario_Oidcalendario(oid).stream()
-                    .map(fecha -> {
-                        FechaDTOResponse fechaDto = new FechaDTOResponse();
-                        fechaDto.setOidFecha(fecha.getOidFecha());
-                        fechaDto.setOidNombreFecha(fecha.getNombreFecha().getOidNombreFecha());
-                        fechaDto.setNombre(fecha.getNombreResuelto());
-                        fechaDto.setFechaInicial(fecha.getFechaInicial());
-                        fechaDto.setFechaFin(fecha.getFechaFin());
-                        fechaDto.setTipo(fecha.getTipo());
-                        fechaDto.setOidCalendario(fecha.getCalendario().getOidcalendario());
-                        return fechaDto;
-                    })
-                    .toList();
-            dto.setFechas(fechas);
+            CalendarioDTOResponse dto = calendarioMapper.toResponse(calendario, obtenerFechasDto(calendario.getOidcalendario()));
 
             logger.info("Calendario encontrado con ID: {}", oid);
 
@@ -151,7 +152,7 @@ public class CalendarioServiceImpl implements CalendarioService {
                 crearSeleccionadosIniciales(guardado);
             }
 
-            CalendarioDTOResponse dto = calendarioMapper.toResponse(guardado);
+            CalendarioDTOResponse dto = calendarioMapper.toResponse(guardado, obtenerFechasDto(guardado.getOidcalendario()));
 
             logger.info("Calendario guardado con ID: {}", guardado.getOidcalendario());
             return new ApiResponse<>(201, "Calendario guardado correctamente.", dto);
@@ -178,7 +179,7 @@ public class CalendarioServiceImpl implements CalendarioService {
             existente.setUsuarioActualizacion("UsuarioActualizacion");
 
             Calendario actualizado = calendarioRepository.save(existente);
-            CalendarioDTOResponse dto = calendarioMapper.toResponse(actualizado);
+            CalendarioDTOResponse dto = calendarioMapper.toResponse(actualizado, obtenerFechasDto(actualizado.getOidcalendario()));
 
             logger.info("Calendario actualizado con ID: {}", oid);
             return new ApiResponse<>(200, "Calendario actualizado correctamente.", dto);

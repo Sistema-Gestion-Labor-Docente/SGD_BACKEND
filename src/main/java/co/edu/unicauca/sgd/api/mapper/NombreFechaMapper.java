@@ -23,6 +23,7 @@ public class NombreFechaMapper {
         NombreFechaDTOResponse dto = new NombreFechaDTOResponse();
         dto.setOidNombreFecha(e.getOidNombreFecha());
         dto.setNombre(e.getNombre());
+        dto.setUniqueDate(e.isUniqueDate());
         dto.setFechaCreacion(e.getFechaCreacion());
         dto.setUsuarioCreacion(e.getUsuarioCreacion());
         dto.setFechaActualizacion(e.getFechaActualizacion());

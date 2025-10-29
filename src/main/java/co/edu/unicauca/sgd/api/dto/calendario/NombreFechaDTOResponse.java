@@ -11,6 +11,7 @@ public class NombreFechaDTOResponse {
 
     private Integer oidNombreFecha;
     private String nombre;
+    private boolean uniqueDate;
 
     // Auditoría
     private LocalDateTime fechaCreacion;
