@@ -14,6 +14,7 @@ public class FechaDTOResponse {
 
     private Integer oidNombreFecha;
     private String nombre;
+    private boolean uniqueDate;
 
     private LocalDateTime fechaInicial;
     private LocalDateTime fechaFin;
@@ -21,6 +22,15 @@ public class FechaDTOResponse {
 
     private Integer oidCalendario;
     private String nombreCalendario;
+
+    public void setUniqueDate(boolean uniqueDate) {
+        this.uniqueDate = uniqueDate;
+    }
+
+    // Opcional: forzar también getUniqueDate() si alguna parte lo invoca
+    public boolean getUniqueDate() {
+        return this.uniqueDate;
+    }
 
 }
 

@@ -8,47 +8,47 @@
 
   <changeSet id="0014-17082025-seed-nombrefecha" author="Jesus Edwin Adrada Ruiz">
     <sql>
-      INSERT INTO NOMBREFECHA (NOMBRE, FECHACREACION, USUARIOCREACION)
-      SELECT n, NOW(), 'seeder'
+      INSERT INTO NOMBREFECHA (NOMBRE, UNIQUE_DATE, FECHACREACION, USUARIOCREACION)
+      SELECT n, unique_flag, NOW(), 'seeder'
       FROM (VALUES
         -- Resaltadas
-        ('Inicio del periodo'),
-        ('Matrículas académicas estudiantes regulares'),
-        ('Inicio de clases'),
-        ('Plazo máximo para presentar solicitudes de cancelación de asignaturas y/o matrícula del {calendar}, debidamente justificadas'),
-        ('Registro de Notas 70% en SIMCA'),
-        ('Evaluación docente {calendar}'),
-        ('Finalización de clases'),
-        ('Plazo máximo para finales, supletorios y habilitaciones a cargo de profesores de cátedra'),
-        ('Cierre de SIMCA para registro de calificaciones'),
-        ('Finalización de periodo académico {calendar}'),
+        ('Inicio del periodo', TRUE),
+        ('Matrículas académicas estudiantes regulares', FALSE),
+        ('Inicio de clases', TRUE),
+        ('Plazo máximo para presentar solicitudes de cancelación de asignaturas y/o matrícula del {calendar}, debidamente justificadas', TRUE),
+        ('Registro de Notas 70% en SIMCA', TRUE),
+        ('Evaluación docente {calendar}', FALSE),
+        ('Finalización de clases', TRUE),
+        ('Plazo máximo para finales, supletorios y habilitaciones a cargo de profesores de cátedra', TRUE),
+        ('Cierre de SIMCA para registro de calificaciones', TRUE),
+        ('Finalización de periodo académico {calendar}', TRUE),
 
         -- No resaltadas
-        ('Inducción a estudiantes de primer semestre, periodo académico {calendar}'),
-        ('Ajustes de matrícula SIMCA'),
-        ('Adiciones matrícula a través del módulo SIMCA (KIRA)'),
-        ('Listas definitivas de clase'),
-        ('PRIMEROS PARCIALES'),
-        ('Plazo para registro de notas primeros parciales'),
-        ('SEGUNDOS PARCIALES'),
-        ('Plazo máximo para recepción de solicitudes de reingreso {calendar}'),
-        ('Exámenes finales, supletorios, habilitaciones y validaciones - profesores de planta y ocasionales'),
-        ('Planeación de cursos especiales'),
-        ('Desarrollo de cursos especiales'),
+        ('Inducción a estudiantes de primer semestre, periodo académico {calendar}', FALSE),
+        ('Ajustes de matrícula SIMCA', FALSE),
+        ('Adiciones matrícula a través del módulo SIMCA (KIRA)', FALSE),
+        ('Listas definitivas de clase', TRUE),
+        ('PRIMEROS PARCIALES', FALSE),
+        ('Plazo para registro de notas primeros parciales', TRUE),
+        ('SEGUNDOS PARCIALES', FALSE),
+        ('Plazo máximo para recepción de solicitudes de reingreso {calendar}', TRUE),
+        ('Exámenes finales, supletorios, habilitaciones y validaciones - profesores de planta y ocasionales', FALSE),
+        ('Planeación de cursos especiales', FALSE),
+        ('Desarrollo de cursos especiales', FALSE),
 
         -- Administrativas
-        ('Solicitud de presentación de nuevas electivas al consejo de facultad'),
-        ('Reporte de las electivas a ofrecer por el departamento'),
-        ('Presentación de electivas y líneas de énfasis'),
-        ('Pre-inscripción de electivas y líneas de énfasis'),
+        ('Solicitud de presentación de nuevas electivas al consejo de facultad', FALSE),
+        ('Reporte de las electivas a ofrecer por el departamento', FALSE),
+        ('Presentación de electivas y líneas de énfasis', FALSE),
+        ('Pre-inscripción de electivas y líneas de énfasis', FALSE),
 
         -- Caracter adicional
-        ('SEMANAS DE OCASIONALES'),
-        ('SEMANAS DE CATEDRA'),
-        ('SEMANAS DE PLANTA'),
-        ('SEMANAS DE BECARIO Y PRACTICANTE')
+        ('SEMANAS DE OCASIONALES', FALSE),
+        ('SEMANAS DE CÁTEDRA', FALSE),
+        ('SEMANAS DE PLANTA', FALSE),
+        ('SEMANAS DE BECARIO Y PRACTICANTE', TRUE)
 
-      ) AS t(n)
+      ) AS t(n, unique_flag)
       ON CONFLICT (NOMBRE) DO NOTHING;
     </sql>
   </changeSet>

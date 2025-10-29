@@ -34,6 +34,7 @@ public class FechaMapper {
         dto.setOidFecha(entidad.getOidFecha());
         dto.setOidNombreFecha(entidad.getNombreFecha().getOidNombreFecha());
         dto.setNombre(entidad.getNombreResuelto());
+        dto.setUniqueDate(entidad.getNombreFecha().isUniqueDate());
         dto.setFechaInicial(entidad.getFechaInicial());
         dto.setFechaFin(entidad.getFechaFin());
         dto.setTipo(entidad.getTipo());

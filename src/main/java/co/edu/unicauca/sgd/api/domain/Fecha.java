@@ -71,4 +71,9 @@ public class Fecha {
     public String getPeriodo() {
         return this.calendario.getAnioCalendario() + " - " + this.calendario.getNumeroCalendario();
     }
+
+    @Transient
+    public boolean isUniqueDate() {
+        return this.nombreFecha != null && this.nombreFecha.isUniqueDate();
+    }
 }

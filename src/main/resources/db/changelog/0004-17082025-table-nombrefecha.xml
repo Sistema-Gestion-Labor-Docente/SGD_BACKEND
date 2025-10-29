@@ -14,6 +14,9 @@
       <column name="NOMBRE" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
+      <column name="UNIQUE_DATE" type="BOOLEAN" defaultValueBoolean="true">
+        <constraints nullable="false"/>
+      </column>
       <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
         <constraints nullable="false"/>
       </column>

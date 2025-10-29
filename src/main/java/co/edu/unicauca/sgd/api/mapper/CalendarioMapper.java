@@ -2,9 +2,12 @@ package co.edu.unicauca.sgd.api.mapper;
 
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.dto.calendario.FechaDTOResponse;
 
 @Component
 public class CalendarioMapper {
@@ -54,6 +57,12 @@ public class CalendarioMapper {
         dto.setUsuarioActualizacion(entidad.getUsuarioActualizacion());
         dto.setEstado(entidad.getEstado());
         dto.setObservacion(entidad.getObservacion());
+        return dto;
+    }
+
+    public CalendarioDTOResponse toResponse(Calendario entidad, List<FechaDTOResponse> fechas) {
+        CalendarioDTOResponse dto = toResponse(entidad);
+        dto.setFechas(fechas);
         return dto;
     }
 }

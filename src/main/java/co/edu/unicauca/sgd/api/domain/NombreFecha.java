@@ -26,6 +26,9 @@ public class NombreFecha {
     @Column(name = "NOMBRE", nullable = false, unique = true, length = 255)
     private String nombre;
 
+    @Column(name = "UNIQUE_DATE", nullable = false)
+    private boolean uniqueDate = false;
+
     @CreationTimestamp
     @Column(name = "FECHACREACION", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
