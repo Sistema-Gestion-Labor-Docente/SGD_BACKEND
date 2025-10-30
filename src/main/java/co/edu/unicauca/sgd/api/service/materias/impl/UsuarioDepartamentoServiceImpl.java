@@ -1,33 +1,52 @@
 package co.edu.unicauca.sgd.api.service.materias.impl;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
 import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.UsuarioDepartamentoDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.UsuarioDepartamentoDTOResponse;
+import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoAlreadyExistsException;
+import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoException;
+import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoInternalException;
+import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoNotFoundException;
+import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoValidationException;
 import co.edu.unicauca.sgd.api.mapper.UsuarioDepartamentoMapper;
+import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
+import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasProjection;
 import co.edu.unicauca.sgd.api.service.materias.UsuarioDepartamentoService;
 import jakarta.transaction.Transactional;
-import org.slf4j.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
 
 @Service
 public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoService {
 
     private static final Logger logger = LoggerFactory.getLogger(UsuarioDepartamentoServiceImpl.class);
 
-    private UsuarioDepartamentoRepository repository;
+    private final UsuarioDepartamentoRepository repository;
 
-    private UsuarioDepartamentoMapper mapper;
+    private final UsuarioDepartamentoMapper mapper;
+
+    private final UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository;
 
     public UsuarioDepartamentoServiceImpl(
             @Autowired UsuarioDepartamentoRepository repository,
-            @Autowired UsuarioDepartamentoMapper mapper) {
+            @Autowired UsuarioDepartamentoMapper mapper,
+            @Autowired UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository) {
         this.repository = repository;
         this.mapper = mapper;
+        this.usuarioActividadCalendarioRepository = usuarioActividadCalendarioRepository;
     }
 
     @Override
@@ -45,12 +64,34 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
             }
 
             Page<UsuarioDepartamento> page = repository.findAll(spec, pageable);
-            Page<UsuarioDepartamentoDTOResponse> response = page.map(mapper::toResponse);
+
+            Map<Integer, Float> horasPorUsuario = new HashMap<>();
+            List<UsuarioDepartamento> contenido = page.getContent();
+            if (!contenido.isEmpty()) {
+                List<Integer> oidsUsuarios = contenido.stream()
+                        .map(UsuarioDepartamento::getOidUsuario)
+                        .collect(Collectors.toList());
+                List<UsuarioHorasProjection> proyecciones = usuarioActividadCalendarioRepository
+                        .sumarHorasPorUsuarios(oidsUsuarios);
+                for (UsuarioHorasProjection proyeccion : proyecciones) {
+                    horasPorUsuario.put(proyeccion.getOidUsuario(), proyeccion.getTotalHoras());
+                }
+            }
+
+            Map<Integer, Float> horasMapFinal = horasPorUsuario;
+            Page<UsuarioDepartamentoDTOResponse> response = page.map(entidad -> {
+                UsuarioDepartamentoDTOResponse dto = mapper.toResponse(entidad);
+                Float totalHoras = horasMapFinal.getOrDefault(entidad.getOidUsuario(), 0f);
+                dto.setTotalHorasActividades(totalHoras);
+                return dto;
+            });
 
             logger.info("UsuarioDepartamento encontrados: {}", response.getTotalElements());
             return new ApiResponse<>(200, "Registros recuperados correctamente.", response);
+        } catch (UsuarioDepartamentoException e) {
+            throw e;
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al listar usuario-departamento: " + e.getMessage(), null);
+            throw new UsuarioDepartamentoInternalException("Error al listar usuario-departamento.", e);
         }
     }
 
@@ -59,12 +100,15 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
     public ApiResponse<UsuarioDepartamentoDTOResponse> buscarPorUsuario(Integer oidUsuario) {
         try {
             UsuarioDepartamento entity = repository.findById(oidUsuario)
-                .orElseThrow(() -> new RuntimeException("No existe asignación para el usuario: " + oidUsuario));
-            return new ApiResponse<>(200, "Asignación encontrada correctamente.", mapper.toResponse(entity));
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(404, e.getMessage(), null);
+                .orElseThrow(() -> new UsuarioDepartamentoNotFoundException("No existe asignacion para el usuario: " + oidUsuario));
+            UsuarioDepartamentoDTOResponse dto = mapper.toResponse(entity);
+            Float totalHoras = usuarioActividadCalendarioRepository.sumarHorasPorUsuario(oidUsuario);
+            dto.setTotalHorasActividades(totalHoras != null ? totalHoras : 0f);
+            return new ApiResponse<>(200, "Asignacion encontrada correctamente.", dto);
+        } catch (UsuarioDepartamentoException e) {
+            throw e;
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            throw new UsuarioDepartamentoInternalException("Error interno al buscar la asignacion.", e);
         }
     }
 
@@ -72,17 +116,21 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
     @Transactional
     public ApiResponse<UsuarioDepartamentoDTOResponse> guardar(UsuarioDepartamentoDTORequest request) {
         try {
-            // Como la PK es OIDUSUARIO, si ya existe devolvemos 400
+            if (request.getOidUsuario() == null || request.getOidDepartamento() == null) {
+                throw new UsuarioDepartamentoValidationException("Los campos oidUsuario y oidDepartamento son obligatorios.");
+            }
             if (repository.existsById(request.getOidUsuario())) {
-                return new ApiResponse<>(400, "El usuario ya tiene un departamento asignado.", null);
+                throw new UsuarioDepartamentoAlreadyExistsException("El usuario ya tiene un departamento asignado.");
             }
             UsuarioDepartamento entity = mapper.convertToEntity(request);
             UsuarioDepartamento saved = repository.save(entity);
             logger.info("Usuario {} asignado a departamento {}", saved.getOidUsuario(),
                     saved.getDepartamento() != null ? saved.getDepartamento().getOidDepartamento() : null);
-            return new ApiResponse<>(200, "Asignación guardada correctamente.", mapper.toResponse(saved));
+            return new ApiResponse<>(200, "Asignacion guardada correctamente.", mapper.toResponse(saved));
+        } catch (UsuarioDepartamentoException e) {
+            throw e;
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al guardar la asignación: " + e.getMessage(), null);
+            throw new UsuarioDepartamentoInternalException("Error al guardar la asignacion.", e);
         }
     }
 
@@ -90,10 +138,13 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
     @Transactional
     public ApiResponse<UsuarioDepartamentoDTOResponse> actualizar(Integer oidUsuario, UsuarioDepartamentoDTORequest request) {
         try {
-            UsuarioDepartamento existente = repository.findById(oidUsuario)
-                .orElseThrow(() -> new RuntimeException("No existe asignación para el usuario: " + oidUsuario));
+            if (request.getOidDepartamento() == null) {
+                throw new UsuarioDepartamentoValidationException("El campo oidDepartamento es obligatorio para la actualizacion.");
+            }
 
-            // Aseguramos consistencia: el path param manda
+            UsuarioDepartamento existente = repository.findById(oidUsuario)
+                .orElseThrow(() -> new UsuarioDepartamentoNotFoundException("No existe asignacion para el usuario: " + oidUsuario));
+
             request.setOidUsuario(oidUsuario);
 
             mapper.actualizarCamposBasicos(existente, request);
@@ -103,11 +154,11 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
                     actualizado.getOidUsuario(),
                     actualizado.getDepartamento() != null ? actualizado.getDepartamento().getOidDepartamento() : null);
 
-            return new ApiResponse<>(200, "Asignación actualizada correctamente.", mapper.toResponse(actualizado));
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
+            return new ApiResponse<>(200, "Asignacion actualizada correctamente.", mapper.toResponse(actualizado));
+        } catch (UsuarioDepartamentoException e) {
+            throw e;
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno al actualizar: " + e.getMessage(), null);
+            throw new UsuarioDepartamentoInternalException("Error interno al actualizar la asignacion.", e);
         }
     }
 
@@ -115,13 +166,15 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
     public ApiResponse<Void> eliminar(Integer oidUsuario) {
         try {
             if (!repository.existsById(oidUsuario)) {
-                return new ApiResponse<>(404, "No existe asignación para el usuario: " + oidUsuario, null);
+                throw new UsuarioDepartamentoNotFoundException("No existe asignacion para el usuario: " + oidUsuario);
             }
             repository.deleteById(oidUsuario);
-            logger.info("Asignación eliminada para el usuario {}", oidUsuario);
-            return new ApiResponse<>(200, "Asignación eliminada correctamente.", null);
+            logger.info("Asignacion eliminada para el usuario {}", oidUsuario);
+            return new ApiResponse<>(200, "Asignacion eliminada correctamente.", null);
+        } catch (UsuarioDepartamentoException e) {
+            throw e;
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al eliminar la asignación: " + e.getMessage(), null);
+            throw new UsuarioDepartamentoInternalException("Error al eliminar la asignacion.", e);
         }
     }
 }

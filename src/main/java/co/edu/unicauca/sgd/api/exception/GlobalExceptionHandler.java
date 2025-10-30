@@ -15,7 +15,7 @@ import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import jakarta.persistence.EntityNotFoundException;
 
 /**
- * Manejo global de excepciones en la aplicación.
+ * Manejo global de excepciones en la aplicacion.
  */
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,64 +24,72 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ClassCastException.class)
     public ResponseEntity<ApiResponse<Void>> handleClassCastException(ClassCastException e) {
-        logger.error("⚠️ [ERROR] Error de conversión de tipos: {}", e.getMessage(), e);
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error de conversión de tipos: " + e.getMessage());
+        logger.error("[ERROR] Error de conversion de tipos: {}", e.getMessage(), e);
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error de conversion de tipos: " + e.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException e) {
-        logger.warn("⚠️ [WARN] Parámetro inválido: {}", e.getMessage());
+        logger.warn("[WARN] Parametro invalido: {}", e.getMessage());
         return buildErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException ex) {
-        logger.warn("⚠️ [WARN] Estado ilegal: {}", ex.getMessage());
+        logger.warn("[WARN] Estado ilegal: {}", ex.getMessage());
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(InvalidDataAccessApiUsageException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataAccessException(InvalidDataAccessApiUsageException ex) {
-        logger.warn("⚠️ [WARN] Error en consulta de datos: {}", ex.getMessage());
+        logger.warn("[WARN] Error en consulta de datos: {}", ex.getMessage());
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Error en la consulta de datos: " + ex.getMessage());
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleEntityNotFoundException(EntityNotFoundException ex) {
-        logger.warn("⚠️ [WARN] Entidad no encontrada: {}", ex.getMessage());
+        logger.warn("[WARN] Entidad no encontrada: {}", ex.getMessage());
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiResponse<Void>> handleDatabaseException(DataAccessException ex) {
-        logger.error("⚠️ [ERROR] Error en la base de datos: {}", ex.getMessage(), ex);
+        logger.error("[ERROR] Error en la base de datos: {}", ex.getMessage(), ex);
         return buildErrorResponse(HttpStatus.NOT_FOUND, "Error en la base de datos: " + ex.getMessage());
     }
 
     @ExceptionHandler(RecursoNoEncontradoException.class)
     public ResponseEntity<ApiResponse<Void>> handleRecursoNoEncontrado(RecursoNoEncontradoException ex) {
-        logger.warn("⚠️ [WARN] Recurso no encontrado: {}", ex.getMessage());
+        logger.warn("[WARN] Recurso no encontrado: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ApiResponse<>(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null));
     }
 
     @ExceptionHandler(ValidacionNegocioException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidacionNegocio(ValidacionNegocioException ex) {
-        logger.warn("⚠️ [WARN] Validación de negocio incumplida: {}", ex.getMessage());
+        logger.warn("[WARN] Validacion de negocio incumplida: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), null));
     }
 
+    @ExceptionHandler(UsuarioDepartamentoException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUsuarioDepartamentoException(UsuarioDepartamentoException ex) {
+        HttpStatus status = ex.getStatus();
+        logger.warn("[WARN] Usuario-Departamento: {}", ex.getMessage());
+        return ResponseEntity.status(status)
+                .body(new ApiResponse<>(status.value(), ex.getMessage(), null));
+    }
+
     @ExceptionHandler(AsignacionHorasExcedidasException.class)
     public ResponseEntity<ApiResponse<Void>> handleAsignacionHorasExcedidas(AsignacionHorasExcedidasException ex) {
-        logger.warn("⚠️ [WARN] Límite de horas excedido: {}", ex.getMessage());
+        logger.warn("[WARN] Limite de horas excedido: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiResponse<>(HttpStatus.CONFLICT.value(), ex.getMessage(), null));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception e) {
-        logger.error("⚠️ [ERROR] Excepción no controlada: {}", e.getMessage(), e);
+        logger.error("[ERROR] Excepcion no controlada: {}", e.getMessage(), e);
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Ha ocurrido un error inesperado.");
     }
 
@@ -100,24 +108,25 @@ public class GlobalExceptionHandler {
             if (detailedMessage.contains("ora-00001") || detailedMessage.contains("unique constraint")) {
                 errorMessage = "Error: Ya existe un registro con los mismos datos.";
             } else if (detailedMessage.contains("null value in column")) {
-                errorMessage = "Uno o más campos obligatorios están vacíos.";
+                errorMessage = "Uno o mas campos obligatorios estan vacios.";
             }
         }
 
-        logger.warn("⚠️ [DATABASE ERROR] {}", errorMessage);
+        logger.warn("[DATABASE ERROR] {}", errorMessage);
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiResponse<>(409, errorMessage, null));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException e) {
-        logger.error("⚠️ [ERROR] Restricción de clave única violada: {}", e.getMessage());
+        logger.error("[ERROR] Restriccion de clave unica violada: {}", e.getMessage());
 
         String errorMessage = "Error: Ya existe un registro con los mismos datos.";
 
         if (e.getSQLException() != null && e.getSQLException().getMessage().contains("ORA-00001")) {
-            errorMessage = "Error: Ya existe un proceso con este Evaluador, Evaluado y Período Académico.";
+            errorMessage = "Error: Ya existe un proceso con este Evaluador, Evaluado y Periodo Academico.";
         }
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiResponse<>(409, errorMessage, null));
     }
 }
+

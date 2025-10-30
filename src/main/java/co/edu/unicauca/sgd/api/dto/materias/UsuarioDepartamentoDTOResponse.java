@@ -14,5 +14,6 @@ public class UsuarioDepartamentoDTOResponse {
     private Integer oidDepartamento;
     private String nombreDepartamento;
     private LocalDateTime fechaCreacion;
+    private Float totalHorasActividades;
 
 }
