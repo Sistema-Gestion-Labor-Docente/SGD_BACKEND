@@ -11,6 +11,7 @@ public class UsuarioActividadCalendarioDTORequest {
 
     private Integer oidActividad;
     private Integer oidCargoActividad;
+    private Integer oidTipoActividad;
     private Integer oidEstadoActividad;
     private String nombreActividad;
     private Float horas;
