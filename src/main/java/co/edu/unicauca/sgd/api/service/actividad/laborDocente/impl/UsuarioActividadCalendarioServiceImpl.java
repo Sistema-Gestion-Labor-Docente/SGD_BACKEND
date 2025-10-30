@@ -23,16 +23,19 @@ import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import co.edu.unicauca.sgd.api.domain.EavAtributo;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
+import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
-import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.CargoActividadDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.exception.AsignacionHorasExcedidasException;
+import co.edu.unicauca.sgd.api.exception.RecursoNoEncontradoException;
+import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
 import co.edu.unicauca.sgd.api.mapper.UsuarioActividadCalendarioMapper;
 import co.edu.unicauca.sgd.api.repository.ActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
@@ -40,6 +43,7 @@ import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.CargoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.EavAtributoRepository;
 import co.edu.unicauca.sgd.api.repository.EstadoActividadRepository;
+import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.repository.projection.ActividadUsuariosProjection;
@@ -61,7 +65,10 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     private final EstadoActividadRepository estadoActividadRepository;
     private final EavAtributoService eavAtributoService;
     private final EavAtributoRepository eavAtributoRepository;
+    private final TipoActividadRepository tipoActividadRepository;
     private final ObjectMapper objectMapper;
+
+    private static final float EPSILON = 0.0001f;
 
     public UsuarioActividadCalendarioServiceImpl(
             ActividadRepository actividadRepository,
@@ -74,6 +81,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             EstadoActividadRepository estadoActividadRepository,
             EavAtributoService eavAtributoService,
             EavAtributoRepository eavAtributoRepository,
+            TipoActividadRepository tipoActividadRepository,
             ObjectMapper objectMapper) {
         this.actividadRepository = actividadRepository;
         this.usuarioRepository = usuarioRepository;
@@ -85,20 +93,36 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         this.estadoActividadRepository = estadoActividadRepository;
         this.eavAtributoService = eavAtributoService;
         this.eavAtributoRepository = eavAtributoRepository;
+        this.tipoActividadRepository = tipoActividadRepository;
         this.objectMapper = objectMapper;
     }
 
+    @Override
+    @Transactional
     public ApiResponse<UsuarioActividadCalendarioDTOResponse> crearActividadConRelaciones(@Valid UsuarioActividadCalendarioDTORequest request) {
 
-        CargoActividad cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
-                .orElseThrow(() -> new RuntimeException("Cargo de actividad no encontrado"));
+        CargoActividad cargoActividad = null;
+        if (request.getOidCargoActividad() != null) {
+            cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Cargo de actividad no encontrado"));
+        }
+
+        TipoActividad tipoActividad = resolverTipoActividad(cargoActividad, request, null);
 
         EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
-                .orElseThrow(() -> new RuntimeException("Estado de actividad no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Estado de actividad no encontrado"));
+
+        validarMaximoHorasUsuarios(
+                request.getOidsUsuarios(),
+                request.getHoras(),
+                cargoActividad,
+                tipoActividad,
+                null
+        );
 
         // 1. Crear Actividad
         Actividad actividad = new Actividad();
-        actividad.setTipoActividad(cargoActividad.getTipoActividad());
+        actividad.setTipoActividad(tipoActividad);
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
         actividad.setHoras(request.getHoras());
@@ -109,7 +133,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
         // 2. Obtener Calendario y crear/obtener ActividadCalendario
         Calendario calendario = calendarioRepository.findById(request.getOidCalendario())
-                .orElseThrow(() -> new RuntimeException("Calendario no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
 
         ActividadCalendario actividadCalendario = actividadCalendarioRepository
                 .findByActividad_OidActividadAndCalendario_Oidcalendario(actividad.getOidActividad(), calendario.getOidcalendario())
@@ -122,15 +146,16 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                 });
 
         // Si la actividadCalendario ya exist铆a pero el cargo es distinto, actualizamos
-        if (actividadCalendario.getCargoActividad() == null || !actividadCalendario.getCargoActividad().getOidCargoActividad().equals(cargoActividad.getOidCargoActividad())) {
+        if (cargoActividad != null || actividadCalendario.getCargoActividad() != null) {
             actividadCalendario.setCargoActividad(cargoActividad);
             actividadCalendario = actividadCalendarioRepository.save(actividadCalendario);
         }
 
         // 3. Crear relaciones UsuarioActividadCalendario apuntando a actividadCalendario
-        for (Integer oidUsuario : request.getOidsUsuarios()) {
+        List<Integer> usuariosSolicitados = request.getOidsUsuarios() == null ? List.of() : request.getOidsUsuarios();
+        for (Integer oidUsuario : usuariosSolicitados) {
             Usuario usuario = usuarioRepository.findById(oidUsuario)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
             // No crear duplicados
             boolean exists = usuarioActividadCalendarioRepository.existsByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(actividadCalendario.getOidActividadCalendario(), oidUsuario);
             if (!exists) {
@@ -174,16 +199,29 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     @Transactional
     public ApiResponse<UsuarioActividadCalendarioDTOResponse> actualizarActividadConRelaciones(Integer oidActividad, @Valid UsuarioActividadCalendarioDTORequest request) {        
         Actividad actividad = actividadRepository.findById(oidActividad)
-                .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Actividad no encontrada"));
 
-        CargoActividad cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
-                .orElseThrow(() -> new RuntimeException("Cargo de actividad no encontrado"));
+        CargoActividad cargoActividad = null;
+        if (request.getOidCargoActividad() != null) {
+            cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Cargo de actividad no encontrado"));
+        }
 
         EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
-                .orElseThrow(() -> new RuntimeException("Estado de actividad no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Estado de actividad no encontrado"));
+
+        TipoActividad tipoActividad = resolverTipoActividad(cargoActividad, request, actividad);
+
+        validarMaximoHorasUsuarios(
+                request.getOidsUsuarios(),
+                request.getHoras(),
+                cargoActividad,
+                tipoActividad,
+                actividad.getOidActividad()
+        );
 
         // Actualizar datos base de Actividad
-        actividad.setTipoActividad(cargoActividad.getTipoActividad());
+        actividad.setTipoActividad(tipoActividad);
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
         actividad.setHoras(request.getHoras());
@@ -194,7 +232,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
         // Obtener/crear ActividadCalendario destino (puede ser el mismo o uno nuevo si cambi贸 el calendario)
         Calendario calendarioDestino = calendarioRepository.findById(request.getOidCalendario())
-                .orElseThrow(() -> new RuntimeException("Calendario no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
 
         ActividadCalendario actividadCalendarioDestino = actividadCalendarioRepository
                 .findByActividad_OidActividadAndCalendario_Oidcalendario(actividad.getOidActividad(), calendarioDestino.getOidcalendario())
@@ -208,7 +246,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
 
         // Si existe pero cargo distinto, actualizar
-        if (actividadCalendarioDestino.getCargoActividad() == null || !actividadCalendarioDestino.getCargoActividad().getOidCargoActividad().equals(cargoActividad.getOidCargoActividad())) {
+        if (cargoActividad != null || actividadCalendarioDestino.getCargoActividad() != null) {
             actividadCalendarioDestino.setCargoActividad(cargoActividad);
             actividadCalendarioDestino = actividadCalendarioRepository.save(actividadCalendarioDestino);
         }
@@ -226,7 +264,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         for (Integer oidUsuario : solicitados) {
             if (!existentesOids.contains(oidUsuario)) {
                 Usuario usuario = usuarioRepository.findById(oidUsuario)
-                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                        .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
                 UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
                 relacion.setUsuario(usuario);
                 relacion.setActividadCalendario(actividadCalendarioDestino);
@@ -283,6 +321,114 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         return new ApiResponse<>(200, "Actividad actualizada con relaciones", dto);
     }
 
+    private TipoActividad resolverTipoActividad(CargoActividad cargoActividad, UsuarioActividadCalendarioDTORequest request, Actividad actividadActual) {
+        if (cargoActividad != null && cargoActividad.getTipoActividad() != null) {
+            return cargoActividad.getTipoActividad();
+        }
+        if (request.getOidTipoActividad() != null) {
+            return tipoActividadRepository.findById(request.getOidTipoActividad())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Tipo de actividad no encontrado"));
+        }
+        if (actividadActual != null && actividadActual.getTipoActividad() != null) {
+            return actividadActual.getTipoActividad();
+        }
+        throw new ValidacionNegocioException("Debe especificar un cargo o un tipo de actividad para la asignaci贸n.");
+    }
+
+    private void validarMaximoHorasUsuarios(List<Integer> oidsUsuarios,
+                                            Float horasActividad,
+                                            CargoActividad cargoActividad,
+                                            TipoActividad tipoActividad,
+                                            Integer oidActividadActual) {
+        if (oidsUsuarios == null || oidsUsuarios.isEmpty()) {
+            return;
+        }
+
+        float horasSolicitadas = horasActividad == null ? 0f : horasActividad;
+        Set<Integer> usuariosUnicos = new HashSet<>(oidsUsuarios);
+
+        Float limiteHorasPorTipo = null;
+        TipoActividad tipoActividadEvaluado = tipoActividad;
+        if (tipoActividadEvaluado == null) {
+            throw new ValidacionNegocioException("No se pudo determinar el tipo de actividad para validar horas.");
+        }
+        if (cargoActividad == null) {
+            limiteHorasPorTipo = obtenerMaximoHorasPorTipoActividad(tipoActividadEvaluado.getOidTipoActividad());
+        }
+
+        for (Integer oidUsuario : usuariosUnicos) {
+            float horasAsignadas = cargoActividad != null
+                    ? calcularHorasPorUsuarioYCargo(oidUsuario, cargoActividad.getOidCargoActividad(), oidActividadActual)
+                    : calcularHorasPorUsuarioYTipoActividad(oidUsuario, tipoActividadEvaluado.getOidTipoActividad(), oidActividadActual);
+
+            float limite = cargoActividad != null
+                    ? (cargoActividad.getMaxHorasSemana() == null ? Float.MAX_VALUE : cargoActividad.getMaxHorasSemana())
+                    : (limiteHorasPorTipo == null ? Float.MAX_VALUE : limiteHorasPorTipo);
+
+            if (limite != Float.MAX_VALUE && (horasAsignadas + horasSolicitadas) - limite > EPSILON) {
+                throw new AsignacionHorasExcedidasException(oidUsuario, limite, horasAsignadas, horasSolicitadas);
+            }
+        }
+    }
+
+    private float calcularHorasPorUsuarioYCargo(Integer oidUsuario, Integer oidCargoActividad, Integer oidActividadActual) {
+        if (oidUsuario == null || oidCargoActividad == null) {
+            return 0f;
+        }
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
+                .findByUsuario_OidUsuarioAndActividadCalendario_CargoActividad_OidCargoActividad(oidUsuario, oidCargoActividad);
+        return sumarHorasRelacionadas(relaciones, oidActividadActual);
+    }
+
+    private float calcularHorasPorUsuarioYTipoActividad(Integer oidUsuario, Integer oidTipoActividad, Integer oidActividadActual) {
+        if (oidUsuario == null || oidTipoActividad == null) {
+            return 0f;
+        }
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
+                .findByUsuario_OidUsuarioAndActividadCalendario_Actividad_TipoActividad_OidTipoActividad(oidUsuario, oidTipoActividad);
+        return sumarHorasRelacionadas(relaciones, oidActividadActual);
+    }
+
+    private float sumarHorasRelacionadas(List<UsuarioActividadCalendario> relaciones, Integer oidActividadActual) {
+        if (relaciones == null || relaciones.isEmpty()) {
+            return 0f;
+        }
+        Set<Integer> actividadesProcesadas = new HashSet<>();
+        double total = 0d;
+        for (UsuarioActividadCalendario relacion : relaciones) {
+            if (relacion == null || relacion.getActividadCalendario() == null) {
+                continue;
+            }
+            Actividad actividad = relacion.getActividadCalendario().getActividad();
+            if (actividad == null) {
+                continue;
+            }
+            Integer oidActividad = actividad.getOidActividad();
+            if (oidActividad != null && oidActividad.equals(oidActividadActual)) {
+                continue;
+            }
+            if (oidActividad != null && !actividadesProcesadas.add(oidActividad)) {
+                continue;
+            }
+            Float horas = actividad.getHoras();
+            if (horas != null) {
+                total += horas;
+            }
+        }
+        return (float) total;
+    }
+
+    private Float obtenerMaximoHorasPorTipoActividad(Integer oidTipoActividad) {
+        if (oidTipoActividad == null) {
+            return null;
+        }
+        return cargoActividadRepository.findByTipoActividad_OidTipoActividad(oidTipoActividad).stream()
+                .map(CargoActividad::getMaxHorasSemana)
+                .filter(value -> value != null)
+                .max(Float::compare)
+                .orElse(null);
+    }
+
     @Override
     public ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> listarActividadesConRelaciones(
             Integer oidCalendario,
@@ -292,9 +438,8 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
          // Validaciones b谩sicas
         if (oidCalendario == null || oidDepartamento == null) {
-            return new ApiResponse<>(400, "Los par谩metros oidCalendario, oidDepartamento y oidTipoActividad son obligatorios", Page.empty());
+            throw new ValidacionNegocioException("Los par醡etros oidCalendario y oidDepartamento son obligatorios");
         }
-
         // 1) Obtener page de ids de actividad (paginado)
         Page<Integer> idsPage = usuarioActividadCalendarioRepository.findDistinctActividadIdsByFilters(
                 oidCalendario, oidDepartamento, oidTipoActividad, pageable);
@@ -358,7 +503,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     @Override
     public ApiResponse<UsuarioActividadCalendarioDTOResponse> obtenerActividadConRelaciones(Integer oidActividad) {
         Actividad actividad = actividadRepository.findById(oidActividad)
-                .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Actividad no encontrada"));
         List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_Actividad_OidActividad(oidActividad);
         Calendario calendario = relaciones.isEmpty() ? null : relaciones.get(0).getActividadCalendario().getCalendario();
         List<AtributoDTO> atributos = eavAtributoService.obtenerAtributosPorActividad(actividad);
@@ -371,7 +516,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     public ApiResponse<Void> eliminarActividad(Integer oidActividad) {
         Optional<Actividad> actividadOpt = actividadRepository.findById(oidActividad);
         if (actividadOpt.isEmpty()) {
-            return new ApiResponse<>(404, "Actividad no encontrada", null);
+            throw new RecursoNoEncontradoException("Actividad no encontrada");
         }
 
         // Eliminar todas relaciones de usuario asociadas a la actividad (todas las actividadCalendario)
@@ -407,13 +552,12 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         // buscar el ActividadCalendario correspondiente
         Optional<ActividadCalendario> optAc = actividadCalendarioRepository.findByActividad_OidActividadAndCalendario_Oidcalendario(oidActividad, oidCalendario);
         if (optAc.isEmpty()) {
-            return new ApiResponse<>(404, "Relaci贸n no encontrada (actividad+calendario)", null);
+            throw new RecursoNoEncontradoException("Relaci髇 no encontrada para la actividad y calendario especificados");
         }
         ActividadCalendario ac = optAc.get();
-
         boolean exists = usuarioActividadCalendarioRepository.existsByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(ac.getOidActividadCalendario(), oidUsuario);
         if (!exists) {
-            return new ApiResponse<>(404, "Relaci贸n no encontrada", null);
+            throw new RecursoNoEncontradoException("Relaci髇 usuario-actividad no encontrada");
         }
 
         usuarioActividadCalendarioRepository.deleteByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(ac.getOidActividadCalendario(), oidUsuario);
@@ -443,5 +587,15 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     }
 
 }
+
+
+
+
+
+
+
+
+
+
 
 

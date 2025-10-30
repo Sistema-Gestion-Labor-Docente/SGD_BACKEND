@@ -43,6 +43,10 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
 
     List<UsuarioActividadCalendario> findByActividadCalendario_Actividad_OidActividadIn(List<Integer> oidActividades);
 
+    List<UsuarioActividadCalendario> findByUsuario_OidUsuarioAndActividadCalendario_CargoActividad_OidCargoActividad(Integer oidUsuario, Integer oidCargoActividad);
+
+    List<UsuarioActividadCalendario> findByUsuario_OidUsuarioAndActividadCalendario_Actividad_TipoActividad_OidTipoActividad(Integer oidUsuario, Integer oidTipoActividad);
+
     @Query(
       value = """
         SELECT DISTINCT a.OIDACTIVIDAD
