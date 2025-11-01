@@ -1,5 +1,8 @@
 package co.edu.unicauca.sgd.api.service.calendario;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -21,5 +24,7 @@ public interface CalendarioService {
     ApiResponse<CalendarioDTOResponse> actualizar(Integer id, CalendarioDTORequest dto);
 
     ApiResponse<Void> eliminar(Integer oid);
+
+    ByteArrayOutputStream generarCalendarioPdf(Integer oidCalendario) throws IOException;
 }
 

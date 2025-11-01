@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Calendario de Actividades - Plantilla</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 20mm;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #111;
+      }
+      .page {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 100%;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+      }
+
+      .content {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 180mm;
+        padding: 12mm 10mm;
+        margin: 0 auto;
+        text-align: left;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      header h1,
+      header h2 {
+        font-size: 18px;
+        margin: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+        text-decoration: underline;
+      }
+      header h2 {
+        font-size: 14px;
+      }
+      .intro {
+        margin: 12px 0;
+        font-size: 13px;
+        text-align: justify;
+      }
+
+      .calendar-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin: 0 auto;
+        table-layout: fixed;
+      }
+      .calendar-table th,
+      .calendar-table td {
+        border: 1px solid #999;
+        padding: 6px 8px;
+        vertical-align: top;
+        text-align: center;
+        word-break: break-word;
+        white-space: normal;
+      }
+      .calendar-table th {
+        background: #eee;
+        font-weight: 700;
+        text-decoration: underline;
+      }
+      .calendar-table tbody tr:nth-child(odd) {
+        background: #f4f4f4;
+      }
+      .calendar-table tbody tr:nth-child(even) {
+        background: #ffffff;
+      }
+
+      .calendar-table td:first-child {
+        text-align: justify;
+      }
+
+      .calendar-table th:first-child,
+      .calendar-table td:first-child {
+        width: 65%;
+      }
+
+      .calendar-table th:last-child,
+      .calendar-table td:last-child {
+        width: 35%;
+      }
+
+      .notes {
+        margin-top: 14px;
+        font-size: 12px;
+        text-align: center;
+      }
+      .notes ul {
+        display: inline-block;
+        text-align: left;
+        padding-left: 16px;
+      }
+      .foot {
+        margin-top: 20px;
+        text-align: center;
+        font-size: 12px;
+      }
+
+      @media screen {
+        .page {
+          box-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="content">
+      <header>
+        <h1>{{CALENDARIO_TITULO}}</h1>
+        <h2>{{CALENDARIO_FACULTAD}}</h2>
+        <h2>{{CALENDARIO_PERIODO}}</h2>
+      </header>
+
+      <div class="intro">{{CALENDARIO_INTRO}}</div>
+
+      <table class="calendar-table" role="table">
+        <thead>
+          <tr>
+            <th>Actividad</th>
+            <th>Fecha / Rango</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{CALENDARIO_FILAS}}
+        </tbody>
+      </table>
+
+      <div class="notes">{{CALENDARIO_NOTAS}}</div>
+
+      <div class="foot">{{CALENDARIO_FOOTER}}</div>
+      </div>
+    </div>
+  </body>
+</html>
