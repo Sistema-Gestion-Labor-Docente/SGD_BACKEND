@@ -1,9 +1,15 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,6 +49,27 @@ public class CalendarioController {
     public ResponseEntity<ApiResponse<CalendarioDTOResponse>> findByOid(@PathVariable Integer oid) {
         ApiResponse<CalendarioDTOResponse> response = calendarioService.buscarPorId(oid);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
+    }
+
+    @GetMapping("/{oid}/pdf")
+    @Operation(summary = "Descargar calendario en PDF", description = "Genera un PDF del calendario usando la plantilla Formato_CalendarioPDF.html")
+    public ResponseEntity<byte[]> descargarCalendarioPdf(@PathVariable Integer oid) {
+        try {
+            ByteArrayOutputStream pdfStream = calendarioService.generarCalendarioPdf(oid);
+            byte[] contenido = pdfStream.toByteArray();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDisposition(ContentDisposition.attachment().filename("Calendario_" + oid + ".pdf").build());
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(contenido);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping

@@ -1,5 +1,7 @@
 package co.edu.unicauca.sgd.api.service.calendario.impl;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -29,6 +31,7 @@ import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
+import co.edu.unicauca.sgd.api.service.calendario.CalendarioPdfService;
 import co.edu.unicauca.sgd.api.service.calendario.CalendarioService;
 import co.edu.unicauca.sgd.api.service.calendario.FechaService;
 import co.edu.unicauca.sgd.api.specification.CalendarioSpecs;
@@ -41,24 +44,24 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private static final List<Integer> OIDS_FECHAS_RESALTADAS = List.of(
         1, // Inicio del periodo
-        2, // Matrículas académicas estudiantes regulares
+        2, // Matriculas academicas estudiantes regulares
         3, // Inicio de clases
-        4, // Plazo máximo para presentar solicitudes ...
+        4, // Plazo maximo para presentar solicitudes ...
         5, // Registro de Notas 70% en SIMCA
-        6, // Evaluación docente {identificador del período}
-        7, // Finalización de clases
-        8, // Plazo máximo para finales...
+        6, // Evaluacion docente {identificador del periodo}
+        7, // Finalizacion de clases
+        8, // Plazo maximo para finales...
         9, // Cierre de SIMCA para registro de calificaciones
-        10 // Finalización de periodo académico {identificador del período}
+        10 // Finalizacion de periodo academico {identificador del periodo}
     );
 
-    private CalendarioRepository calendarioRepository;
+    private final CalendarioRepository calendarioRepository;
 
-    private CalendarioMapper calendarioMapper;
+    private final CalendarioMapper calendarioMapper;
 
-    private FechaService fechaService;
+    private final FechaService fechaService;
 
-    private FechaRepository fechaRepository;
+    private final FechaRepository fechaRepository;
 
     private final FechaMapper fechaMapper;
 
@@ -68,6 +71,8 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private final UsuarioDepartamentoRepository usuarioDepartamentoRepository;
 
+    private final CalendarioPdfService calendarioPdfService;
+
     public CalendarioServiceImpl(
             CalendarioRepository calendarioRepository,
             CalendarioMapper calendarioMapper,
@@ -76,7 +81,8 @@ public class CalendarioServiceImpl implements CalendarioService {
             SeleccionadoRepository seleccionadoRepository,
             DepartamentoRepository departamentoRepository,
             UsuarioDepartamentoRepository usuarioDepartamentoRepository,
-            FechaMapper fechaMapper) {
+            FechaMapper fechaMapper,
+            CalendarioPdfService calendarioPdfService) {
         this.calendarioRepository = calendarioRepository;
         this.calendarioMapper = calendarioMapper;
         this.fechaService = fechaService;
@@ -85,6 +91,7 @@ public class CalendarioServiceImpl implements CalendarioService {
         this.departamentoRepository = departamentoRepository;
         this.usuarioDepartamentoRepository = usuarioDepartamentoRepository;
         this.fechaMapper = fechaMapper;
+        this.calendarioPdfService = calendarioPdfService;
     }
 
     private List<FechaDTOResponse> obtenerFechasDto(Integer oidCalendario) {
@@ -169,10 +176,10 @@ public class CalendarioServiceImpl implements CalendarioService {
                     .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
 
             if (request.getAnioCalendario() != null && !request.getAnioCalendario().equals(existente.getAnioCalendario())) {
-                throw new RuntimeException("El año (anio) no es editable.");
+                throw new RuntimeException("El anio (anio) no es editable.");
             }
             if (request.getNumeroCalendario() != null && !request.getNumeroCalendario().equals(existente.getNumeroCalendario())) {
-                throw new RuntimeException("El número (numero) no es editable.");
+                throw new RuntimeException("El numero (numero) no es editable.");
             }
 
             calendarioMapper.actualizarCamposBasicos(existente, request);
@@ -184,7 +191,7 @@ public class CalendarioServiceImpl implements CalendarioService {
             logger.info("Calendario actualizado con ID: {}", oid);
             return new ApiResponse<>(200, "Calendario actualizado correctamente.", dto);
         } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
+            return new ApiResponse<>(400, "Error en la actualizacion: " + e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error interno al actualizar el calendario: " + e.getMessage(), null);
         }
@@ -202,6 +209,23 @@ public class CalendarioServiceImpl implements CalendarioService {
             return new ApiResponse<>(204, "Calendario eliminado correctamente.", null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar el calendario: " + e.getMessage(), null);
+        }
+    }
+
+    @Override
+    public ByteArrayOutputStream generarCalendarioPdf(Integer oidCalendario) throws IOException {
+        if (oidCalendario == null) {
+            throw new IllegalArgumentException("El identificador del calendario es obligatorio.");
+        }
+        logger.info("Generando PDF del calendario ID: {}", oidCalendario);
+        Calendario calendario = calendarioRepository.findById(oidCalendario)
+                .orElseThrow(() -> new IllegalArgumentException("Calendario no encontrado con ID: " + oidCalendario));
+        List<FechaDTOResponse> fechas = obtenerFechasDto(oidCalendario);
+        try {
+            return calendarioPdfService.generarCalendarioPdf(calendario, fechas);
+        } catch (IOException e) {
+            logger.error("Error generando el PDF del calendario {}", oidCalendario, e);
+            throw e;
         }
     }
 
@@ -228,7 +252,7 @@ public class CalendarioServiceImpl implements CalendarioService {
                 fechaService.guardar(fecha);
                 logger.debug("Fecha resaltada creada (oidNombreFecha={}): calendario={}", oidNombreFecha, oidCalendario);
             } catch (Exception e) {
-                // Continuamos con las demás para no abortar todo el proceso
+                // Continuamos con las demas para no abortar todo el proceso
                 logger.error("No se pudo crear la fecha (oidNombreFecha={}): {}", oidNombreFecha, e.getMessage());
             }
         }
@@ -265,7 +289,7 @@ public class CalendarioServiceImpl implements CalendarioService {
                         continue;
                     }
 
-                    // Verificamos roles: si tiene algún rol excluido, no lo seleccionamos
+                    // Verificamos roles: si tiene algun rol excluido, no lo seleccionamos
                     boolean tieneRolExcluido = usuario.getRoles() != null
                             && usuario.getRoles().stream()
                                 .map(r -> r.getNombre() == null ? "" : r.getNombre().toUpperCase())
@@ -291,10 +315,10 @@ public class CalendarioServiceImpl implements CalendarioService {
                         s.setCalendario(calendario);
                         s.setUsuario(usuario);
 
-                        // Default para TIPO: PLANTA (ajusta si prefieres otra lógica)
+                        // Default para TIPO: PLANTA (ajusta si prefieres otra logica)
                         s.setTipo(ContratacionEnum.PLANTA);
 
-                        // UsuarioCreacion: usamos quien creó el calendario si está, si no "SYSTEM"
+                        // UsuarioCreacion: usamos quien creo el calendario si esta, si no "SYSTEM"
                         s.setUsuarioCreacion(StringUtils.hasText(calendario.getUsuarioCreacion()) ? calendario.getUsuarioCreacion() : "SYSTEM");
 
                         seleccionadoRepository.save(s);
@@ -306,12 +330,16 @@ public class CalendarioServiceImpl implements CalendarioService {
                     }
                 }
             } catch (Exception exDept) {
-                // Capturamos por departamento para que un fallo no detenga los demás
+                // Capturamos por departamento para que un fallo no detenga los demas
                 logger.error("Error creando seleccionados para departamento {}: {}", dept, exDept.getMessage());
             }
         }
 
         logger.info("Terminado de crear listas de seleccionados para calendario ID: {}", calendario.getOidcalendario());
     }
-}
+}
+
+
+
+
 
