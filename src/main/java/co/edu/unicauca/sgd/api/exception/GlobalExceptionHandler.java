@@ -87,6 +87,13 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>(HttpStatus.CONFLICT.value(), ex.getMessage(), null));
     }
 
+    @ExceptionHandler(AsignacionException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAsignacionException(AsignacionException ex) {
+        logger.warn("[WARN] Asignacion: {}", ex.getMessage());
+        return ResponseEntity.status(ex.getStatus())
+                .body(new ApiResponse<>(ex.getStatus().value(), ex.getMessage(), null));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception e) {
         logger.error("[ERROR] Excepcion no controlada: {}", e.getMessage(), e);

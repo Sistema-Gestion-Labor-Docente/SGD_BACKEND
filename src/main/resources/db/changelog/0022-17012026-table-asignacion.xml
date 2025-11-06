@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+      http://www.liquibase.org/xml/ns/dbchangelog
+      https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="0022-17012026-asignacion" author="Jesus Edwin Adrada Ruiz">
+        <createSequence sequenceName="SEQ_OIDASIGNACION" startValue="1" incrementBy="1"/>
+
+        <createTable tableName="ASIGNACION">
+            <column name="OIDASIGNACION" type="INT" defaultValueComputed="nextval('SEQ_OIDASIGNACION')">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="OIDNECESIDAD" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="OIDSELECCIONADO" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="OIDACTIVIDAD" type="INT">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="HORASDOCENCIA" type="FLOAT"/>
+            <column name="SEMANASDOCENCIA" type="FLOAT"/>
+            <column name="HORASPREPARACION" type="FLOAT"/>
+            <column name="SEMANASPREPARACION" type="FLOAT"/>
+            <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USUARIOCREACION" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+            <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="ASIGNACION" baseColumnNames="OIDNECESIDAD"
+                                 referencedTableName="NECESIDAD" referencedColumnNames="OIDNECESIDAD"
+                                 constraintName="FK_ASIGNACION_NECESIDAD"/>
+
+        <addForeignKeyConstraint baseTableName="ASIGNACION" baseColumnNames="OIDSELECCIONADO"
+                                 referencedTableName="SELECCIONADO" referencedColumnNames="OIDSELECCIONADO"
+                                 constraintName="FK_ASIGNACION_SELECCIONADO"/>
+
+        <addForeignKeyConstraint baseTableName="ASIGNACION" baseColumnNames="OIDACTIVIDAD"
+                                 referencedTableName="ACTIVIDAD" referencedColumnNames="OIDACTIVIDAD"
+                                 constraintName="FK_ASIGNACION_ACTIVIDAD"/>
+
+        <addUniqueConstraint tableName="ASIGNACION"
+                             columnNames="OIDNECESIDAD,OIDSELECCIONADO"
+                             constraintName="UQ_ASIG_NEC_SEL"/>
+
+        <createIndex tableName="ASIGNACION" indexName="IX_ASIGNACION_NECESIDAD">
+            <column name="OIDNECESIDAD"/>
+        </createIndex>
+
+        <createIndex tableName="ASIGNACION" indexName="IX_ASIGNACION_SELECCIONADO">
+            <column name="OIDSELECCIONADO"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
