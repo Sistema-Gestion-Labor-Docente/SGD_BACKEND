@@ -15,6 +15,8 @@ public interface FechaRepository extends JpaRepository<Fecha, Integer>, JpaSpeci
 
     List<Fecha> findByCalendario_Oidcalendario(Integer oidCalendario);
 
+    List<Fecha> findByCalendario_OidcalendarioOrderByFechaInicialAsc(Integer oidCalendario);
+
     long countByCalendario_OidcalendarioAndTipo(Integer oidCalendario, TipoFechaEnum tipo);
 
     long countByCalendario_OidcalendarioAndTipoAndOidFechaNot(Integer oidCalendario, TipoFechaEnum tipo, Integer oidFecha);

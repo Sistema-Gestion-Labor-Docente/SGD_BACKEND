@@ -24,6 +24,10 @@ import co.edu.unicauca.sgd.api.dto.calendario.FechaDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.FechaDTOResponse;
 import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioConsultaException;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioNoEncontradoException;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioOperacionNoPermitidaException;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioProcesoException;
 import co.edu.unicauca.sgd.api.mapper.CalendarioMapper;
 import co.edu.unicauca.sgd.api.mapper.FechaMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
@@ -101,7 +105,7 @@ public class CalendarioServiceImpl implements CalendarioService {
         if (oidCalendario == null) {
             return List.of();
         }
-        return fechaRepository.findByCalendario_Oidcalendario(oidCalendario)
+        return fechaRepository.findByCalendario_OidcalendarioOrderByFechaInicialAsc(oidCalendario)
                 .stream()
                 .map(fechaMapper::toResponse)
                 .toList();
@@ -122,7 +126,9 @@ public class CalendarioServiceImpl implements CalendarioService {
             logger.info("Calendarios encontrados: {}", responsePage.getTotalElements());
             return new ApiResponse<>(200, "Calendarios encontrados correctamente.", responsePage);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al recuperar los calendarios: " + e.getMessage(), null);
+            CalendarioConsultaException ex =
+                    new CalendarioConsultaException("Error al recuperar los calendarios", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -130,17 +136,19 @@ public class CalendarioServiceImpl implements CalendarioService {
     public ApiResponse<CalendarioDTOResponse> buscarPorId(Integer oid) {
         try {
             Calendario calendario = calendarioRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new CalendarioNoEncontradoException(oid));
 
             CalendarioDTOResponse dto = calendarioMapper.toResponse(calendario, obtenerFechasDto(calendario.getOidcalendario()));
 
             logger.info("Calendario encontrado con ID: {}", oid);
 
             return new ApiResponse<>(200, "Calendario encontrado correctamente.", dto);
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(404, "Calendario no encontrado: " + e.getMessage(), null);
+        } catch (CalendarioNoEncontradoException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno al recuperar el calendario: " + e.getMessage(), null);
+            CalendarioConsultaException ex =
+                    new CalendarioConsultaException("Error interno al recuperar el calendario", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -166,8 +174,12 @@ public class CalendarioServiceImpl implements CalendarioService {
 
             logger.info("Calendario guardado con ID: {}", guardado.getOidcalendario());
             return new ApiResponse<>(201, "Calendario guardado correctamente.", dto);
+        } catch (CalendarioOperacionNoPermitidaException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al guardar el calendario: " + e.getMessage(), null);
+            CalendarioProcesoException ex =
+                    new CalendarioProcesoException("Error al guardar el calendario", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -176,13 +188,13 @@ public class CalendarioServiceImpl implements CalendarioService {
     public ApiResponse<CalendarioDTOResponse> actualizar(Integer oid, CalendarioDTORequest request) {
         try {
             Calendario existente = calendarioRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new CalendarioNoEncontradoException(oid));
 
             if (request.getAnioCalendario() != null && !request.getAnioCalendario().equals(existente.getAnioCalendario())) {
-                throw new RuntimeException("El anio (anio) no es editable.");
+                throw new CalendarioOperacionNoPermitidaException("El anio (anio) no es editable.");
             }
             if (request.getNumeroCalendario() != null && !request.getNumeroCalendario().equals(existente.getNumeroCalendario())) {
-                throw new RuntimeException("El numero (numero) no es editable.");
+                throw new CalendarioOperacionNoPermitidaException("El numero (numero) no es editable.");
             }
 
             calendarioMapper.actualizarCamposBasicos(existente, request);
@@ -193,10 +205,14 @@ public class CalendarioServiceImpl implements CalendarioService {
 
             logger.info("Calendario actualizado con ID: {}", oid);
             return new ApiResponse<>(200, "Calendario actualizado correctamente.", dto);
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en la actualizacion: " + e.getMessage(), null);
+        } catch (CalendarioOperacionNoPermitidaException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (CalendarioNoEncontradoException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno al actualizar el calendario: " + e.getMessage(), null);
+            CalendarioProcesoException ex =
+                    new CalendarioProcesoException("Error interno al actualizar el calendario", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -205,24 +221,28 @@ public class CalendarioServiceImpl implements CalendarioService {
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             if (!calendarioRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "Calendario no encontrado con ID: " + oid, null);
+                throw new CalendarioNoEncontradoException(oid);
             }
             calendarioRepository.deleteById(oid);
             logger.info("Calendario eliminado con ID: {}", oid);
             return new ApiResponse<>(204, "Calendario eliminado correctamente.", null);
+        } catch (CalendarioNoEncontradoException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al eliminar el calendario: " + e.getMessage(), null);
+            CalendarioProcesoException ex =
+                    new CalendarioProcesoException("Error al eliminar el calendario", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
     @Override
     public ByteArrayOutputStream generarCalendarioPdf(Integer oidCalendario) throws IOException {
         if (oidCalendario == null) {
-            throw new IllegalArgumentException("El identificador del calendario es obligatorio.");
+            throw new CalendarioOperacionNoPermitidaException("El identificador del calendario es obligatorio.");
         }
         logger.info("Generando PDF del calendario ID: {}", oidCalendario);
         Calendario calendario = calendarioRepository.findById(oidCalendario)
-                .orElseThrow(() -> new IllegalArgumentException("Calendario no encontrado con ID: " + oidCalendario));
+                .orElseThrow(() -> new CalendarioNoEncontradoException(oidCalendario));
         List<FechaDTOResponse> fechas = obtenerFechasDto(oidCalendario);
         try {
             return calendarioPdfService.generarCalendarioPdf(calendario, fechas);
