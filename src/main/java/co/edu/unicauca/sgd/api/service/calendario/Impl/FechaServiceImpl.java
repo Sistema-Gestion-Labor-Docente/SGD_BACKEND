@@ -389,17 +389,21 @@ public class FechaServiceImpl implements FechaService {
             }
         }
 
-        // 2. Calcular semanas de preparación (del inicio de periodo a inicio de clases)
+        // 2. Calcular semanas de preparación (del inicio de periodo al fin de clases)
         if (dto.getTipo() == TipoFechaEnum.CLASES || dto.getOidNombreFecha() == NOMBRE_PERIODO_INICIO) {
-            // Buscar inicio de periodo
             Optional<Fecha> inicioPeriodoOpt = fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(
                 calendario.getOidcalendario(), NOMBRE_PERIODO_INICIO);
 
-            LocalDateTime inicioPeriodo = (dto.getOidNombreFecha() == NOMBRE_PERIODO_INICIO) ? dto.getFechaInicial() : inicioPeriodoOpt.map(Fecha::getFechaInicial).orElse(null);
-            LocalDateTime inicioClases = (dto.getOidNombreFecha() == NOMBRE_CLASES_INICIO) ? dto.getFechaInicial() : inicioClasesOpt.map(Fecha::getFechaInicial).orElse(null);
+            LocalDateTime inicioPeriodo = (dto.getOidNombreFecha() == NOMBRE_PERIODO_INICIO)
+                ? dto.getFechaInicial()
+                : inicioPeriodoOpt.map(Fecha::getFechaInicial).orElse(null);
+            LocalDateTime finClases = (dto.getOidNombreFecha() == NOMBRE_CLASES_FIN)
+                ? dto.getFechaInicial()
+                : finClasesOpt.map(Fecha::getFechaInicial).orElse(null);
 
-            if (inicioPeriodo != null && inicioClases != null) {
-                long semanasPrep = java.time.temporal.ChronoUnit.WEEKS.between(inicioPeriodo.toLocalDate(), inicioClases.toLocalDate());
+            if (inicioPeriodo != null && finClases != null) {
+                long semanasPrep = java.time.temporal.ChronoUnit.WEEKS.between(
+                    inicioPeriodo.toLocalDate(), finClases.toLocalDate());
                 calendario.setSemanasPreparacion((float) semanasPrep);
             }
         }

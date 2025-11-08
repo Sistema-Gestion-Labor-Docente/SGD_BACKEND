@@ -1,0 +1,260 @@
+package co.edu.unicauca.sgd.api.service.necesidad.impl;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import co.edu.unicauca.sgd.api.domain.Actividad;
+import co.edu.unicauca.sgd.api.domain.Asignacion;
+import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.EstadoActividad;
+import co.edu.unicauca.sgd.api.domain.Materia;
+import co.edu.unicauca.sgd.api.domain.Necesidad;
+import co.edu.unicauca.sgd.api.domain.Seleccionado;
+import co.edu.unicauca.sgd.api.domain.TipoActividad;
+import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTORequest;
+import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
+import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
+import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionLimiteDocentesException;
+import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionOperacionNoPermitidaException;
+import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
+import co.edu.unicauca.sgd.api.repository.ActividadRepository;
+import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
+import co.edu.unicauca.sgd.api.repository.EstadoActividadRepository;
+import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
+import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
+import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
+
+@ExtendWith(MockitoExtension.class)
+class AsignacionServiceImplTest {
+
+    @Mock
+    private AsignacionRepository asignacionRepository;
+    @Mock
+    private NecesidadRepository necesidadRepository;
+    @Mock
+    private SeleccionadoRepository seleccionadoRepository;
+    @Mock
+    private TipoActividadRepository tipoActividadRepository;
+    @Mock
+    private EstadoActividadRepository estadoActividadRepository;
+    @Mock
+    private ActividadRepository actividadRepository;
+    @Mock
+    private AsignacionMapper asignacionMapper;
+
+    @InjectMocks
+    private AsignacionServiceImpl asignacionService;
+
+    private Necesidad necesidad;
+    private Seleccionado seleccionado;
+
+    @BeforeEach
+    void init() {
+        Calendario calendario = new Calendario();
+        calendario.setOidcalendario(10);
+        calendario.setSemanasClase(16f);
+        calendario.setSemanasPreparacion(4f);
+
+        Materia materia = new Materia();
+        materia.setHorasSemana(12);
+
+        necesidad = new Necesidad();
+        necesidad.setOidNecesidad(1);
+        necesidad.setCalendario(calendario);
+        necesidad.setMateria(materia);
+        necesidad.setEstado(EstadoNecesidad.NO_ASIGNADA);
+
+        seleccionado = new Seleccionado();
+        seleccionado.setOidSeleccionado(2);
+        seleccionado.setCalendario(calendario);
+    }
+
+    @Test
+    void listar_DeberiaFiltrarPorSeleccionado() {
+        Asignacion asignacion1 = buildAsignacion(1, seleccionado.getOidSeleccionado());
+        Asignacion asignacion2 = buildAsignacion(2, 99);
+
+        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Arrays.asList(asignacion1, asignacion2));
+
+        AsignacionDTOResponse dto = AsignacionDTOResponse.builder().build();
+        when(asignacionMapper.toResponse(asignacion1)).thenReturn(dto);
+
+        ApiResponse<Page<AsignacionDTOResponse>> response =
+                asignacionService.listar(1, seleccionado.getOidSeleccionado(), Pageable.unpaged());
+
+        assertThat(response.getCodigo()).isEqualTo(200);
+        assertThat(response.getData().getTotalElements()).isEqualTo(1);
+        assertThat(response.getData().getContent()).containsExactly(dto);
+        verify(asignacionRepository).findByNecesidad_OidNecesidad(1);
+    }
+
+    @Test
+    void crear_DeberiaGuardarAsignacionYRedistribuirHoras() {
+        AsignacionDTORequest request = buildRequest();
+
+        TipoActividad tipoActividad = new TipoActividad();
+        EstadoActividad estadoActividad = new EstadoActividad();
+
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
+        when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
+        when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
+        when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA_DIRECTA")).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Asignacion asignacionGuardada = new Asignacion();
+        asignacionGuardada.setNecesidad(necesidad);
+        asignacionGuardada.setSeleccionado(seleccionado);
+        Actividad actividadAsignacion = new Actividad();
+        actividadAsignacion.setNombreActividad("Labor");
+        asignacionGuardada.setActividad(actividadAsignacion);
+
+        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+            Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
+            asignacion.setOidAsignacion(50);
+            return asignacion;
+        });
+        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Collections.singletonList(asignacionGuardada));
+
+        AsignacionDTOResponse dto = AsignacionDTOResponse.builder().build();
+        when(asignacionMapper.toResponse(any(Asignacion.class))).thenReturn(dto);
+
+        ApiResponse<AsignacionDTOResponse> response = asignacionService.crear(request);
+
+        assertThat(response.getCodigo()).isEqualTo(201);
+        assertThat(response.getData()).isEqualTo(dto);
+
+        Float horasEsperadas = 12f;
+        assertThat(asignacionGuardada.getHorasDocencia()).isEqualTo(horasEsperadas);
+        verify(asignacionRepository).saveAll(anyList());
+        verify(actividadRepository).save(any(Actividad.class));
+        assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.ASIGNADA);
+        verify(necesidadRepository).save(necesidad);
+    }
+
+    @Test
+    void crear_DeberiaFallarCuandoSuperaLimiteDocentes() {
+        AsignacionDTORequest request = buildRequest();
+
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
+        when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(3L);
+
+        assertThrows(AsignacionLimiteDocentesException.class, () -> asignacionService.crear(request));
+        verify(asignacionRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizar_NoDebePermitirCambiosDeNecesidadONuevoSeleccionado() {
+        Asignacion asignacion = new Asignacion();
+        asignacion.setOidAsignacion(5);
+        asignacion.setNecesidad(necesidad);
+        asignacion.setSeleccionado(seleccionado);
+
+        when(asignacionRepository.findById(5)).thenReturn(Optional.of(asignacion));
+
+        AsignacionDTORequest request = buildRequest();
+        request.setOidNecesidad(99);
+
+        assertThrows(AsignacionOperacionNoPermitidaException.class, () -> asignacionService.actualizar(5, request));
+        verify(asignacionRepository, never()).save(any());
+    }
+
+    @Test
+    void eliminar_DeberiaRedistribuirCuandoQuedanDocentes() {
+        Asignacion asignacion = new Asignacion();
+        asignacion.setOidAsignacion(9);
+        asignacion.setNecesidad(necesidad);
+        asignacion.setSeleccionado(seleccionado);
+        Actividad actividad = new Actividad();
+        actividad.setNombreActividad("Actividad");
+        asignacion.setActividad(actividad);
+
+        Asignacion remanente = new Asignacion();
+        remanente.setNecesidad(necesidad);
+        remanente.setSeleccionado(seleccionado);
+        Actividad remAct = new Actividad();
+        remAct.setNombreActividad("Remanente");
+        remanente.setActividad(remAct);
+
+        necesidad.setEstado(EstadoNecesidad.ASIGNADA);
+
+        when(asignacionRepository.findById(9)).thenReturn(Optional.of(asignacion));
+        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Collections.singletonList(remanente));
+        when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(1L);
+
+        ApiResponse<Void> response = asignacionService.eliminar(9);
+
+        assertThat(response.getCodigo()).isEqualTo(204);
+        verify(asignacionRepository).delete(asignacion);
+        verify(asignacionRepository).saveAll(anyList());
+        assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.ASIGNADA);
+        verify(necesidadRepository, never()).save(necesidad);
+    }
+
+    @Test
+    void eliminar_DebeMarcarNecesidadComoNoAsignadaCuandoNoQuedanDocentes() {
+        Asignacion asignacion = new Asignacion();
+        asignacion.setOidAsignacion(10);
+        asignacion.setNecesidad(necesidad);
+        asignacion.setSeleccionado(seleccionado);
+        necesidad.setEstado(EstadoNecesidad.ASIGNADA);
+
+        when(asignacionRepository.findById(10)).thenReturn(Optional.of(asignacion));
+        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Collections.emptyList());
+        when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L);
+
+        ApiResponse<Void> response = asignacionService.eliminar(10);
+
+        assertThat(response.getCodigo()).isEqualTo(204);
+        verify(asignacionRepository).delete(asignacion);
+        verify(asignacionRepository, never()).saveAll(anyList());
+        assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.NO_ASIGNADA);
+        verify(necesidadRepository).save(necesidad);
+    }
+
+    private Asignacion buildAsignacion(int id, int oidSeleccionado) {
+        Asignacion asignacion = new Asignacion();
+        asignacion.setOidAsignacion(id);
+        asignacion.setNecesidad(necesidad);
+        Seleccionado seleccionadoAsignacion = new Seleccionado();
+        seleccionadoAsignacion.setOidSeleccionado(oidSeleccionado);
+        seleccionadoAsignacion.setCalendario(necesidad.getCalendario());
+        asignacion.setSeleccionado(seleccionadoAsignacion);
+
+        Actividad actividad = new Actividad();
+        actividad.setNombreActividad("Actividad " + id);
+        asignacion.setActividad(actividad);
+        return asignacion;
+    }
+
+    private AsignacionDTORequest buildRequest() {
+        AsignacionDTORequest request = new AsignacionDTORequest();
+        request.setOidNecesidad(1);
+        request.setOidSeleccionado(2);
+        request.setOidEstadoActividad(3);
+        request.setNombreActividad("Docencia directa");
+        return request;
+    }
+}

@@ -76,6 +76,18 @@ class FechaControllerTest {
     }
 
     @Test
+    void findByOid_ShouldReturnOkWhenServiceReturns204() {
+        ApiResponse<FechaDTOResponse> serviceResponse = new ApiResponse<>(204, "sin contenido", null);
+        when(fechaService.buscarPorId(9)).thenReturn(serviceResponse);
+
+        ResponseEntity<ApiResponse<FechaDTOResponse>> result = controller.findByOid(9);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isEqualTo(serviceResponse);
+        verify(fechaService).buscarPorId(9);
+    }
+
+    @Test
     void save_ShouldReturnCreatedStatusWhenServiceReturns201() {
         FechaDTORequest request = new FechaDTORequest();
         FechaDTOResponse dto = new FechaDTOResponse();
@@ -101,6 +113,19 @@ class FechaControllerTest {
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
         verify(fechaService).actualizar(7, request);
+    }
+
+    @Test
+    void update_ShouldReturnOkWhenServiceReturns204() {
+        FechaDTORequest request = new FechaDTORequest();
+        ApiResponse<FechaDTOResponse> serviceResponse = new ApiResponse<>(204, "sin cambios", null);
+        when(fechaService.actualizar(11, request)).thenReturn(serviceResponse);
+
+        ResponseEntity<ApiResponse<FechaDTOResponse>> result = controller.update(11, request);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isEqualTo(serviceResponse);
+        verify(fechaService).actualizar(11, request);
     }
 
     @Test
@@ -131,4 +156,3 @@ class FechaControllerTest {
         verify(fechaService).eliminar(3);
     }
 }
-

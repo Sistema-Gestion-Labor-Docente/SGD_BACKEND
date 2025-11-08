@@ -22,12 +22,14 @@ import co.edu.unicauca.sgd.api.domain.EstadoActividad;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
+import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
 import co.edu.unicauca.sgd.api.exception.RecursoNoEncontradoException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionCalendarioInvalidoException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionDocenteDuplicadoException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionLimiteDocentesException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionNoEncontradaException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionTipoActividadNoConfiguradaException;
+import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionOperacionNoPermitidaException;
 import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
 import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
@@ -112,6 +114,7 @@ public class AsignacionServiceImpl implements AsignacionService {
             prepararAsignacion(asignacion, request, true);
             asignacion = asignacionRepository.save(asignacion);
             redistribuirHoras(asignacion.getNecesidad());
+            actualizarEstadoNecesidad(asignacion.getNecesidad());
             return new ApiResponse<>(201, "Asignación creada correctamente.", asignacionMapper.toResponse(asignacion));
         } catch (DataIntegrityViolationException e) {
             throw new AsignacionDocenteDuplicadoException();
@@ -123,6 +126,11 @@ public class AsignacionServiceImpl implements AsignacionService {
     public ApiResponse<AsignacionDTOResponse> actualizar(Integer oidAsignacion, AsignacionDTORequest request) {
         Asignacion asignacion = asignacionRepository.findById(oidAsignacion)
                 .orElseThrow(() -> new AsignacionNoEncontradaException(oidAsignacion));
+
+        if (!Objects.equals(asignacion.getNecesidad().getOidNecesidad(), request.getOidNecesidad())
+                || !Objects.equals(asignacion.getSeleccionado().getOidSeleccionado(), request.getOidSeleccionado())) {
+            throw new AsignacionOperacionNoPermitidaException();
+        }
 
         Integer necesidadOriginal = asignacion.getNecesidad().getOidNecesidad();
         prepararAsignacion(asignacion, request, false);
@@ -146,6 +154,7 @@ public class AsignacionServiceImpl implements AsignacionService {
         Necesidad necesidad = asignacion.getNecesidad();
         asignacionRepository.delete(asignacion);
         redistribuirHoras(necesidad);
+        actualizarEstadoNecesidad(necesidad);
 
         return new ApiResponse<>(204, "Asignación eliminada correctamente.", null);
     }
@@ -224,5 +233,14 @@ public class AsignacionServiceImpl implements AsignacionService {
         });
 
         asignacionRepository.saveAll(asignaciones);
+    }
+
+    private void actualizarEstadoNecesidad(Necesidad necesidad) {
+        long totalAsignaciones = asignacionRepository.countByNecesidad_OidNecesidad(necesidad.getOidNecesidad());
+        EstadoNecesidad nuevoEstado = totalAsignaciones > 0 ? EstadoNecesidad.ASIGNADA : EstadoNecesidad.NO_ASIGNADA;
+        if (necesidad.getEstado() != nuevoEstado) {
+            necesidad.setEstado(nuevoEstado);
+            necesidadRepository.save(necesidad);
+        }
     }
 }
