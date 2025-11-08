@@ -19,6 +19,7 @@ import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.RolDTO;
 import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
+import co.edu.unicauca.sgd.api.dto.UsuarioDetalleDTO;
 import co.edu.unicauca.sgd.api.dto.materias.DepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.dto.materias.ProgramaDTOResponse;
 import co.edu.unicauca.sgd.api.mapper.DepartamentoMapper;
@@ -218,6 +219,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         dto.setIdentificacion(usuario.getIdentificacion());
         dto.setNombres(usuario.getNombres());
         dto.setApellidos(usuario.getApellidos());
+        dto.setUsuarioDetalle(UsuarioDetalleDTO.fromEntity(usuario.getUsuarioDetalle()));
 
         List<RolDTO> rolesDto = usuario.getRoles() == null ? Collections.emptyList()
             : usuario.getRoles().stream()

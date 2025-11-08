@@ -33,6 +33,7 @@ import jakarta.transaction.Transactional;
 public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoService {
 
     private static final Logger logger = LoggerFactory.getLogger(UsuarioDepartamentoServiceImpl.class);
+    private static final String DOCENCIA = "DOCENCIA";
 
     private final UsuarioDepartamentoRepository repository;
 
@@ -178,5 +179,79 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
         } catch (Exception e) {
             throw new UsuarioDepartamentoInternalException("Error al eliminar la asignacion.", e);
         }
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<List<UsuarioDepartamentoDTOResponse>> obtenerProfesoresPorTipoActividad(String filtro, Integer oidDepartamento) {
+        try {
+            if (oidDepartamento == null) {
+                throw new UsuarioDepartamentoValidationException("El parámetro oidDepartamento es obligatorio.");
+            }
+            String filtroNormalizado = filtro == null ? DOCENCIA : filtro.trim().toUpperCase();
+
+            List<UsuarioDepartamento> profesores;
+            String mensajeVacio;
+            String mensajeExitoso;
+
+            switch (filtroNormalizado) {
+                case "DOCENCIA":
+                    profesores = repository.findProfesoresConTipoActividad(DOCENCIA, oidDepartamento);
+                    mensajeVacio = "No se encontraron profesores con actividades de tipo DOCENCIA.";
+                    mensajeExitoso = "Profesores con actividades de tipo DOCENCIA recuperados correctamente.";
+                    break;
+                case "NO_DOCENCIA":
+                    profesores = repository.findProfesoresConTipoActividadDiferente(DOCENCIA, oidDepartamento);
+                    mensajeVacio = "No se encontraron profesores con actividades diferentes a DOCENCIA.";
+                    mensajeExitoso = "Profesores con actividades diferentes a DOCENCIA recuperados correctamente.";
+                    break;
+                default:
+                    throw new UsuarioDepartamentoValidationException("Filtro inválido. Use DOCENCIA o NO_DOCENCIA.");
+            }
+
+            return construirRespuestaProfesores(profesores, mensajeVacio, mensajeExitoso);
+        } catch (UsuarioDepartamentoException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new UsuarioDepartamentoInternalException("Error al listar profesores por tipo de actividad.", e);
+        }
+    }
+
+    private ApiResponse<List<UsuarioDepartamentoDTOResponse>> construirRespuestaProfesores(
+            List<UsuarioDepartamento> profesores,
+            String mensajeVacio,
+            String mensajeExitoso) {
+
+        List<UsuarioDepartamentoDTOResponse> dtoList = profesores.stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+
+        if (!dtoList.isEmpty()) {
+            Map<Integer, Float> horasPorUsuario = obtenerHorasPorUsuario(profesores);
+            dtoList.forEach(dto -> {
+                Integer oidUsuario = dto.getUsuario() != null ? dto.getUsuario().getOidUsuario() : null;
+                if (oidUsuario != null) {
+                    dto.setTotalHorasActividades(horasPorUsuario.getOrDefault(oidUsuario, 0f));
+                }
+            });
+        }
+
+        String mensaje = dtoList.isEmpty() ? mensajeVacio : mensajeExitoso;
+        return new ApiResponse<>(200, mensaje, dtoList);
+    }
+
+    private Map<Integer, Float> obtenerHorasPorUsuario(List<UsuarioDepartamento> profesores) {
+        List<Integer> oids = profesores.stream()
+                .map(UsuarioDepartamento::getOidUsuario)
+                .collect(Collectors.toList());
+
+        Map<Integer, Float> horasPorUsuario = new HashMap<>();
+        if (!oids.isEmpty()) {
+            List<UsuarioHorasProjection> proyecciones = usuarioActividadCalendarioRepository.sumarHorasPorUsuarios(oids);
+            for (UsuarioHorasProjection proyeccion : proyecciones) {
+                horasPorUsuario.put(proyeccion.getOidUsuario(), proyeccion.getTotalHoras());
+            }
+        }
+        return horasPorUsuario;
     }
 }

@@ -41,9 +41,12 @@ public class UsuarioActividadCalendarioController {
             @RequestParam(name = "oidCalendario", required = true) Integer oidCalendario,
             @RequestParam(name = "oidDepartamento", required = true) Integer oidDepartamento,
             @RequestParam(name = "oidTipoActividad", required = false) Integer oidTipoActividad,
+            @RequestParam(name = "oidEstadoActividad", required = false) Integer oidEstadoActividad,
+            @RequestParam(name = "oidUsuarioResponsable", required = false) Integer oidUsuarioResponsable,
             Pageable pageable) {
         ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> response =
-                usuarioActividadCalendarioService.listarActividadesConRelaciones(oidCalendario, oidDepartamento, oidTipoActividad, pageable);
+                usuarioActividadCalendarioService.listarActividadesConRelaciones(
+                        oidCalendario, oidDepartamento, oidTipoActividad, oidEstadoActividad, oidUsuarioResponsable, pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

@@ -58,7 +58,9 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
         JOIN USUARIODEPARTAMENTO ud ON ud.OIDUSUARIO = u.OIDUSUARIO
         WHERE ac.OIDCALENDARIO = :oidCalendario
           AND ( :oidTipoActividad IS NULL OR a.OIDTIPOACTIVIDAD = :oidTipoActividad )
+          AND ( :oidEstadoActividad IS NULL OR a.OIDESTADOACTIVIDAD = :oidEstadoActividad )
           AND ud.OIDDEPARTAMENTO = :oidDepartamento
+          AND ( :oidUsuarioResponsable IS NULL OR uac.OIDUSUARIO = :oidUsuarioResponsable )
       """,
       countQuery = """
         SELECT COUNT(DISTINCT a.OIDACTIVIDAD)
@@ -69,7 +71,9 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
         JOIN USUARIODEPARTAMENTO ud ON ud.OIDUSUARIO = u.OIDUSUARIO
         WHERE ac.OIDCALENDARIO = :oidCalendario
           AND ( :oidTipoActividad IS NULL OR a.OIDTIPOACTIVIDAD = :oidTipoActividad )
+          AND ( :oidEstadoActividad IS NULL OR a.OIDESTADOACTIVIDAD = :oidEstadoActividad )
           AND ud.OIDDEPARTAMENTO = :oidDepartamento
+          AND ( :oidUsuarioResponsable IS NULL OR uac.OIDUSUARIO = :oidUsuarioResponsable )
       """,
       nativeQuery = true
     )
@@ -77,6 +81,8 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
         @Param("oidCalendario") Integer oidCalendario,
         @Param("oidDepartamento") Integer oidDepartamento,
         @Param("oidTipoActividad") Integer oidTipoActividad,
+        @Param("oidEstadoActividad") Integer oidEstadoActividad,
+        @Param("oidUsuarioResponsable") Integer oidUsuarioResponsable,
         Pageable pageable);
 
     @Query("""

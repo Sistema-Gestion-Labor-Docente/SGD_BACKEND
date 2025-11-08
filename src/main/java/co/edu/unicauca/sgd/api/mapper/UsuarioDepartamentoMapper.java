@@ -6,6 +6,7 @@ import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.UsuarioDepartamentoDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.UsuarioDepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.domain.Departamento;
+import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.service.actividad.ActividadDTOService;
 
 @Component
@@ -21,8 +22,7 @@ public class UsuarioDepartamentoMapper {
         UsuarioDepartamento ud = new UsuarioDepartamento();
         ud.setOidUsuario(dto.getOidUsuario());
         ud.setDepartamento(new Departamento(dto.getOidDepartamento()));
-        // Nota: no es necesario setear Usuario; si tu entidad lo expone, podrías:
-        // ud.setUsuario(new Usuario(dto.getOidUsuario()));
+        ud.setUsuario(new Usuario(dto.getOidUsuario()));
         return ud;
     }
 
