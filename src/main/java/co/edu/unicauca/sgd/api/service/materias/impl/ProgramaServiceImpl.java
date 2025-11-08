@@ -51,7 +51,10 @@ public class ProgramaServiceImpl implements ProgramaService {
             Page<ProgramaDTOResponse> response = page.map(programaMapper::toResponse);
 
             logger.info("Programas encontrados: {}", response.getTotalElements());
-            return new ApiResponse<>(200, "Programas recuperados correctamente.", response);
+            String message = response.hasContent()
+                    ? "Programas recuperados correctamente."
+                    : "No se encontraron programas.";
+            return new ApiResponse<>(200, message, response);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al listar programas: " + e.getMessage(), null);
         }
@@ -61,12 +64,12 @@ public class ProgramaServiceImpl implements ProgramaService {
     public ApiResponse<ProgramaDTOResponse> buscarPorId(Integer oid) {
         try {
             Programa entity = programaRepository.findById(oid)
-                .orElseThrow(() -> new RuntimeException("Programa no encontrado con ID: " + oid));
+                .orElseThrow(() -> new IllegalStateException("Programa no encontrado con ID: " + oid));
             return new ApiResponse<>(200, "Programa encontrado correctamente.", programaMapper.toResponse(entity));
-        } catch (RuntimeException e) {
+        } catch (IllegalStateException e) {
             return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error interno al buscar el programa: " + e.getMessage(), null);
         }
     }
 
@@ -74,19 +77,24 @@ public class ProgramaServiceImpl implements ProgramaService {
     @Transactional
     public ApiResponse<ProgramaDTOResponse> guardar(ProgramaDTORequest request) {
         try {
+            if (!StringUtils.hasText(request.getNombre())) {
+                throw new IllegalArgumentException("El nombre del programa es obligatorio.");
+            }
             Programa entidad = programaMapper.convertToEntity(request);
 
             if (request.getCoordinadorOidUsuario() != null) {
                 Usuario coord = usuarioRepository.findById(request.getCoordinadorOidUsuario())
-                    .orElseThrow(() -> new RuntimeException("Coordinador no encontrado"));
+                    .orElseThrow(() -> new IllegalStateException("Coordinador no encontrado con ID: " + request.getCoordinadorOidUsuario()));
                 entidad.setCoordinador(coord);
             }
 
             entidad.setUsuarioCreacion("Usuario");
             Programa saved = programaRepository.save(entidad);
             return new ApiResponse<>(200, "Programa guardado.", programaMapper.toResponse(saved));
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
             return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al guardar programa: " + e.getMessage(), null);
         }
@@ -97,13 +105,13 @@ public class ProgramaServiceImpl implements ProgramaService {
     public ApiResponse<ProgramaDTOResponse> actualizar(Integer id, ProgramaDTORequest request) {
         try {
             Programa existente = programaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Programa no encontrado"));
+                .orElseThrow(() -> new IllegalStateException("Programa no encontrado con ID: " + id));
 
             programaMapper.actualizarCamposBasicos(existente, request);
 
             if (request.getCoordinadorOidUsuario() != null) {
                 Usuario coord = usuarioRepository.findById(request.getCoordinadorOidUsuario())
-                    .orElseThrow(() -> new RuntimeException("Coordinador no encontrado"));
+                    .orElseThrow(() -> new IllegalStateException("Coordinador no encontrado con ID: " + request.getCoordinadorOidUsuario()));
                 existente.setCoordinador(coord);
             } else {
                 existente.setCoordinador(null);
@@ -112,8 +120,10 @@ public class ProgramaServiceImpl implements ProgramaService {
             existente.setUsuarioActualizacion("UsuarioActualizacion");
             Programa actualizado = programaRepository.save(existente);
             return new ApiResponse<>(200, "Programa actualizado.", programaMapper.toResponse(actualizado));
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
             return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al actualizar programa: " + e.getMessage(), null);
         }
@@ -123,11 +133,13 @@ public class ProgramaServiceImpl implements ProgramaService {
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             if (!programaRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "Programa no encontrado con ID: " + oid, null);
+                throw new IllegalStateException("Programa no encontrado con ID: " + oid);
             }
             programaRepository.deleteById(oid);
             logger.info("Programa eliminado ID: {}", oid);
             return new ApiResponse<>(200, "Programa eliminado correctamente.", null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar el programa: " + e.getMessage(), null);
         }

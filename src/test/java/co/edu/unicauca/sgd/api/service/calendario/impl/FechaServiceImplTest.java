@@ -8,13 +8,20 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.Fecha;
@@ -45,6 +52,39 @@ class FechaServiceImplTest {
     @BeforeEach
     void setUp() {
         fechaService = new FechaServiceImpl(fechaRepository, calendarioRepository, nombreFechaRepository, fechaMapper);
+    }
+
+    @Test
+    void obtenerTodas_conResultadosDevuelveMensajePositivo() {
+        Pageable pageable = PageRequest.of(0, 5);
+        Fecha fecha = new Fecha();
+        Page<Fecha> page = new PageImpl<>(List.of(fecha), pageable, 1);
+        FechaDTOResponse dto = new FechaDTOResponse();
+
+        when(fechaRepository.findAll(ArgumentMatchers.<Specification<Fecha>>any(), ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(page);
+        when(fechaMapper.toResponse(fecha)).thenReturn(dto);
+
+        ApiResponse<Page<FechaDTOResponse>> response = fechaService.obtenerTodas(TipoFechaEnum.CLASES, pageable);
+
+        assertThat(response.getCodigo()).isEqualTo(200);
+        assertThat(response.getMensaje()).isEqualTo("Fechas obtenidas correctamente");
+        assertThat(response.getData().getContent()).containsExactly(dto);
+    }
+
+    @Test
+    void obtenerTodas_sinResultadosDevuelveMensajeSinDatos() {
+        Pageable pageable = PageRequest.of(0, 5);
+        Page<Fecha> page = new PageImpl<>(List.of(), pageable, 0);
+
+        when(fechaRepository.findAll(ArgumentMatchers.<Specification<Fecha>>any(), ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(page);
+
+        ApiResponse<Page<FechaDTOResponse>> response = fechaService.obtenerTodas(null, pageable);
+
+        assertThat(response.getCodigo()).isEqualTo(200);
+        assertThat(response.getMensaje()).isEqualTo("No se encontraron fechas.");
+        assertThat(response.getData().getTotalElements()).isZero();
     }
 
     @Test

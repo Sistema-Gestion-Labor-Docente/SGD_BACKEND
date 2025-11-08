@@ -87,7 +87,9 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
             });
 
             logger.info("UsuarioDepartamento encontrados: {}", response.getTotalElements());
-            return new ApiResponse<>(200, "Registros recuperados correctamente.", response);
+            boolean hasContent = response.hasContent();
+            String message = hasContent ? "Registros recuperados correctamente." : "No se encontraron asignaciones usuario-departamento.";
+            return new ApiResponse<>(200, message, response);
         } catch (UsuarioDepartamentoException e) {
             throw e;
         } catch (Exception e) {

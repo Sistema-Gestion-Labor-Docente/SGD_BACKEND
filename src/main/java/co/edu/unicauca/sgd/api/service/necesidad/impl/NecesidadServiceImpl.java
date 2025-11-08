@@ -73,7 +73,10 @@ public class NecesidadServiceImpl implements NecesidadService {
             Page<NecesidadDTOResponse> response = page.map(necesidadMapper::toResponse);
 
             logger.info("Necesidades encontradas: {}", response.getTotalElements());
-            return new ApiResponse<>(200, "Necesidades recuperadas correctamente.", response);
+            String message = response.hasContent()
+                    ? "Necesidades recuperadas correctamente."
+                    : "No se encontraron necesidades.";
+            return new ApiResponse<>(200, message, response);
         } catch (Exception e) {
             logger.error("Error al listar necesidades", e);
             return new ApiResponse<>(500, "Error al listar las necesidades: " + e.getMessage(), Page.empty(pageableToUse));
@@ -84,15 +87,15 @@ public class NecesidadServiceImpl implements NecesidadService {
     public ApiResponse<NecesidadDTOResponse> buscarPorId(Integer oid) {
         try {
             Necesidad necesidad = necesidadRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Necesidad no encontrada con ID: " + oid));
+                    .orElseThrow(() -> new IllegalStateException("Necesidad no encontrado con ID: " + oid));
 
             return new ApiResponse<>(200, "Necesidad encontrada correctamente.", necesidadMapper.toResponse(necesidad));
-        } catch (RuntimeException e) {
+        } catch (IllegalStateException e) {
             logger.warn("Necesidad no encontrada: {}", e.getMessage());
             return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             logger.error("Error al buscar necesidad", e);
-            return new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error interno al buscar la necesidad: " + e.getMessage(), null);
         }
     }
 
@@ -177,12 +180,15 @@ public class NecesidadServiceImpl implements NecesidadService {
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             if (!necesidadRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "Necesidad no encontrada con ID: " + oid, null);
+                throw new IllegalStateException("Necesidad no encontrado con ID: " + oid);
             }
 
             necesidadRepository.deleteById(oid);
             logger.info("Necesidad eliminada con ID: {}", oid);
             return new ApiResponse<>(204, "Necesidad eliminada correctamente.", null);
+        } catch (IllegalStateException e) {
+            logger.warn("Intento de eliminar necesidad inexistente: {}", e.getMessage());
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             logger.error("Error al eliminar necesidad", e);
             return new ApiResponse<>(500, "Error al eliminar la necesidad: " + e.getMessage(), null);

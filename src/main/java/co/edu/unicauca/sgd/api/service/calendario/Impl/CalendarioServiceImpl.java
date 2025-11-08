@@ -124,7 +124,11 @@ public class CalendarioServiceImpl implements CalendarioService {
                     calendarioMapper.toResponse(calendario, obtenerFechasDto(calendario.getOidcalendario())));
 
             logger.info("Calendarios encontrados: {}", responsePage.getTotalElements());
-            return new ApiResponse<>(200, "Calendarios encontrados correctamente.", responsePage);
+            boolean hasContent = responsePage.hasContent();
+            String message = hasContent
+                    ? "Calendarios encontrados correctamente."
+                    : "No se encontraron calendarios.";
+            return new ApiResponse<>(200, message, responsePage);
         } catch (Exception e) {
             CalendarioConsultaException ex =
                     new CalendarioConsultaException("Error al recuperar los calendarios", e);

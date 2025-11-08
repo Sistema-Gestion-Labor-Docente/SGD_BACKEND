@@ -84,6 +84,21 @@ class UsuarioDepartamentoServiceImplTest {
     }
 
     @Test
+    void obtenerTodos_sinRegistros_DeberiaIndicarMensajeSinResultados() {
+        Pageable pageable = PageRequest.of(0, 5);
+        Page<UsuarioDepartamento> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        when(repository.findAll(ArgumentMatchers.<Specification<UsuarioDepartamento>>any(), eq(pageable))).thenReturn(emptyPage);
+
+        ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response = service.obtenerTodos(null, null, pageable);
+
+        assertEquals(200, response.getCodigo());
+        assertEquals("No se encontraron asignaciones usuario-departamento.", response.getMensaje());
+        assertEquals(0, response.getData().getTotalElements());
+        verify(usuarioActividadCalendarioRepository, never()).sumarHorasPorUsuarios(anyList());
+    }
+
+    @Test
     void obtenerTodos_cuandoOcurreError_lanzaExcepcionInterna() {
         Pageable pageable = PageRequest.of(0, 5);
         when(repository.findAll(ArgumentMatchers.<Specification<UsuarioDepartamento>>any(), eq(pageable))).thenThrow(new RuntimeException("DB down"));

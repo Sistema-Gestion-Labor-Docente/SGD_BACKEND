@@ -79,7 +79,9 @@ public class FechaServiceImpl implements FechaService {
             }
 
             Page<FechaDTOResponse> responsePage = fechas.map(fechaMapper::toResponse);
-            return new ApiResponse<>(200, "Fechas obtenidas correctamente", responsePage);
+            boolean hasContent = responsePage.hasContent();
+            String message = hasContent ? "Fechas obtenidas correctamente" : "No se encontraron fechas.";
+            return new ApiResponse<>(200, message, responsePage);
         } catch (Exception e) {
             FechaConsultaException ex =
                     new FechaConsultaException("Error al obtener fechas", e);

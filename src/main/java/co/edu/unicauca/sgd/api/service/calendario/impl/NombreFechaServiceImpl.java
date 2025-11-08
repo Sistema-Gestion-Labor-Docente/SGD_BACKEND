@@ -51,7 +51,9 @@ public class NombreFechaServiceImpl implements NombreFechaService {
                 page = nombreFechaRepository.findByOidNombreFechaNotIn(EXCLUDED_IDS, sortedPageable);
             }
             Page<NombreFechaDTOResponse> mapped = page.map(nombreFechaMapper::toResponse);
-            return new ApiResponse<>(200, "Registros obtenidos correctamente", mapped);
+            boolean hasContent = mapped.hasContent();
+            String message = hasContent ? "Registros obtenidos correctamente" : "No se encontraron nombres de fecha.";
+            return new ApiResponse<>(200, message, mapped);
         } catch (Exception e) {
             NombreFechaConsultaException ex =
                     new NombreFechaConsultaException("Error al listar NombreFecha", e);

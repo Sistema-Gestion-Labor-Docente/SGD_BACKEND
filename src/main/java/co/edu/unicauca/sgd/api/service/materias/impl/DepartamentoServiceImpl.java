@@ -52,7 +52,10 @@ public class DepartamentoServiceImpl implements DepartamentoService {
             Page<DepartamentoDTOResponse> response = page.map(departamentoMapper::toResponse);
 
             logger.info("Departamentos encontrados: {}", response.getTotalElements());
-            return new ApiResponse<>(200, "Departamentos recuperados correctamente.", response);
+            String message = response.hasContent()
+                    ? "Departamentos recuperados correctamente."
+                    : "No se encontraron departamentos.";
+            return new ApiResponse<>(200, message, response);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al listar departamentos: " + e.getMessage(), null);
         }
@@ -62,12 +65,12 @@ public class DepartamentoServiceImpl implements DepartamentoService {
     public ApiResponse<DepartamentoDTOResponse> buscarPorId(Integer oid) {
         try {
             Departamento entity = departamentoRepository.findById(oid)
-                .orElseThrow(() -> new RuntimeException("Departamento no encontrado con ID: " + oid));
+                .orElseThrow(() -> new IllegalStateException("Departamento no encontrado con ID: " + oid));
             return new ApiResponse<>(200, "Departamento encontrado correctamente.", departamentoMapper.toResponse(entity));
-        } catch (RuntimeException e) {
+        } catch (IllegalStateException e) {
             return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error interno al buscar el departamento: " + e.getMessage(), null);
         }
     }
 
@@ -75,13 +78,16 @@ public class DepartamentoServiceImpl implements DepartamentoService {
     @Transactional
     public ApiResponse<DepartamentoDTOResponse> guardar(DepartamentoDTORequest request) {
         try {
+            if (!StringUtils.hasText(request.getNombre())) {
+                throw new IllegalArgumentException("El nombre del departamento es obligatorio.");
+            }
             Departamento entity = departamentoMapper.convertToEntity(request);
             entity.setNombre(request.getNombre().toUpperCase());
 
             // resolver jefe si viene
             if (request.getJefeOidUsuario() != null) {
                 Usuario jefe = usuarioRepository.findById(request.getJefeOidUsuario())
-                    .orElseThrow(() -> new RuntimeException("Jefe no encontrado con ID: " + request.getJefeOidUsuario()));
+                    .orElseThrow(() -> new IllegalStateException("Usuario jefe no encontrado con ID: " + request.getJefeOidUsuario()));
                 entity.setJefe(jefe);
             }
 
@@ -89,8 +95,10 @@ public class DepartamentoServiceImpl implements DepartamentoService {
             Departamento saved = departamentoRepository.save(entity);
             logger.info("Departamento guardado ID: {}", saved.getOidDepartamento());
             return new ApiResponse<>(200, "Departamento guardado correctamente.", departamentoMapper.toResponse(saved));
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en datos: " + e.getMessage(), null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al guardar el departamento: " + e.getMessage(), null);
         }
@@ -101,14 +109,14 @@ public class DepartamentoServiceImpl implements DepartamentoService {
     public ApiResponse<DepartamentoDTOResponse> actualizar(Integer oid, DepartamentoDTORequest request) {
         try {
             Departamento existente = departamentoRepository.findById(oid)
-                .orElseThrow(() -> new RuntimeException("Departamento no encontrado con ID: " + oid));
+                .orElseThrow(() -> new IllegalStateException("Departamento no encontrado con ID: " + oid));
 
             departamentoMapper.actualizarCamposBasicos(existente, request);
 
             // actualizar jefe: si viene null explícito => quitar jefe
             if (request.getJefeOidUsuario() != null) {
                 Usuario jefe = usuarioRepository.findById(request.getJefeOidUsuario())
-                    .orElseThrow(() -> new RuntimeException("Jefe no encontrado con ID: " + request.getJefeOidUsuario()));
+                    .orElseThrow(() -> new IllegalStateException("Usuario jefe no encontrado con ID: " + request.getJefeOidUsuario()));
                 existente.setJefe(jefe);
             } else {
                 existente.setJefe(null);
@@ -118,10 +126,12 @@ public class DepartamentoServiceImpl implements DepartamentoService {
             Departamento actualizado = departamentoRepository.save(existente);
             logger.info("Departamento actualizado ID: {}", oid);
             return new ApiResponse<>(200, "Departamento actualizado correctamente.", departamentoMapper.toResponse(actualizado));
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno al actualizar: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error interno al actualizar el departamento: " + e.getMessage(), null);
         }
     }
 
@@ -129,11 +139,13 @@ public class DepartamentoServiceImpl implements DepartamentoService {
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             if (!departamentoRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "Departamento no encontrado con ID: " + oid, null);
+                throw new IllegalStateException("Departamento no encontrado con ID: " + oid);
             }
             departamentoRepository.deleteById(oid);
             logger.info("Departamento eliminado ID: {}", oid);
             return new ApiResponse<>(200, "Departamento eliminado correctamente.", null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar el departamento: " + e.getMessage(), null);
         }
