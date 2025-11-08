@@ -42,7 +42,7 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private static final Logger logger = LoggerFactory.getLogger(CalendarioServiceImpl.class);
 
-    private static final List<Integer> OIDS_FECHAS_RESALTADAS = List.of(
+    private static final List<Integer> OIDS_FECHAS_INICIALES = List.of(
         1, // Inicio del periodo
         2, // Matriculas academicas estudiantes regulares
         3, // Inicio de clases
@@ -52,7 +52,10 @@ public class CalendarioServiceImpl implements CalendarioService {
         7, // Finalizacion de clases
         8, // Plazo maximo para finales...
         9, // Cierre de SIMCA para registro de calificaciones
-        10 // Finalizacion de periodo academico {identificador del periodo}
+        10, // Finalizacion de periodo academico {identificador del periodo}
+        26, 
+        27, 
+        28
     );
 
     private final CalendarioRepository calendarioRepository;
@@ -238,12 +241,18 @@ public class CalendarioServiceImpl implements CalendarioService {
     private void crearFechasResaltadasIniciales(Integer oidCalendario) {
         logger.info("Creando fechas resaltadas iniciales para calendario ID: {}", oidCalendario);
 
-        for (Integer oidNombreFecha : OIDS_FECHAS_RESALTADAS) {
+        for (Integer oidNombreFecha : OIDS_FECHAS_INICIALES) {
             FechaDTORequest fecha = new FechaDTORequest();
             fecha.setOidCalendario(oidCalendario);
             fecha.setOidNombreFecha(oidNombreFecha);
             if (oidNombreFecha.equals(3) || oidNombreFecha.equals(7)) {
                 fecha.setTipo(TipoFechaEnum.CLASES);
+            } else if (oidNombreFecha.equals(26)) {
+                fecha.setTipo(TipoFechaEnum.OCASIONAL);
+            } else if (oidNombreFecha.equals(27)) {
+                fecha.setTipo(TipoFechaEnum.CATEDRA);
+            } else if (oidNombreFecha.equals(28)) {
+                fecha.setTipo(TipoFechaEnum.BECARIO_Y_PRACTICANTE);
             } else {
                 fecha.setTipo(TipoFechaEnum.RESALTADAS);
             }
@@ -337,9 +346,14 @@ public class CalendarioServiceImpl implements CalendarioService {
 
         logger.info("Terminado de crear listas de seleccionados para calendario ID: {}", calendario.getOidcalendario());
     }
-}
-
-
-
-
+}
+
+
+
+
+
+
+
+
+
 
