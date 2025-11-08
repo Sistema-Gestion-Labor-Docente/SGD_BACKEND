@@ -43,6 +43,8 @@ import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoValidationException;
 import co.edu.unicauca.sgd.api.mapper.UsuarioDepartamentoMapper;
 import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
+import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasProjection;
+import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioDepartamentoServiceImplTest {
@@ -251,6 +253,60 @@ class UsuarioDepartamentoServiceImplTest {
         assertThrows(UsuarioDepartamentoInternalException.class, () -> service.eliminar(1));
     }
 
+    @Test
+    void obtenerProfesoresPorTipoActividad_docencia_exito() {
+        UsuarioDepartamento profesor = buildUsuarioDepartamento(1, 3);
+        UsuarioDepartamentoDTOResponse dto = new UsuarioDepartamentoDTOResponse();
+        UsuarioDTO usuarioDto = new UsuarioDTO();
+        usuarioDto.setOidUsuario(1);
+        dto.setUsuario(usuarioDto);
+
+        when(repository.findProfesoresConTipoActividad("DOCENCIA", 3)).thenReturn(List.of(profesor));
+        when(mapper.toResponse(profesor)).thenReturn(dto);
+        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuarios(anyList()))
+                .thenReturn(List.of(buildHorasProjection(1, 12f)));
+
+        ApiResponse<List<UsuarioDepartamentoDTOResponse>> response = service.obtenerProfesoresPorTipoActividad("DOCENCIA", 3);
+
+        assertEquals(200, response.getCodigo());
+        assertEquals(1, response.getData().size());
+        assertEquals(12f, response.getData().get(0).getTotalHorasActividades());
+        verify(repository).findProfesoresConTipoActividad("DOCENCIA", 3);
+        verify(mapper).toResponse(profesor);
+    }
+
+    @Test
+    void obtenerProfesoresPorTipoActividad_noDocencia_exito() {
+        UsuarioDepartamento profesor = buildUsuarioDepartamento(2, 4);
+        UsuarioDepartamentoDTOResponse dto = new UsuarioDepartamentoDTOResponse();
+        UsuarioDTO usuarioDto = new UsuarioDTO();
+        usuarioDto.setOidUsuario(2);
+        dto.setUsuario(usuarioDto);
+
+        when(repository.findProfesoresConTipoActividadDiferente("DOCENCIA", 4)).thenReturn(List.of(profesor));
+        when(mapper.toResponse(profesor)).thenReturn(dto);
+        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuarios(anyList()))
+                .thenReturn(List.of(buildHorasProjection(2, 5f)));
+
+        ApiResponse<List<UsuarioDepartamentoDTOResponse>> response = service.obtenerProfesoresPorTipoActividad("NO_DOCENCIA", 4);
+
+        assertEquals(200, response.getCodigo());
+        assertEquals("Profesores con actividades diferentes a DOCENCIA recuperados correctamente.", response.getMensaje());
+        verify(repository).findProfesoresConTipoActividadDiferente("DOCENCIA", 4);
+    }
+
+    @Test
+    void obtenerProfesoresPorTipoActividad_filtroInvalidoLanzaValidacion() {
+        assertThrows(UsuarioDepartamentoValidationException.class,
+                () -> service.obtenerProfesoresPorTipoActividad("OTRO", 1));
+    }
+
+    @Test
+    void obtenerProfesoresPorTipoActividad_sinDepartamentoLanzaValidacion() {
+        assertThrows(UsuarioDepartamentoValidationException.class,
+                () -> service.obtenerProfesoresPorTipoActividad("DOCENCIA", null));
+    }
+
     private UsuarioDepartamentoDTORequest buildRequest(Integer oidUsuario, Integer oidDepartamento) {
         UsuarioDepartamentoDTORequest request = new UsuarioDepartamentoDTORequest();
         request.setOidUsuario(oidUsuario);
@@ -267,5 +323,19 @@ class UsuarioDepartamentoServiceImplTest {
         entity.setDepartamento(departamento);
         entity.setFechaCreacion(LocalDateTime.now());
         return entity;
+    }
+
+    private UsuarioHorasProjection buildHorasProjection(Integer oidUsuario, Float horas) {
+        return new UsuarioHorasProjection() {
+            @Override
+            public Integer getOidUsuario() {
+                return oidUsuario;
+            }
+
+            @Override
+            public Float getTotalHoras() {
+                return horas;
+            }
+        };
     }
 }
