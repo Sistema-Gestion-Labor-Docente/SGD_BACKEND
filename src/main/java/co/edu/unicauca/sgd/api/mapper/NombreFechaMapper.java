@@ -12,11 +12,13 @@ public class NombreFechaMapper {
     public NombreFecha toEntity(NombreFechaDTORequest dto) {
         NombreFecha e = new NombreFecha();
         e.setNombre(dto.getNombre());
+        e.setUniqueDate(dto.isUniqueDate());
         return e;
     }
 
     public void update(NombreFecha existente, NombreFechaDTORequest dto) {
         existente.setNombre(dto.getNombre());
+        existente.setUniqueDate(dto.isUniqueDate());
     }
 
     public NombreFechaDTOResponse toResponse(NombreFecha e) {

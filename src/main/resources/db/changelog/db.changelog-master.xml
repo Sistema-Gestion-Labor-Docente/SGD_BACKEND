@@ -27,4 +27,5 @@
     <include file="db/changelog/0019-15092025-seleccionado.xml"/>
     <include file="db/changelog/0020-24092025-seed-new-eav-atributos.xml" context="data"/>
     <include file="db/changelog/0021-17012026-table-necesidad.xml"/>
+    <include file="db/changelog/0022-17012026-table-asignacion.xml"/>
 </databaseChangeLog>
