@@ -434,6 +434,8 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             Integer oidCalendario,
             Integer oidDepartamento,
             Integer oidTipoActividad,
+            Integer oidEstadoActividad,
+            Integer oidUsuarioResponsable,
             Pageable pageable) {
 
          // Validaciones básicas
@@ -442,7 +444,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         }
         // 1) Obtener page de ids de actividad (paginado)
         Page<Integer> idsPage = usuarioActividadCalendarioRepository.findDistinctActividadIdsByFilters(
-                oidCalendario, oidDepartamento, oidTipoActividad, pageable);
+                oidCalendario, oidDepartamento, oidTipoActividad, oidEstadoActividad, oidUsuarioResponsable, pageable);
 
         List<Integer> actividadIds = idsPage.getContent();
         if (actividadIds.isEmpty()) {

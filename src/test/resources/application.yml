@@ -1,0 +1,5 @@
+spring:
+  jpa:
+    defer-datasource-initialization: true
+  liquibase:
+    enabled: false

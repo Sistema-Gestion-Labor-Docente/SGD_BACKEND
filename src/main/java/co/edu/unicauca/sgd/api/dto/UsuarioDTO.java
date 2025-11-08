@@ -18,6 +18,7 @@ public class UsuarioDTO {
     private String apellidos;
     private DepartamentoDTOResponse departamento;
     private List<RolDTO> roles;
+    private UsuarioDetalleDTO usuarioDetalle;
 
     private ProgramaDTOResponse programaCoordinador;
     private DepartamentoDTOResponse departamentoJefatura; 

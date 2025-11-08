@@ -1,6 +1,9 @@
 package co.edu.unicauca.sgd.api.service.materias;
 
-import org.springframework.data.domain.*;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.UsuarioDepartamentoDTORequest;
@@ -17,5 +20,7 @@ public interface UsuarioDepartamentoService {
     ApiResponse<UsuarioDepartamentoDTOResponse> actualizar(Integer oidUsuario, UsuarioDepartamentoDTORequest request);
 
     ApiResponse<Void> eliminar(Integer oidUsuario);
+
+    ApiResponse<List<UsuarioDepartamentoDTOResponse>> obtenerProfesoresPorTipoActividad(String filtro, Integer oidDepartamento);
     
 }

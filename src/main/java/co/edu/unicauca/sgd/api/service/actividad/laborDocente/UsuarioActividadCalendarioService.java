@@ -14,7 +14,13 @@ public interface UsuarioActividadCalendarioService {
 
     ApiResponse<UsuarioActividadCalendarioDTOResponse> actualizarActividadConRelaciones(Integer oidActividad, UsuarioActividadCalendarioDTORequest request);
     
-    ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> listarActividadesConRelaciones(Integer oidCalendario, Integer oidDepartamento, Integer oidTipoActividad, Pageable pageable);
+    ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> listarActividadesConRelaciones(
+            Integer oidCalendario,
+            Integer oidDepartamento,
+            Integer oidTipoActividad,
+            Integer oidEstadoActividad,
+            Integer oidUsuarioResponsable,
+            Pageable pageable);
     
     ApiResponse<UsuarioActividadCalendarioDTOResponse> obtenerActividadConRelaciones(Integer oidActividad);
     

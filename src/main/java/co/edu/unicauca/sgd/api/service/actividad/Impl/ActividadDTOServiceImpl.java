@@ -7,6 +7,7 @@ import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
 import co.edu.unicauca.sgd.api.dto.RolDTO;
 import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
+import co.edu.unicauca.sgd.api.dto.UsuarioDetalleDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.service.EavAtributoService;
 import co.edu.unicauca.sgd.api.service.actividad.ActividadDTOService;
@@ -63,11 +64,13 @@ public class ActividadDTOServiceImpl implements ActividadDTOService {
         String nombres = usuario.getNombres() != null ? usuario.getNombres() : DEFAULT_NAME;
         String apellidos = usuario.getApellidos() != null ? usuario.getApellidos() : DEFAULT_NAME;
 
-        return new UsuarioDTO(
+        UsuarioDTO dto = new UsuarioDTO(
                 usuario.getOidUsuario(),
                 usuario.getIdentificacion(),
                 nombres,
                 apellidos,
                 rolDTOList);
+        dto.setUsuarioDetalle(UsuarioDetalleDTO.fromEntity(usuario.getUsuarioDetalle()));
+        return dto;
     }
 }

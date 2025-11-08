@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,5 +80,13 @@ public class UsuarioDepartamentoController {
                 .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
     }
 
-    
+    @GetMapping("/actividades")
+    @Operation(summary = "Listar profesores por tipo de actividades",
+        description = "Permite obtener profesores que tienen actividades de tipo DOCENCIA o actividades diferentes a DOCENCIA, según el parámetro indicado")
+    public ResponseEntity<ApiResponse<List<UsuarioDepartamentoDTOResponse>>> listarProfesoresPorTipo(
+            @RequestParam(defaultValue = "DOCENCIA") String filtro,
+            @RequestParam Integer oidDepartamento) {
+        ApiResponse<List<UsuarioDepartamentoDTOResponse>> response = service.obtenerProfesoresPorTipoActividad(filtro, oidDepartamento);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
+    }
 }

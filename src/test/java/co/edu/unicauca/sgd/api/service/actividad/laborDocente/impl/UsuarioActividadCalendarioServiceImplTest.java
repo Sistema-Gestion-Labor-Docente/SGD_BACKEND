@@ -84,7 +84,7 @@ class UsuarioActividadCalendarioServiceImplTest {
     @Test
     void listarActividadesConRelaciones_parametrosObligatorios_falla() {
         assertThrows(ValidacionNegocioException.class,
-                () -> service.listarActividadesConRelaciones(null, null, null, Pageable.unpaged()));
+                () -> service.listarActividadesConRelaciones(null, null, null, null, null, Pageable.unpaged()));
     }
 
     @Test
@@ -92,11 +92,11 @@ class UsuarioActividadCalendarioServiceImplTest {
         Pageable pageable = Pageable.unpaged();
         Page<Integer> idsPage = new PageImpl<>(List.of(), pageable, 0);
 
-        when(usuarioActividadCalendarioRepository.findDistinctActividadIdsByFilters(1, 2, null, pageable))
+        when(usuarioActividadCalendarioRepository.findDistinctActividadIdsByFilters(1, 2, null, null, null, pageable))
                 .thenReturn(idsPage);
 
         ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> response =
-                service.listarActividadesConRelaciones(1, 2, null, pageable);
+                service.listarActividadesConRelaciones(1, 2, null, null, null, pageable);
 
         assertEquals(200, response.getCodigo());
         assertEquals("No se encontraron actividades.", response.getMensaje());

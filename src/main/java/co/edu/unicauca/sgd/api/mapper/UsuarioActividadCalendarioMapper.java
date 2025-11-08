@@ -15,6 +15,7 @@ import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
 import co.edu.unicauca.sgd.api.dto.RolDTO;
 import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
+import co.edu.unicauca.sgd.api.dto.UsuarioDetalleDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.CargoActividadDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
@@ -100,6 +101,7 @@ public class UsuarioActividadCalendarioMapper {
                         return rolDto;
                     })
                     .collect(Collectors.toList()));
+                usuarioDto.setUsuarioDetalle(UsuarioDetalleDTO.fromEntity(usuario.getUsuarioDetalle()));
                 return usuarioDto;
             })
             .collect(Collectors.toList());
