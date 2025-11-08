@@ -25,7 +25,7 @@ import jakarta.transaction.Transactional;
 @Service
 public class NombreFechaServiceImpl implements NombreFechaService {
 
-    private static final List<Integer> EXCLUDED_IDS = List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 26, 27, 28);
+    private static final List<Integer> EXCLUDED_IDS = List.of(1, 3, 7, 10, 26, 27, 28);
     private static final int LAST_PROTECTED_ID = EXCLUDED_IDS.stream().mapToInt(Integer::intValue).max().orElse(0);
     private static final Sort SORT_BY_ID = Sort.by("oidNombreFecha").ascending();
 

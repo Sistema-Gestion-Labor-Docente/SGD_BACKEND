@@ -37,9 +37,12 @@ public class FechaServiceImpl implements FechaService {
 
     // IDs fijos en la tabla NombreFecha
     private static final int NOMBRE_PERIODO_INICIO = 1;   // "Inicio de periodo"
-    private static final int NOMBRE_PERIODO_FIN    = 10;  // "Finalización de periodo"
-    private static final int NOMBRE_CLASES_INICIO  = 3;   // "Inicio de clases"
-    private static final int NOMBRE_CLASES_FIN     = 7;   // "Finalización de clases"
+    private static final int NOMBRE_PERIODO_FIN = 10;  // "Finalización de periodo"
+    private static final int NOMBRE_CLASES_INICIO = 3;   // "Inicio de clases"
+    private static final int NOMBRE_CLASES_FIN = 7;   // "Finalización de clases"
+    private static final int NOMBRE_INCIO_OCASIONAL = 26; // "Inicio actividades ocasionales"
+    private static final int NOMBRE_INICIO_CATEDRA = 27; // "Inicio actividades cátedra"
+    private static final int NOMBRE_INICIO_BECARIO = 28; // "Inicio
 
     private static final Sort SORT_FECHA_INICIAL_ASC = Sort.by("fechaInicial").ascending();
 
@@ -194,7 +197,10 @@ public class FechaServiceImpl implements FechaService {
             if (fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_PERIODO_INICIO ||
                 fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_PERIODO_FIN ||
                 fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_CLASES_INICIO ||
-                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_CLASES_FIN) {
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_CLASES_FIN ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_INCIO_OCASIONAL ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_INICIO_CATEDRA ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_INICIO_BECARIO) {
                 throw new FechaOperacionNoPermitidaException("No se permite eliminar esta fecha especial: " + fecha.getNombreFecha().getNombre());
             }
 
