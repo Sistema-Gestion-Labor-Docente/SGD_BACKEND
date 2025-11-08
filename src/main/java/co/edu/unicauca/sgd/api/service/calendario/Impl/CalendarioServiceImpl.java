@@ -24,6 +24,10 @@ import co.edu.unicauca.sgd.api.dto.calendario.FechaDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.FechaDTOResponse;
 import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioConsultaException;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioNoEncontradoException;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioOperacionNoPermitidaException;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioProcesoException;
 import co.edu.unicauca.sgd.api.mapper.CalendarioMapper;
 import co.edu.unicauca.sgd.api.mapper.FechaMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
@@ -42,7 +46,7 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private static final Logger logger = LoggerFactory.getLogger(CalendarioServiceImpl.class);
 
-    private static final List<Integer> OIDS_FECHAS_RESALTADAS = List.of(
+    private static final List<Integer> OIDS_FECHAS_INICIALES = List.of(
         1, // Inicio del periodo
         2, // Matriculas academicas estudiantes regulares
         3, // Inicio de clases
@@ -52,7 +56,10 @@ public class CalendarioServiceImpl implements CalendarioService {
         7, // Finalizacion de clases
         8, // Plazo maximo para finales...
         9, // Cierre de SIMCA para registro de calificaciones
-        10 // Finalizacion de periodo academico {identificador del periodo}
+        10, // Finalizacion de periodo academico {identificador del periodo}
+        26, 
+        27, 
+        28
     );
 
     private final CalendarioRepository calendarioRepository;
@@ -98,7 +105,7 @@ public class CalendarioServiceImpl implements CalendarioService {
         if (oidCalendario == null) {
             return List.of();
         }
-        return fechaRepository.findByCalendario_Oidcalendario(oidCalendario)
+        return fechaRepository.findByCalendario_OidcalendarioOrderByFechaInicialAsc(oidCalendario)
                 .stream()
                 .map(fechaMapper::toResponse)
                 .toList();
@@ -117,9 +124,15 @@ public class CalendarioServiceImpl implements CalendarioService {
                     calendarioMapper.toResponse(calendario, obtenerFechasDto(calendario.getOidcalendario())));
 
             logger.info("Calendarios encontrados: {}", responsePage.getTotalElements());
-            return new ApiResponse<>(200, "Calendarios encontrados correctamente.", responsePage);
+            boolean hasContent = responsePage.hasContent();
+            String message = hasContent
+                    ? "Calendarios encontrados correctamente."
+                    : "No se encontraron calendarios.";
+            return new ApiResponse<>(200, message, responsePage);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al recuperar los calendarios: " + e.getMessage(), null);
+            CalendarioConsultaException ex =
+                    new CalendarioConsultaException("Error al recuperar los calendarios", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -127,17 +140,19 @@ public class CalendarioServiceImpl implements CalendarioService {
     public ApiResponse<CalendarioDTOResponse> buscarPorId(Integer oid) {
         try {
             Calendario calendario = calendarioRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new CalendarioNoEncontradoException(oid));
 
             CalendarioDTOResponse dto = calendarioMapper.toResponse(calendario, obtenerFechasDto(calendario.getOidcalendario()));
 
             logger.info("Calendario encontrado con ID: {}", oid);
 
             return new ApiResponse<>(200, "Calendario encontrado correctamente.", dto);
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(404, "Calendario no encontrado: " + e.getMessage(), null);
+        } catch (CalendarioNoEncontradoException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno al recuperar el calendario: " + e.getMessage(), null);
+            CalendarioConsultaException ex =
+                    new CalendarioConsultaException("Error interno al recuperar el calendario", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -163,8 +178,12 @@ public class CalendarioServiceImpl implements CalendarioService {
 
             logger.info("Calendario guardado con ID: {}", guardado.getOidcalendario());
             return new ApiResponse<>(201, "Calendario guardado correctamente.", dto);
+        } catch (CalendarioOperacionNoPermitidaException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al guardar el calendario: " + e.getMessage(), null);
+            CalendarioProcesoException ex =
+                    new CalendarioProcesoException("Error al guardar el calendario", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -173,13 +192,13 @@ public class CalendarioServiceImpl implements CalendarioService {
     public ApiResponse<CalendarioDTOResponse> actualizar(Integer oid, CalendarioDTORequest request) {
         try {
             Calendario existente = calendarioRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new CalendarioNoEncontradoException(oid));
 
             if (request.getAnioCalendario() != null && !request.getAnioCalendario().equals(existente.getAnioCalendario())) {
-                throw new RuntimeException("El anio (anio) no es editable.");
+                throw new CalendarioOperacionNoPermitidaException("El anio (anio) no es editable.");
             }
             if (request.getNumeroCalendario() != null && !request.getNumeroCalendario().equals(existente.getNumeroCalendario())) {
-                throw new RuntimeException("El numero (numero) no es editable.");
+                throw new CalendarioOperacionNoPermitidaException("El numero (numero) no es editable.");
             }
 
             calendarioMapper.actualizarCamposBasicos(existente, request);
@@ -190,10 +209,14 @@ public class CalendarioServiceImpl implements CalendarioService {
 
             logger.info("Calendario actualizado con ID: {}", oid);
             return new ApiResponse<>(200, "Calendario actualizado correctamente.", dto);
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en la actualizacion: " + e.getMessage(), null);
+        } catch (CalendarioOperacionNoPermitidaException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (CalendarioNoEncontradoException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno al actualizar el calendario: " + e.getMessage(), null);
+            CalendarioProcesoException ex =
+                    new CalendarioProcesoException("Error interno al actualizar el calendario", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -202,24 +225,28 @@ public class CalendarioServiceImpl implements CalendarioService {
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             if (!calendarioRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "Calendario no encontrado con ID: " + oid, null);
+                throw new CalendarioNoEncontradoException(oid);
             }
             calendarioRepository.deleteById(oid);
             logger.info("Calendario eliminado con ID: {}", oid);
             return new ApiResponse<>(204, "Calendario eliminado correctamente.", null);
+        } catch (CalendarioNoEncontradoException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al eliminar el calendario: " + e.getMessage(), null);
+            CalendarioProcesoException ex =
+                    new CalendarioProcesoException("Error al eliminar el calendario", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
     @Override
     public ByteArrayOutputStream generarCalendarioPdf(Integer oidCalendario) throws IOException {
         if (oidCalendario == null) {
-            throw new IllegalArgumentException("El identificador del calendario es obligatorio.");
+            throw new CalendarioOperacionNoPermitidaException("El identificador del calendario es obligatorio.");
         }
         logger.info("Generando PDF del calendario ID: {}", oidCalendario);
         Calendario calendario = calendarioRepository.findById(oidCalendario)
-                .orElseThrow(() -> new IllegalArgumentException("Calendario no encontrado con ID: " + oidCalendario));
+                .orElseThrow(() -> new CalendarioNoEncontradoException(oidCalendario));
         List<FechaDTOResponse> fechas = obtenerFechasDto(oidCalendario);
         try {
             return calendarioPdfService.generarCalendarioPdf(calendario, fechas);
@@ -238,12 +265,18 @@ public class CalendarioServiceImpl implements CalendarioService {
     private void crearFechasResaltadasIniciales(Integer oidCalendario) {
         logger.info("Creando fechas resaltadas iniciales para calendario ID: {}", oidCalendario);
 
-        for (Integer oidNombreFecha : OIDS_FECHAS_RESALTADAS) {
+        for (Integer oidNombreFecha : OIDS_FECHAS_INICIALES) {
             FechaDTORequest fecha = new FechaDTORequest();
             fecha.setOidCalendario(oidCalendario);
             fecha.setOidNombreFecha(oidNombreFecha);
             if (oidNombreFecha.equals(3) || oidNombreFecha.equals(7)) {
                 fecha.setTipo(TipoFechaEnum.CLASES);
+            } else if (oidNombreFecha.equals(26)) {
+                fecha.setTipo(TipoFechaEnum.OCASIONAL);
+            } else if (oidNombreFecha.equals(27)) {
+                fecha.setTipo(TipoFechaEnum.CATEDRA);
+            } else if (oidNombreFecha.equals(28)) {
+                fecha.setTipo(TipoFechaEnum.BECARIO_Y_PRACTICANTE);
             } else {
                 fecha.setTipo(TipoFechaEnum.RESALTADAS);
             }
@@ -337,9 +370,14 @@ public class CalendarioServiceImpl implements CalendarioService {
 
         logger.info("Terminado de crear listas de seleccionados para calendario ID: {}", calendario.getOidcalendario());
     }
-}
-
-
-
-
+}
+
+
+
+
+
+
+
+
+
 

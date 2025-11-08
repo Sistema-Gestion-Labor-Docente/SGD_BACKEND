@@ -50,7 +50,9 @@ public class CargoActividadServiceImpl implements CargoActividadService {
             }
             Page<CargoActividad> result = cargoActividadRepository.findAll(spec, pageable);
             Page<CargoActividadDTOResponse> page = result.map(cargoActividadMapper::toResponse);
-            return new ApiResponse<>(200, "Cargos de actividad encontrados", page);
+            boolean hasContent = page.hasContent();
+            String message = hasContent ? "Cargos de actividad encontrados" : "No se encontraron cargos de actividad.";
+            return new ApiResponse<>(200, message, page);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al consultar cargos de actividad: " + e.getMessage(), null);
         }
@@ -60,10 +62,12 @@ public class CargoActividadServiceImpl implements CargoActividadService {
     public ApiResponse<CargoActividadDTOResponse> buscarPorId(Integer oid) {
         try {
             CargoActividad entity = cargoActividadRepository.findById(oid)
-                .orElseThrow(() -> new RuntimeException("CargoActividad no encontrado con ID: " + oid));
+                .orElseThrow(() -> new IllegalStateException("CargoActividad no encontrado con ID: " + oid));
             return new ApiResponse<>(200, "Cargo de actividad encontrado", cargoActividadMapper.toResponse(entity));
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(404, "Error: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error al buscar cargo de actividad: " + e.getMessage(), null);
         }
     }
 
@@ -71,14 +75,21 @@ public class CargoActividadServiceImpl implements CargoActividadService {
     @Transactional
     public ApiResponse<CargoActividadDTOResponse> guardar(CargoActividadDTORequest request) {
         try {
+            if (request.getOidTipoActividad() == null) {
+                throw new IllegalArgumentException("El tipo de actividad es obligatorio.");
+            }
             TipoActividad tipoActividad = tipoActividadRepository.findById(request.getOidTipoActividad())
-                    .orElseThrow(() -> new RuntimeException("Tipo de actividad no encontrado"));
+                    .orElseThrow(() -> new IllegalStateException("Tipo de actividad no encontrado con ID: " + request.getOidTipoActividad()));
 
             CargoActividad entity = cargoActividadMapper.convertToEntity(request, tipoActividad);
             entity.setUsuarioCreacion("admin"); // Cambia esto por el usuario logueado si aplica
 
             CargoActividad guardado = cargoActividadRepository.save(entity);
             return new ApiResponse<>(201, "Cargo de actividad guardado", cargoActividadMapper.toResponse(guardado));
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al guardar cargo de actividad: " + e.getMessage(), null);
         }
@@ -88,16 +99,23 @@ public class CargoActividadServiceImpl implements CargoActividadService {
     @Transactional
     public ApiResponse<CargoActividadDTOResponse> actualizar(Integer oid, CargoActividadDTORequest request) {
         try {
+            if (request.getOidTipoActividad() == null) {
+                throw new IllegalArgumentException("El tipo de actividad es obligatorio.");
+            }
             CargoActividad entity = cargoActividadRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("CargoActividad no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new IllegalStateException("CargoActividad no encontrado con ID: " + oid));
             TipoActividad tipoActividad = tipoActividadRepository.findById(request.getOidTipoActividad())
-                    .orElseThrow(() -> new RuntimeException("Tipo de actividad no encontrado"));
+                    .orElseThrow(() -> new IllegalStateException("Tipo de actividad no encontrado con ID: " + request.getOidTipoActividad()));
 
             cargoActividadMapper.actualizarCamposBasicos(entity, request, tipoActividad);
             entity.setUsuarioActualizacion("admin"); // Cambia esto por el usuario logueado si aplica
 
             CargoActividad actualizado = cargoActividadRepository.save(entity);
             return new ApiResponse<>(200, "Cargo de actividad actualizado", cargoActividadMapper.toResponse(actualizado));
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al actualizar cargo de actividad: " + e.getMessage(), null);
         }
@@ -108,10 +126,12 @@ public class CargoActividadServiceImpl implements CargoActividadService {
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             if (!cargoActividadRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "CargoActividad no encontrado con ID: " + oid, null);
+                throw new IllegalStateException("CargoActividad no encontrado con ID: " + oid);
             }
             cargoActividadRepository.deleteById(oid);
             return new ApiResponse<>(204, "Cargo de actividad eliminado correctamente", null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar cargo de actividad: " + e.getMessage(), null);
         }

@@ -78,7 +78,10 @@ public class MateriaServiceImpl implements MateriaService {
             Page<MateriaDTOResponse> response = page.map(materiaMapper::toResponse);
 
             logger.info("Materias encontradas: {}", response.getTotalElements());
-            return new ApiResponse<>(200, "Materias recuperadas correctamente.", response);
+            String message = response.hasContent()
+                    ? "Materias recuperadas correctamente."
+                    : "No se encontraron materias.";
+            return new ApiResponse<>(200, message, response);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al listar materias: " + e.getMessage(), null);
         }
@@ -88,12 +91,12 @@ public class MateriaServiceImpl implements MateriaService {
     public ApiResponse<MateriaDTOResponse> buscarPorId(Integer id) {
         try {
             Materia entity = materiaRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Materia no encontrada con ID: " + id));
+                    .orElseThrow(() -> new IllegalStateException("Materia no encontrado con ID: " + id));
             return new ApiResponse<>(200, "Materia encontrada correctamente.", materiaMapper.toResponse(entity));
-        } catch (RuntimeException e) {
+        } catch (IllegalStateException e) {
             return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error interno al buscar la materia: " + e.getMessage(), null);
         }
     }
 
@@ -105,11 +108,11 @@ public class MateriaServiceImpl implements MateriaService {
 
             if (request.getOidDepartamento() != null && request.getOidDepartamento() > 0) {
                 Departamento dep = departamentoRepository.findById(request.getOidDepartamento())
-                    .orElseThrow(() -> new RuntimeException("Departamento no encontrado con ID: " + request.getOidDepartamento()));
+                    .orElseThrow(() -> new IllegalStateException("Departamento no encontrado con ID: " + request.getOidDepartamento()));
                 entity.setDepartamento(dep);
             }
             Plan plan = planRepository.findById(request.getOidPlan())
-                    .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + request.getOidPlan()));
+                    .orElseThrow(() -> new IllegalStateException("Plan no encontrado con ID: " + request.getOidPlan()));
 
             Materia correquisito = resolverCorrequisito(request, null);
 
@@ -121,8 +124,10 @@ public class MateriaServiceImpl implements MateriaService {
 
             logger.info("Materia guardada ID: {}", saved.getOidMateria());
             return new ApiResponse<>(200, "Materia guardada correctamente.", materiaMapper.toResponse(saved));
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en datos: " + e.getMessage(), null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al guardar la materia: " + e.getMessage(), null);
         }
@@ -133,7 +138,7 @@ public class MateriaServiceImpl implements MateriaService {
     public ApiResponse<MateriaDTOResponse> actualizar(Integer id, MateriaDTORequest request) {
         try {
             Materia existente = materiaRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Materia no encontrada con ID: " + id));
+                    .orElseThrow(() -> new IllegalStateException("Materia no encontrado con ID: " + id));
 
             // actualizar básicos
             materiaMapper.actualizarCamposBasicos(existente, request);
@@ -141,12 +146,12 @@ public class MateriaServiceImpl implements MateriaService {
             // actualizar relaciones si vienen
             if (request.getOidDepartamento() != null) {
                 Departamento dep = departamentoRepository.findById(request.getOidDepartamento())
-                        .orElseThrow(() -> new RuntimeException("Departamento no encontrado con ID: " + request.getOidDepartamento()));
+                        .orElseThrow(() -> new IllegalStateException("Departamento no encontrado con ID: " + request.getOidDepartamento()));
                 existente.setDepartamento(dep);
             }
             if (request.getOidPlan() != null) {
                 Plan plan = planRepository.findById(request.getOidPlan())
-                        .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + request.getOidPlan()));
+                        .orElseThrow(() -> new IllegalStateException("Plan no encontrado con ID: " + request.getOidPlan()));
                 existente.setPlan(plan);
             }
             if (request.getIdCorrequisito() != null) {
@@ -159,8 +164,10 @@ public class MateriaServiceImpl implements MateriaService {
 
             logger.info("Materia actualizada ID: {}", id);
             return new ApiResponse<>(200, "Materia actualizada correctamente.", materiaMapper.toResponse(actualizado));
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
+        } catch (IllegalArgumentException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error interno al actualizar la materia: " + e.getMessage(), null);
         }
@@ -170,11 +177,13 @@ public class MateriaServiceImpl implements MateriaService {
     public ApiResponse<Void> eliminar(Integer id) {
         try {
             if (!materiaRepository.existsById(id)) {
-                return new ApiResponse<>(404, "Materia no encontrada con ID: " + id, null);
+                throw new IllegalStateException("Materia no encontrado con ID: " + id);
             }
             materiaRepository.deleteById(id);
             logger.info("Materia eliminada ID: {}", id);
             return new ApiResponse<>(200, "Materia eliminada correctamente.", null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar la materia: " + e.getMessage(), null);
         }
@@ -196,7 +205,10 @@ public class MateriaServiceImpl implements MateriaService {
             Page<MateriaDTOResponse> response = materias.map(materiaMapper::toResponse);
 
             logger.info("Materias sin correquisito encontradas: {}", response.getTotalElements());
-            return new ApiResponse<>(200, "Materias libres sin correquisito recuperadas correctamente.", response);
+            String message = response.hasContent()
+                    ? "Materias libres sin correquisito recuperadas correctamente."
+                    : "No se encontraron materias sin correquisito.";
+            return new ApiResponse<>(200, message, response);
         } catch (Exception e) {
             logger.error("Error al obtener materias sin correquisito: {}", e.getMessage(), e);
             return new ApiResponse<>(500, "Error al obtener materias sin correquisito: " + e.getMessage(), null);
@@ -211,16 +223,16 @@ public class MateriaServiceImpl implements MateriaService {
         }
 
         Materia correquisito = materiaRepository.findById(idCorrequisito)
-                .orElseThrow(() -> new RuntimeException("Correquisito no encontrado con ID: " + idCorrequisito));
+                .orElseThrow(() -> new IllegalStateException("Correquisito no encontrado con ID: " + idCorrequisito));
 
         if (idMateriaActual != null && correquisito.getIdMateria() != null
                 && correquisito.getIdMateria().equals(idMateriaActual)) {
-            throw new RuntimeException("La materia no puede ser correquisito de sí misma.");
+            throw new IllegalArgumentException("La materia no puede ser correquisito de sí misma.");
         }
         if (StringUtils.hasText(request.getOidMateria())
                 && correquisito.getOidMateria() != null
                 && correquisito.getOidMateria().equalsIgnoreCase(request.getOidMateria())) {
-            throw new RuntimeException("La materia no puede ser correquisito de sí misma.");
+            throw new IllegalArgumentException("La materia no puede ser correquisito de sí misma.");
         }
 
         validarDisponibilidadCorrequisito(correquisito, idMateriaActual);
@@ -230,7 +242,7 @@ public class MateriaServiceImpl implements MateriaService {
     private void validarDisponibilidadCorrequisito(Materia correquisito, Integer idMateriaActual) {
         if (correquisito.getCorrequisito() != null) {
             if (idMateriaActual == null || !correquisito.getCorrequisito().getIdMateria().equals(idMateriaActual)) {
-                throw new RuntimeException("La materia seleccionada como correquisito ya tiene un correquisito asignado.");
+                throw new IllegalArgumentException("La materia seleccionada como correquisito ya tiene un correquisito asignado.");
             }
         }
 
@@ -238,7 +250,7 @@ public class MateriaServiceImpl implements MateriaService {
                 ? materiaRepository.existsByCorrequisito(correquisito)
                 : materiaRepository.existsByCorrequisitoAndIdMateriaNot(correquisito, idMateriaActual);
         if (asociadaAOtraMateria) {
-            throw new RuntimeException("La materia seleccionada como correquisito ya está relacionada con otra materia.");
+            throw new IllegalArgumentException("La materia seleccionada como correquisito ya está relacionada con otra materia.");
         }
     }
 }

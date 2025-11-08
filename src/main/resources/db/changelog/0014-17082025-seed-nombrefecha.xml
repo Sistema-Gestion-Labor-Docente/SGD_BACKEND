@@ -43,10 +43,9 @@
         ('Pre-inscripción de electivas y líneas de énfasis', FALSE),
 
         -- Caracter adicional
-        ('SEMANAS DE OCASIONALES', FALSE),
-        ('SEMANAS DE CÁTEDRA', FALSE),
-        ('SEMANAS DE PLANTA', FALSE),
-        ('SEMANAS DE BECARIO Y PRACTICANTE', FALSE)
+        ('FECHAS DE OCASIONALES', FALSE),
+        ('FECHAS DE CÁTEDRA', FALSE),
+        ('FECHAS DE BECARIO Y PRACTICANTE', FALSE)
 
       ) AS t(n, unique_flag)
       ON CONFLICT (NOMBRE) DO NOTHING;

@@ -1,10 +1,14 @@
 package co.edu.unicauca.sgd.api.service.calendario.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +20,12 @@ import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.calendario.FechaDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.FechaDTOResponse;
 import co.edu.unicauca.sgd.api.enums.TipoFechaEnum;
+import co.edu.unicauca.sgd.api.exception.calendario.CalendarioNoEncontradoException;
+import co.edu.unicauca.sgd.api.exception.calendario.FechaConsultaException;
+import co.edu.unicauca.sgd.api.exception.calendario.FechaNoEncontradaException;
+import co.edu.unicauca.sgd.api.exception.calendario.FechaOperacionNoPermitidaException;
+import co.edu.unicauca.sgd.api.exception.calendario.FechaProcesoException;
+import co.edu.unicauca.sgd.api.exception.calendario.NombreFechaNoEncontradoException;
 import co.edu.unicauca.sgd.api.mapper.FechaMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
@@ -27,9 +37,14 @@ public class FechaServiceImpl implements FechaService {
 
     // IDs fijos en la tabla NombreFecha
     private static final int NOMBRE_PERIODO_INICIO = 1;   // "Inicio de periodo"
-    private static final int NOMBRE_PERIODO_FIN    = 10;  // "Finalización de periodo"
-    private static final int NOMBRE_CLASES_INICIO  = 3;   // "Inicio de clases"
-    private static final int NOMBRE_CLASES_FIN     = 7;   // "Finalización de clases"
+    private static final int NOMBRE_PERIODO_FIN = 10;  // "Finalización de periodo"
+    private static final int NOMBRE_CLASES_INICIO = 3;   // "Inicio de clases"
+    private static final int NOMBRE_CLASES_FIN = 7;   // "Finalización de clases"
+    private static final int NOMBRE_INCIO_OCASIONAL = 26; // "Inicio actividades ocasionales"
+    private static final int NOMBRE_INICIO_CATEDRA = 27; // "Inicio actividades cátedra"
+    private static final int NOMBRE_INICIO_BECARIO = 28; // "Inicio
+
+    private static final Sort SORT_FECHA_INICIAL_ASC = Sort.by("fechaInicial").ascending();
 
 
     private final FechaRepository fechaRepository;
@@ -57,11 +72,23 @@ public class FechaServiceImpl implements FechaService {
                 spec = spec.and((root, query, cb) -> cb.equal(root.get("tipo"), tipo));
             }
 
-            Page<Fecha> fechas = fechaRepository.findAll(spec, pageable);
+            Pageable sortedPageable = ensureSortedPageable(pageable);
+            Page<Fecha> fechas;
+            if (sortedPageable == null) {
+                List<Fecha> ordenadas = fechaRepository.findAll(spec, SORT_FECHA_INICIAL_ASC);
+                fechas = new PageImpl<>(ordenadas, Pageable.unpaged(), ordenadas.size());
+            } else {
+                fechas = fechaRepository.findAll(spec, sortedPageable);
+            }
+
             Page<FechaDTOResponse> responsePage = fechas.map(fechaMapper::toResponse);
-            return new ApiResponse<>(200, "Fechas obtenidas correctamente", responsePage);
+            boolean hasContent = responsePage.hasContent();
+            String message = hasContent ? "Fechas obtenidas correctamente" : "No se encontraron fechas.";
+            return new ApiResponse<>(200, message, responsePage);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al obtener fechas: " + e.getMessage(), null);
+            FechaConsultaException ex =
+                    new FechaConsultaException("Error al obtener fechas", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -69,12 +96,14 @@ public class FechaServiceImpl implements FechaService {
     public ApiResponse<FechaDTOResponse> buscarPorId(Integer oid) {
         try {
             Fecha fecha = fechaRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Fecha no encontrada con ID: " + oid));
+                    .orElseThrow(() -> new FechaNoEncontradaException(oid));
             return new ApiResponse<>(200, "Fecha encontrada correctamente", fechaMapper.toResponse(fecha));
-        } catch (RuntimeException e) {
+        } catch (FechaNoEncontradaException e) {
             return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            FechaConsultaException ex =
+                    new FechaConsultaException("Error interno al buscar la fecha", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
 
@@ -87,35 +116,36 @@ public class FechaServiceImpl implements FechaService {
             validarRangoSiPresentes(dto.getFechaInicial(), dto.getFechaFin());
 
             Calendario calendario = calendarioRepository.findById(dto.getOidCalendario())
-                    .orElseThrow(() -> new RuntimeException("Calendario no encontrado con ID: " + dto.getOidCalendario()));
+                    .orElseThrow(() -> new CalendarioNoEncontradoException(dto.getOidCalendario()));
 
-            // Validaciones
             validarAnioConCalendarioSiPresente(dto.getFechaInicial(), calendario, "fechaInicial");
             validarAnioConCalendarioSiPresente(dto.getFechaFin(), calendario, "fechaFin");
 
-            // NUEVO: reglas de período (sin excluir ID porque es insert)
             validarPeriodoDefinidoYLimites(dto, calendario.getOidcalendario());
-
-            // NUEVO: reglas de CLASES (si aplica)
             validarRelacionesClases(dto, calendario.getOidcalendario(), null);
-
-            // Capacidad por tipo (lo que ya agregaste antes)
             validarCapacidadPorTipo(dto.getTipo(), calendario.getOidcalendario(), null);
 
             NombreFecha nombreFecha = nombreFechaRepository.findById(dto.getOidNombreFecha())
-                    .orElseThrow(() -> new RuntimeException("NombreFecha no encontrado con ID: " + dto.getOidNombreFecha()));
+                    .orElseThrow(() -> new NombreFechaNoEncontradoException(dto.getOidNombreFecha()));
+
+            validarPeriodoDefinidoYLimites(dto, calendario.getOidcalendario());
+            validarRelacionesClases(dto, calendario.getOidcalendario(), null);
+            validarCapacidadPorTipo(dto.getTipo(), calendario.getOidcalendario(), null);
 
             Fecha entidad = fechaMapper.convertToEntity(dto, calendario, nombreFecha);
             Fecha guardada = fechaRepository.save(entidad);
             ajustarDatosCalendarioSiAplica(dto, calendario);
             return new ApiResponse<>(200, "Fecha guardada correctamente", fechaMapper.toResponse(guardada));
-        } catch (RuntimeException e) {
+        } catch (FechaOperacionNoPermitidaException e) {
             return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (CalendarioNoEncontradoException | NombreFechaNoEncontradoException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al guardar la fecha: " + e.getMessage(), null);
+            FechaProcesoException ex =
+                    new FechaProcesoException("Error al guardar la fecha", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
-
     @Override
     @Transactional
     public ApiResponse<FechaDTOResponse> actualizar(Integer id, FechaDTORequest dto) {
@@ -124,11 +154,11 @@ public class FechaServiceImpl implements FechaService {
             validarRangoSiPresentes(dto.getFechaInicial(), dto.getFechaFin());
 
             Fecha existente = fechaRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Fecha no encontrada con ID: " + id));
+                    .orElseThrow(() -> new FechaNoEncontradaException(id));
 
-            if (dto.getOidCalendario() != null 
-            && !dto.getOidCalendario().equals(existente.getCalendario().getOidcalendario())) {
-                throw new RuntimeException("El calendario no puede cambiar en una actualización.");
+            if (dto.getOidCalendario() != null
+                    && !dto.getOidCalendario().equals(existente.getCalendario().getOidcalendario())) {
+                throw new FechaOperacionNoPermitidaException("El calendario no puede cambiar en una actualización.");
             }
 
             Calendario calendario = existente.getCalendario();
@@ -137,46 +167,64 @@ public class FechaServiceImpl implements FechaService {
             validarAnioConCalendarioSiPresente(dto.getFechaFin(), calendario, "fechaFin");
 
             NombreFecha nombreFecha = nombreFechaRepository.findById(dto.getOidNombreFecha())
-                    .orElseThrow(() -> new RuntimeException("NombreFecha no encontrado con ID: " + dto.getOidNombreFecha()));
+                    .orElseThrow(() -> new NombreFechaNoEncontradoException(dto.getOidNombreFecha()));
 
             validarPeriodoDefinidoYLimites(dto, calendario.getOidcalendario());
             validarRelacionesClases(dto, calendario.getOidcalendario(), id);
-
             validarCapacidadPorTipo(dto.getTipo(), calendario.getOidcalendario(), id);
 
             fechaMapper.actualizarCamposBasicos(existente, dto, calendario, nombreFecha);
             Fecha actualizada = fechaRepository.save(existente);
             ajustarDatosCalendarioSiAplica(dto, calendario);
             return new ApiResponse<>(200, "Fecha actualizada correctamente", fechaMapper.toResponse(actualizada));
-        } catch (RuntimeException e) {
+        } catch (FechaOperacionNoPermitidaException e) {
             return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (FechaNoEncontradaException | NombreFechaNoEncontradoException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al actualizar la fecha: " + e.getMessage(), null);
+            FechaProcesoException ex =
+                    new FechaProcesoException("Error al actualizar la fecha", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
     }
-
     @Override
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             Fecha fecha = fechaRepository.findById(oid)
-                .orElseThrow(() -> new RuntimeException("Fecha no encontrada con ID: " + oid));
-        
+                .orElseThrow(() -> new FechaNoEncontradaException(oid));
+    
             // Validar si es especial
             if (fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_PERIODO_INICIO ||
                 fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_PERIODO_FIN ||
                 fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_CLASES_INICIO ||
-                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_CLASES_FIN) {
-                throw new RuntimeException("No se permite eliminar esta fecha especial: " + fecha.getNombreFecha().getNombre());
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_CLASES_FIN ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_INCIO_OCASIONAL ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_INICIO_CATEDRA ||
+                fecha.getNombreFecha().getOidNombreFecha() == NOMBRE_INICIO_BECARIO) {
+                throw new FechaOperacionNoPermitidaException("No se permite eliminar esta fecha especial: " + fecha.getNombreFecha().getNombre());
             }
 
-            if (!fechaRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "Fecha no encontrada con ID: " + oid, null);
-            }
             fechaRepository.deleteById(oid);
             return new ApiResponse<>(200, "Fecha eliminada correctamente", null);
+        } catch (FechaOperacionNoPermitidaException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (FechaNoEncontradaException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error al eliminar la fecha: " + e.getMessage(), null);
+            FechaProcesoException ex =
+                    new FechaProcesoException("Error al eliminar la fecha", e);
+            return new ApiResponse<>(500, ex.getMessage(), null);
         }
+    }
+
+    private Pageable ensureSortedPageable(Pageable pageable) {
+        if (pageable == null || pageable.isUnpaged()) {
+            return null;
+        }
+        Sort sort = pageable.getSort().isUnsorted()
+                ? SORT_FECHA_INICIAL_ASC
+                : pageable.getSort().and(SORT_FECHA_INICIAL_ASC);
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 
     /* ------------ Helpers ------------ */
@@ -206,7 +254,7 @@ public class FechaServiceImpl implements FechaService {
      */
     private void validarRangoSiPresentes(LocalDateTime inicio, LocalDateTime fin) {
         if (inicio != null && fin != null && inicio.isAfter(fin)) {
-            throw new RuntimeException("La fecha inicial no puede ser mayor que la fecha fin.");
+            throw new FechaOperacionNoPermitidaException("La fecha inicial no puede ser mayor que la fecha fin.");
         }
     }
 
@@ -220,11 +268,11 @@ public class FechaServiceImpl implements FechaService {
         try {
             anioCalendario = Integer.parseInt(cal.getAnioCalendario());
         } catch (NumberFormatException ex) {
-            throw new RuntimeException("El año del calendario es inválido: " + cal.getAnioCalendario());
+            throw new FechaOperacionNoPermitidaException("El año del calendario es inválido: " + cal.getAnioCalendario());
         }
 
         if (fecha.getYear() != anioCalendario) {
-            throw new RuntimeException(
+            throw new FechaOperacionNoPermitidaException(
                 String.format("El año de %s (%d) debe coincidir con el año del calendario (%d).",
                               etiquetaCampo, fecha.getYear(), anioCalendario)
             );
@@ -252,7 +300,7 @@ public class FechaServiceImpl implements FechaService {
             String detalle = (tipo == TipoFechaEnum.CLASES)
                 ? "Solo se permiten 2 registros de tipo CLASES por calendario."
                 : String.format("Solo se permite 1 registro de tipo %s por calendario.", tipo.name());
-            throw new RuntimeException(detalle);
+            throw new FechaOperacionNoPermitidaException(detalle);
         }
     }
 
@@ -276,19 +324,19 @@ public class FechaServiceImpl implements FechaService {
 
         if (!esNombreInicio) {
             Fecha inicio = inicioPeriodoOpt.orElseThrow(() ->
-                new RuntimeException("Debe definir primero la fecha con Nombre 1 (Inicio de período) para este calendario.")
+                new FechaOperacionNoPermitidaException("Debe definir primero la fecha con Nombre 1 (Inicio de período) para este calendario.")
             );
 
             LocalDateTime min = (inicio.getFechaInicial() != null) ? inicio.getFechaInicial() : inicio.getFechaFin();
             if (min == null) {
-                throw new RuntimeException("El 'Inicio de período' (Nombre 1) debe tener al menos una fecha definida.");
+                throw new FechaOperacionNoPermitidaException("El 'Inicio de período' (Nombre 1) debe tener al menos una fecha definida.");
             }
 
             if (dto.getFechaInicial() != null && dto.getFechaInicial().isBefore(min)) {
-                throw new RuntimeException(msgAntesDe(etiquetaInicio(rango), "el Inicio de período (Nombre 1)"));
+                throw new FechaOperacionNoPermitidaException(msgAntesDe(etiquetaInicio(rango), "el Inicio de período (Nombre 1)"));
             }
             if (dto.getFechaFin() != null && dto.getFechaFin().isBefore(min)) {
-                throw new RuntimeException(msgAntesDe(etiquetaFin(), "el Inicio de período (Nombre 1)"));
+                throw new FechaOperacionNoPermitidaException(msgAntesDe(etiquetaFin(), "el Inicio de período (Nombre 1)"));
             }
         }
 
@@ -303,10 +351,10 @@ public class FechaServiceImpl implements FechaService {
 
             if (max != null) {
                 if (dto.getFechaInicial() != null && dto.getFechaInicial().isAfter(max)) {
-                    throw new RuntimeException(msgDespuesDe(etiquetaInicio(rango), "la Finalización de período (Nombre 10)"));
+                    throw new FechaOperacionNoPermitidaException(msgDespuesDe(etiquetaInicio(rango), "la Finalización de período (Nombre 10)"));
                 }
                 if (dto.getFechaFin() != null && dto.getFechaFin().isAfter(max)) {
-                    throw new RuntimeException(msgDespuesDe(etiquetaFin(), "la Finalización de período (Nombre 10)"));
+                    throw new FechaOperacionNoPermitidaException(msgDespuesDe(etiquetaFin(), "la Finalización de período (Nombre 10)"));
                 }
             }
         }
@@ -338,10 +386,10 @@ public class FechaServiceImpl implements FechaService {
 
                 if (max != null) {
                     if (dto.getFechaInicial() != null && dto.getFechaInicial().isAfter(max)) {
-                        throw new RuntimeException(msgDespuesDe(etiquetaInicio(rango), "el Fin de clases (Nombre 7) existente"));
+                        throw new FechaOperacionNoPermitidaException(msgDespuesDe(etiquetaInicio(rango), "el Fin de clases (Nombre 7) existente"));
                     }
                     if (dto.getFechaFin() != null && dto.getFechaFin().isAfter(max)) {
-                        throw new RuntimeException(msgDespuesDe(etiquetaFin(), "el Fin de clases (Nombre 7) existente"));
+                        throw new FechaOperacionNoPermitidaException(msgDespuesDe(etiquetaFin(), "el Fin de clases (Nombre 7) existente"));
                     }
                 }
             }
@@ -356,10 +404,10 @@ public class FechaServiceImpl implements FechaService {
 
                 if (min != null) {
                     if (dto.getFechaInicial() != null && dto.getFechaInicial().isBefore(min)) {
-                        throw new RuntimeException(msgAntesDe(etiquetaInicio(rango), "el Inicio de clases (Nombre 3) existente"));
+                        throw new FechaOperacionNoPermitidaException(msgAntesDe(etiquetaInicio(rango), "el Inicio de clases (Nombre 3) existente"));
                     }
                     if (dto.getFechaFin() != null && dto.getFechaFin().isBefore(min)) {
-                        throw new RuntimeException(msgAntesDe(etiquetaFin(), "el Inicio de clases (Nombre 3) existente"));
+                        throw new FechaOperacionNoPermitidaException(msgAntesDe(etiquetaFin(), "el Inicio de clases (Nombre 3) existente"));
                     }
                 }
             }
@@ -449,7 +497,7 @@ public class FechaServiceImpl implements FechaService {
             || dto.getOidNombreFecha() == NOMBRE_CLASES_INICIO
             || dto.getOidNombreFecha() == NOMBRE_CLASES_FIN) {
             if (dto.getFechaFin() != null) {
-                throw new RuntimeException("No se permite fechaFin para esta fecha especial, solo fechaInicial.");
+                throw new FechaOperacionNoPermitidaException("No se permite fechaFin para esta fecha especial, solo fechaInicial.");
             }
         }
     }
@@ -464,14 +512,14 @@ public class FechaServiceImpl implements FechaService {
             || dto.getOidNombreFecha() == NOMBRE_CLASES_FIN) {
             // No permitir fechaFin
             if (dto.getFechaFin() != null) {
-                throw new RuntimeException("No se permite fechaFin para este tipo de fecha especial, solo fechaInicial.");
+                throw new FechaOperacionNoPermitidaException("No se permite fechaFin para este tipo de fecha especial, solo fechaInicial.");
             }
 
             // No permitir duplicados en el mismo calendario
             boolean yaExiste = fechaRepository.existsByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(
                 oidCalendario, dto.getOidNombreFecha());
             if (yaExiste) {
-                throw new RuntimeException("Ya existe una fecha especial de este tipo para este calendario.");
+                throw new FechaOperacionNoPermitidaException("Ya existe una fecha especial de este tipo para este calendario.");
             }
         }
 }

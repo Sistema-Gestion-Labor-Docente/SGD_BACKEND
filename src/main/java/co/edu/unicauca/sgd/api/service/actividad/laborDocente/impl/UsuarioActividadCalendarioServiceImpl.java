@@ -447,7 +447,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         List<Integer> actividadIds = idsPage.getContent();
         if (actividadIds.isEmpty()) {
             Page<UsuarioActividadCalendarioDTOResponse> empty = new PageImpl<>(List.of(), pageable, idsPage.getTotalElements());
-            return new ApiResponse<>(200, "Actividades encontradas", empty);
+            return new ApiResponse<>(200, "No se encontraron actividades.", empty);
         }
 
         // 2) Traer actividades en bloque (mejor que findById en un loop)
@@ -497,7 +497,9 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         Page<UsuarioActividadCalendarioDTOResponse> resultPage =
                 new PageImpl<>(dtos, pageable, idsPage.getTotalElements());
 
-        return new ApiResponse<>(200, "Actividades encontradas", resultPage);
+        boolean hasContent = resultPage.hasContent();
+        String message = hasContent ? "Actividades encontradas" : "No se encontraron actividades.";
+        return new ApiResponse<>(200, message, resultPage);
     }
 
     @Override
@@ -583,7 +585,9 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             return mapper.toDocenciaResponse(actividad, relaciones, calendario, atributos);
         });
 
-        return new ApiResponse<>(200, "Actividades de Docencia encontradas", page);
+        boolean hasContent = page.hasContent();
+        String message = hasContent ? "Actividades de Docencia encontradas" : "No se encontraron actividades de Docencia.";
+        return new ApiResponse<>(200, message, page);
     }
 
 }

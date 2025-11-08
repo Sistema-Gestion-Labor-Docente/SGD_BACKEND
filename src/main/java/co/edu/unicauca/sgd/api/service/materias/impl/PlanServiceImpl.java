@@ -50,7 +50,10 @@ public class PlanServiceImpl implements PlanService {
             Page<PlanDTOResponse> response = page.map(planMapper::toResponse);
 
             logger.info("Planes encontrados: {}", response.getTotalElements());
-            return new ApiResponse<>(200, "Planes recuperados correctamente.", response);
+            String message = response.hasContent()
+                    ? "Planes recuperados correctamente."
+                    : "No se encontraron planes.";
+            return new ApiResponse<>(200, message, response);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al listar planes: " + e.getMessage(), null);
         }
@@ -60,12 +63,12 @@ public class PlanServiceImpl implements PlanService {
     public ApiResponse<PlanDTOResponse> buscarPorId(Integer oid) {
         try {
             Plan entity = planRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new IllegalStateException("Plan no encontrado con ID: " + oid));
             return new ApiResponse<>(200, "Plan encontrado correctamente.", planMapper.toResponse(entity));
-        } catch (RuntimeException e) {
+        } catch (IllegalStateException e) {
             return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error interno al buscar el plan: " + e.getMessage(), null);
         }
     }
 
@@ -88,16 +91,16 @@ public class PlanServiceImpl implements PlanService {
     public ApiResponse<PlanDTOResponse> actualizar(Integer oid, PlanDTORequest request) {
         try {
             Plan existente = planRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new IllegalStateException("Plan no encontrado con ID: " + oid));
             planMapper.actualizarCamposBasicos(existente, request);
             existente.setUsuarioActualizacion("UsuarioActualizacion");
             Plan actualizado = planRepository.save(existente);
             logger.info("Plan actualizado ID: {}", oid);
             return new ApiResponse<>(200, "Plan actualizado correctamente.", planMapper.toResponse(actualizado));
-        } catch (RuntimeException e) {
-            return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
-            return new ApiResponse<>(500, "Error interno al actualizar: " + e.getMessage(), null);
+            return new ApiResponse<>(500, "Error interno al actualizar el plan: " + e.getMessage(), null);
         }
     }
 
@@ -105,11 +108,13 @@ public class PlanServiceImpl implements PlanService {
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             if (!planRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "Plan no encontrado con ID: " + oid, null);
+                throw new IllegalStateException("Plan no encontrado con ID: " + oid);
             }
             planRepository.deleteById(oid);
             logger.info("Plan eliminado ID: {}", oid);
             return new ApiResponse<>(200, "Plan eliminado correctamente.", null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar el plan: " + e.getMessage(), null);
         }

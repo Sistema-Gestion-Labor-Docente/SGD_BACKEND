@@ -53,7 +53,10 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
                 List<SeleccionadoDTOResponse> dtos = list.stream().map(seleccionadoMapper::toResponse).collect(Collectors.toList());
                 Page<SeleccionadoDTOResponse> page = listToPage(dtos, pageable);
                 logger.info("Seleccionados encontrados para calendario={}, departamento={}: {}", oidCalendario, oidDepartamento, page.getTotalElements());
-                return new ApiResponse<>(200, "Seleccionados encontrados correctamente.", page);
+                String message = page.hasContent()
+                        ? "Seleccionados encontrados correctamente."
+                        : "No se encontraron seleccionados para los filtros suministrados.";
+                return new ApiResponse<>(200, message, page);
             }
 
             // Caso: filtrar por calendario
@@ -62,18 +65,24 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
                 List<SeleccionadoDTOResponse> dtos = list.stream().map(seleccionadoMapper::toResponse).collect(Collectors.toList());
                 Page<SeleccionadoDTOResponse> page = listToPage(dtos, pageable);
                 logger.info("Seleccionados encontrados para calendario={}: {}", oidCalendario, page.getTotalElements());
-                return new ApiResponse<>(200, "Seleccionados encontrados correctamente.", page);
+                String message = page.hasContent()
+                        ? "Seleccionados encontrados correctamente."
+                        : "No se encontraron seleccionados para los filtros suministrados.";
+                return new ApiResponse<>(200, message, page);
             }
 
             // Caso: sin filtros -> paginación normal usando repository
             Page<Seleccionado> pageEnt = seleccionadoRepository.findAll(pageable);
             Page<SeleccionadoDTOResponse> pageDto = pageEnt.map(seleccionadoMapper::toResponse);
             logger.info("Seleccionados encontrados (todos): {}", pageDto.getTotalElements());
-            return new ApiResponse<>(200, "Seleccionados encontrados correctamente.", pageDto);
+            String message = pageDto.hasContent()
+                    ? "Seleccionados encontrados correctamente."
+                    : "No se encontraron seleccionados.";
+            return new ApiResponse<>(200, message, pageDto);
 
         } catch (Exception e) {
             logger.error("Error al recuperar seleccionados: {}", e.getMessage(), e);
-            return new ApiResponse<>(500, "Error al recuperar los seleccionados: " + e.getMessage(), Page.empty());
+            return new ApiResponse<>(500, "Error al recuperar los seleccionados: " + e.getMessage(), Page.empty(pageable));
         }
     }
 
@@ -81,13 +90,13 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
     public ApiResponse<SeleccionadoDTOResponse> buscarPorId(Integer oid) {
         try {
             Seleccionado s = seleccionadoRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Seleccionado no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new IllegalStateException("Seleccionado no encontrado con ID: " + oid));
             SeleccionadoDTOResponse dto = seleccionadoMapper.toResponse(s);
             logger.info("Seleccionado encontrado con ID: {}", oid);
             return new ApiResponse<>(200, "Seleccionado encontrado correctamente.", dto);
-        } catch (RuntimeException e) {
+        } catch (IllegalStateException e) {
             logger.warn("Seleccionado no encontrado: {}", e.getMessage());
-            return new ApiResponse<>(404, "Seleccionado no encontrado: " + e.getMessage(), null);
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             logger.error("Error interno al recuperar seleccionado: {}", e.getMessage(), e);
             return new ApiResponse<>(500, "Error interno al recuperar el seleccionado: " + e.getMessage(), null);
@@ -115,9 +124,12 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
 
             logger.info("Seleccionado guardado con ID: {}", guardado.getOidSeleccionado());
             return new ApiResponse<>(201, "Seleccionado guardado correctamente.", dto);
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
             logger.warn("Error de validación al guardar seleccionado: {}", e.getMessage());
-            return new ApiResponse<>(400, "Error al guardar seleccionado: " + e.getMessage(), null);
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            logger.warn("Referencia no encontrada al guardar seleccionado: {}", e.getMessage());
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             logger.error("Error interno al guardar seleccionado: {}", e.getMessage(), e);
             return new ApiResponse<>(500, "Error al guardar el seleccionado: " + e.getMessage(), null);
@@ -129,14 +141,14 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
     public ApiResponse<SeleccionadoDTOResponse> actualizar(Integer oid, SeleccionadoDTORequest request) {
         try {
             Seleccionado existente = seleccionadoRepository.findById(oid)
-                    .orElseThrow(() -> new RuntimeException("Seleccionado no encontrado con ID: " + oid));
+                    .orElseThrow(() -> new IllegalStateException("Seleccionado no encontrado con ID: " + oid));
 
             // No permitimos cambiar calendario ni usuario por seguridad (si quieres permitirlo, quita estas validaciones)
             if (request.getOidCalendario() != null && !request.getOidCalendario().equals(existente.getCalendario().getOidcalendario())) {
-                throw new RuntimeException("El calendario no es editable para este recurso.");
+                throw new IllegalArgumentException("El calendario no es editable para este recurso.");
             }
             if (request.getOidUsuario() != null && !request.getOidUsuario().equals(existente.getUsuario().getOidUsuario())) {
-                throw new RuntimeException("El usuario no es editable para este recurso.");
+                throw new IllegalArgumentException("El usuario no es editable para este recurso.");
             }
 
             if (request.getTipo() != null && request.getTipo() != existente.getTipo()) {
@@ -150,9 +162,12 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
 
             logger.info("Seleccionado actualizado con ID: {}", oid);
             return new ApiResponse<>(200, "Seleccionado actualizado correctamente.", dto);
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
             logger.warn("Error en la actualización del seleccionado: {}", e.getMessage());
-            return new ApiResponse<>(400, "Error en la actualización: " + e.getMessage(), null);
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (IllegalStateException e) {
+            logger.warn("Seleccionado no encontrado en actualización: {}", e.getMessage());
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             logger.error("Error interno al actualizar seleccionado: {}", e.getMessage(), e);
             return new ApiResponse<>(500, "Error interno al actualizar el seleccionado: " + e.getMessage(), null);
@@ -164,11 +179,13 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
     public ApiResponse<Void> eliminar(Integer oid) {
         try {
             if (!seleccionadoRepository.existsById(oid)) {
-                return new ApiResponse<>(404, "Seleccionado no encontrado con ID: " + oid, null);
+                throw new IllegalStateException("Seleccionado no encontrado con ID: " + oid);
             }
             seleccionadoRepository.deleteById(oid);
             logger.info("Seleccionado eliminado con ID: {}", oid);
             return new ApiResponse<>(204, "Seleccionado eliminado correctamente.", null);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             logger.error("Error al eliminar seleccionado: {}", e.getMessage(), e);
             return new ApiResponse<>(500, "Error al eliminar el seleccionado: " + e.getMessage(), null);
@@ -179,19 +196,19 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
 
     private void validarUsuarioExiste(Integer oidUsuario) {
         if (oidUsuario == null || !usuarioRepository.existsById(oidUsuario)) {
-            throw new RuntimeException("Usuario no existe con ID: " + oidUsuario);
+            throw new IllegalStateException("Usuario no encontrado con ID: " + oidUsuario);
         }
     }
 
     private void validarCalendarioExiste(Integer oidCalendario) {
         if (oidCalendario == null || !calendarioRepository.existsById(oidCalendario)) {
-            throw new RuntimeException("Calendario no existe con ID: " + oidCalendario);
+            throw new IllegalStateException("Calendario no encontrado con ID: " + oidCalendario);
         }
     }
 
     private void validarNoDuplicado(Integer oidCalendario, Integer oidUsuario) {
         if (seleccionadoRepository.existsByCalendarioOidcalendarioAndUsuarioOidUsuario(oidCalendario, oidUsuario)) {
-            throw new RuntimeException("El usuario ya está seleccionado para ese calendario.");
+            throw new IllegalArgumentException("El usuario ya está seleccionado para ese calendario.");
         }
     }
 
@@ -214,10 +231,10 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
 
         // Cargar usuario y departamento — si no existen, lanzar (evita crear registros incompletos)
         Usuario usuario = usuarioRepository.findById(oidUsuario)
-                .orElseThrow(() -> new RuntimeException("Usuario no existe con ID: " + oidUsuario));
+                .orElseThrow(() -> new IllegalStateException("Usuario no encontrado con ID: " + oidUsuario));
 
         Departamento departamento = departamentoRepository.findById(oidDepartamento)
-                .orElseThrow(() -> new RuntimeException("Departamento no existe con ID: " + oidDepartamento));
+                .orElseThrow(() -> new IllegalStateException("Departamento no encontrado con ID: " + oidDepartamento));
 
         // Crear y guardar la relación correctamente
         UsuarioDepartamento ud = new UsuarioDepartamento();
