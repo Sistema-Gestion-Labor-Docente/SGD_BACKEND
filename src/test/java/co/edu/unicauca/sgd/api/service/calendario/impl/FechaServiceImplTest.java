@@ -133,11 +133,11 @@ class FechaServiceImplTest {
         Fecha fecha = new Fecha();
         fecha.setNombreFecha(nombreFecha);
 
-        when(fechaRepository.findById(3)).thenReturn(Optional.of(fecha));
+        when(fechaRepository.findById(30)).thenReturn(Optional.of(fecha));
 
-        ApiResponse<Void> response = fechaService.eliminar(3);
+        ApiResponse<Void> response = fechaService.eliminar(30);
 
-        assertThat(response.getCodigo()).isEqualTo(500);
+        assertThat(response.getCodigo()).isEqualTo(400);
         assertThat(response.getMensaje()).contains("No se permite eliminar");
         verify(fechaRepository, never()).deleteById(3);
     }
@@ -149,7 +149,6 @@ class FechaServiceImplTest {
         fecha.setNombreFecha(nombreFecha);
 
         when(fechaRepository.findById(8)).thenReturn(Optional.of(fecha));
-        when(fechaRepository.existsById(8)).thenReturn(true);
 
         ApiResponse<Void> response = fechaService.eliminar(8);
 

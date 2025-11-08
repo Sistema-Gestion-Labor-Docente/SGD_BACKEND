@@ -3,7 +3,9 @@ package co.edu.unicauca.sgd.api.service.calendario.impl;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import co.edu.unicauca.sgd.api.domain.NombreFecha;
@@ -25,6 +27,7 @@ public class NombreFechaServiceImpl implements NombreFechaService {
 
     private static final List<Integer> EXCLUDED_IDS = List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 26, 27, 28);
     private static final int LAST_PROTECTED_ID = EXCLUDED_IDS.stream().mapToInt(Integer::intValue).max().orElse(0);
+    private static final Sort SORT_BY_ID = Sort.by("oidNombreFecha").ascending();
 
     private final NombreFechaRepository nombreFechaRepository;
     
@@ -39,12 +42,13 @@ public class NombreFechaServiceImpl implements NombreFechaService {
     @Override
     public ApiResponse<Page<NombreFechaDTOResponse>> obtenerTodas(String nombre, Pageable pageable) {
         try {
+            Pageable sortedPageable = ensureSorted(pageable);
             Page<NombreFecha> page;
             if (StringUtils.hasText(nombre)) {
                 page = nombreFechaRepository.findByNombreContainingIgnoreCaseAndOidNombreFechaNotIn(
-                        nombre, EXCLUDED_IDS, pageable);
+                        nombre, EXCLUDED_IDS, sortedPageable);
             } else {
-                page = nombreFechaRepository.findByOidNombreFechaNotIn(EXCLUDED_IDS, pageable);
+                page = nombreFechaRepository.findByOidNombreFechaNotIn(EXCLUDED_IDS, sortedPageable);
             }
             Page<NombreFechaDTOResponse> mapped = page.map(nombreFechaMapper::toResponse);
             return new ApiResponse<>(200, "Registros obtenidos correctamente", mapped);
@@ -139,5 +143,15 @@ public class NombreFechaServiceImpl implements NombreFechaService {
             throw new NombreFechaOperacionNoPermitidaException(
                     "Solo se pueden actualizar o eliminar registros con ID mayor a " + LAST_PROTECTED_ID + ".");
         }
+    }
+
+    private Pageable ensureSorted(Pageable pageable) {
+        if (pageable == null || pageable.isUnpaged()) {
+            return PageRequest.of(0, Integer.MAX_VALUE, SORT_BY_ID);
+        }
+        Sort sort = pageable.getSort().isSorted()
+                ? pageable.getSort().and(SORT_BY_ID)
+                : SORT_BY_ID;
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
