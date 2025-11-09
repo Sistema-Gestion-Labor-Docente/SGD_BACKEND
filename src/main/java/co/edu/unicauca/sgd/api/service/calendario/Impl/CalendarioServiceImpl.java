@@ -247,7 +247,12 @@ public class CalendarioServiceImpl implements CalendarioService {
         logger.info("Generando PDF del calendario ID: {}", oidCalendario);
         Calendario calendario = calendarioRepository.findById(oidCalendario)
                 .orElseThrow(() -> new CalendarioNoEncontradoException(oidCalendario));
-        List<FechaDTOResponse> fechas = obtenerFechasDto(oidCalendario);
+        List<FechaDTOResponse> fechas = obtenerFechasDto(oidCalendario).stream()
+                .filter(f -> f.getTipo() == TipoFechaEnum.RESALTADAS
+                        || f.getTipo() == TipoFechaEnum.NO_RESALTADAS
+                        || f.getTipo() == TipoFechaEnum.ADMINISTRATIVAS
+                        || f.getTipo() == TipoFechaEnum.CLASES)
+                .toList();
         try {
             return calendarioPdfService.generarCalendarioPdf(calendario, fechas);
         } catch (IOException e) {
