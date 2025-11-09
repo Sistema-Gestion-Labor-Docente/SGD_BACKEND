@@ -3,6 +3,8 @@ package co.edu.unicauca.sgd.api.service.actividad.laborDocente.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -23,14 +25,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.ActividadCalendario;
+import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.CargoActividad;
+import co.edu.unicauca.sgd.api.domain.EstadoActividad;
 import co.edu.unicauca.sgd.api.domain.Fecha;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
+import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
+import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.exception.RecursoNoEncontradoException;
 import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
 import co.edu.unicauca.sgd.api.mapper.UsuarioActividadCalendarioMapper;
@@ -187,6 +194,81 @@ class UsuarioActividadCalendarioServiceImplTest {
         assertEquals(0f, data.getHorasDisponiblesUsuarioMenorCupo());
         assertEquals(12f, data.getHorasMaximasCargo());
         assertEquals(5f, data.getSemanasMaximas());
+    }
+
+    @Test
+    void crearActividadConRelaciones_usuarioNoPermitidoPorContratacion_lanzaExcepcion() {
+        UsuarioActividadCalendarioDTORequest request = new UsuarioActividadCalendarioDTORequest();
+        request.setOidTipoActividad(1);
+        request.setOidEstadoActividad(2);
+        request.setNombreActividad("Actividad test");
+        request.setHoras(4f);
+        request.setOidCalendario(3);
+        request.setOidsUsuarios(List.of(10));
+
+        TipoActividad tipoActividad = new TipoActividad();
+        tipoActividad.setOidTipoActividad(1);
+        EstadoActividad estadoActividad = new EstadoActividad();
+        estadoActividad.setOidEstadoActividad(2);
+        Calendario calendario = new Calendario();
+        calendario.setOidcalendario(3);
+        calendario.setHorasPlanta(30f);
+        calendario.setHorasOcasionales(25f);
+
+        UsuarioDetalle detalle = new UsuarioDetalle();
+        detalle.setContratacion("CATEDRA");
+        Usuario usuario = new Usuario();
+        usuario.setOidUsuario(10);
+        usuario.setUsuarioDetalle(detalle);
+        usuario.setIdentificacion("1000");
+        usuario.setNombres("Nombre");
+        usuario.setApellidos("Apellido");
+
+        when(tipoActividadRepository.findById(1)).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(2)).thenReturn(Optional.of(estadoActividad));
+        when(calendarioRepository.findById(3)).thenReturn(Optional.of(calendario));
+        when(usuarioRepository.findById(10)).thenReturn(Optional.of(usuario));
+        lenient().when(usuarioActividadCalendarioRepository.findByUsuario_OidUsuario(10)).thenReturn(List.of());
+
+        assertThrows(ValidacionNegocioException.class, () -> service.crearActividadConRelaciones(request));
+    }
+
+    @Test
+    void crearActividadConRelaciones_usuarioPlantaSinHorasEnCalendarioUsaLimiteDefault() {
+        UsuarioActividadCalendarioDTORequest request = new UsuarioActividadCalendarioDTORequest();
+        request.setOidTipoActividad(11);
+        request.setOidEstadoActividad(22);
+        request.setNombreActividad("Actividad");
+        request.setHoras(47f);
+        request.setOidCalendario(33);
+        request.setOidsUsuarios(List.of(44));
+
+        TipoActividad tipoActividad = new TipoActividad();
+        tipoActividad.setOidTipoActividad(11);
+        EstadoActividad estadoActividad = new EstadoActividad();
+        estadoActividad.setOidEstadoActividad(22);
+        Calendario calendario = new Calendario();
+        calendario.setOidcalendario(33);
+        calendario.setHorasPlanta(null);
+
+        UsuarioDetalle detalle = new UsuarioDetalle();
+        detalle.setContratacion("PLANTA");
+        Usuario usuario = new Usuario();
+        usuario.setOidUsuario(44);
+        usuario.setUsuarioDetalle(detalle);
+        usuario.setIdentificacion("2000");
+        usuario.setNombres("Nombre");
+        usuario.setApellidos("Apellido");
+
+        when(tipoActividadRepository.findById(11)).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(22)).thenReturn(Optional.of(estadoActividad));
+        when(calendarioRepository.findById(33)).thenReturn(Optional.of(calendario));
+        when(usuarioRepository.findById(44)).thenReturn(Optional.of(usuario));
+        when(usuarioActividadCalendarioRepository.findByUsuario_OidUsuario(44)).thenReturn(List.of());
+
+        ValidacionNegocioException exception = assertThrows(ValidacionNegocioException.class,
+                () -> service.crearActividadConRelaciones(request));
+        assertTrue(exception.getMessage().contains("44"), "Debe usar el límite por defecto de 44 horas.");
     }
 
     private UsuarioActividadCalendario relacionConHoras(float horas) {

@@ -3,6 +3,7 @@ package co.edu.unicauca.sgd.api.service.actividad.laborDocente.impl;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import co.edu.unicauca.sgd.api.domain.Fecha;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
+import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
@@ -78,6 +80,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     private final ObjectMapper objectMapper;
 
     private static final float EPSILON = 0.0001f;
+    private static final float HORAS_DEFAULT_CONTRATACION = 44f;
     private static final int NOMBRE_PERIODO_INICIO = 1;
     private static final int NOMBRE_PERIODO_FIN = 10;
 
@@ -125,6 +128,16 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Estado de actividad no encontrado"));
 
+            Calendario calendario = calendarioRepository.findById(request.getOidCalendario())
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
+
+            Map<Integer, Usuario> usuariosValidadosPorContratacion = validarHorasPorContratacionUsuarios(
+                    request.getOidsUsuarios(),
+                    request.getHoras(),
+                    calendario,
+                    null
+            );
+
             validarMaximoHorasUsuarios(
                     request.getOidsUsuarios(),
                     request.getHoras(),
@@ -145,9 +158,6 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             final Actividad actividadFinal = actividad;
 
             // 2. Obtener Calendario y crear/obtener ActividadCalendario
-            Calendario calendario = calendarioRepository.findById(request.getOidCalendario())
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
-
             ActividadCalendario actividadCalendario = actividadCalendarioRepository
                     .findByActividad_OidActividadAndCalendario_Oidcalendario(actividad.getOidActividad(), calendario.getOidcalendario())
                     .orElseGet(() -> {
@@ -167,8 +177,11 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             // 3. Crear relaciones UsuarioActividadCalendario apuntando a actividadCalendario
             List<Integer> usuariosSolicitados = request.getOidsUsuarios() == null ? List.of() : request.getOidsUsuarios();
             for (Integer oidUsuario : usuariosSolicitados) {
-                Usuario usuario = usuarioRepository.findById(oidUsuario)
-                        .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+                Usuario usuario = usuariosValidadosPorContratacion.get(oidUsuario);
+                if (usuario == null) {
+                    usuario = usuarioRepository.findById(oidUsuario)
+                            .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+                }
                 // No crear duplicados
                 boolean exists = usuarioActividadCalendarioRepository.existsByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(actividadCalendario.getOidActividadCalendario(), oidUsuario);
                 if (!exists) {
@@ -244,6 +257,16 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
         TipoActividad tipoActividad = resolverTipoActividad(cargoActividad, request, actividad);
 
+        Calendario calendarioDestino = calendarioRepository.findById(request.getOidCalendario())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
+
+        Map<Integer, Usuario> usuariosValidadosPorContratacion = validarHorasPorContratacionUsuarios(
+                request.getOidsUsuarios(),
+                request.getHoras(),
+                calendarioDestino,
+                actividad.getOidActividad()
+        );
+
         validarMaximoHorasUsuarios(
                 request.getOidsUsuarios(),
                 request.getHoras(),
@@ -263,9 +286,6 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         final Actividad actividadFinal = actividad;
 
         // Obtener/crear ActividadCalendario destino (puede ser el mismo o uno nuevo si cambió el calendario)
-        Calendario calendarioDestino = calendarioRepository.findById(request.getOidCalendario())
-                .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
-
         ActividadCalendario actividadCalendarioDestino = actividadCalendarioRepository
                 .findByActividad_OidActividadAndCalendario_Oidcalendario(actividad.getOidActividad(), calendarioDestino.getOidcalendario())
                 .orElseGet(() -> {
@@ -295,8 +315,11 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         // Añadir nuevos
         for (Integer oidUsuario : solicitados) {
             if (!existentesOids.contains(oidUsuario)) {
-                Usuario usuario = usuarioRepository.findById(oidUsuario)
-                        .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+                Usuario usuario = usuariosValidadosPorContratacion.get(oidUsuario);
+                if (usuario == null) {
+                    usuario = usuarioRepository.findById(oidUsuario)
+                            .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+                }
                 UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
                 relacion.setUsuario(usuario);
                 relacion.setActividadCalendario(actividadCalendarioDestino);
@@ -418,6 +441,15 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         }
         List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
                 .findByUsuario_OidUsuarioAndActividadCalendario_Actividad_TipoActividad_OidTipoActividad(oidUsuario, oidTipoActividad);
+        return sumarHorasRelacionadas(relaciones, oidActividadActual);
+    }
+
+    private float calcularHorasTotalesUsuario(Integer oidUsuario, Integer oidActividadActual) {
+        if (oidUsuario == null) {
+            return 0f;
+        }
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
+                .findByUsuario_OidUsuario(oidUsuario);
         return sumarHorasRelacionadas(relaciones, oidActividadActual);
     }
 
@@ -817,5 +849,68 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             return fecha.getFechaInicial();
         }
         return fecha.getFechaFin();
+    }
+
+    private Map<Integer, Usuario> validarHorasPorContratacionUsuarios(List<Integer> oidsUsuarios,
+                                                                      Float horasActividad,
+                                                                      Calendario calendario,
+                                                                      Integer oidActividadActual) {
+        if (oidsUsuarios == null || oidsUsuarios.isEmpty()) {
+            return Map.of();
+        }
+        if (calendario == null) {
+            throw new ValidacionNegocioException("Debe especificar un calendario válido para la asignación.");
+        }
+        float horasSolicitadas = horasActividad == null ? 0f : horasActividad;
+        Set<Integer> usuariosUnicos = new HashSet<>(oidsUsuarios);
+        Map<Integer, Usuario> usuariosProcesados = new HashMap<>();
+
+        for (Integer oidUsuario : usuariosUnicos) {
+            Usuario usuario = usuarioRepository.findById(oidUsuario)
+                    .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+
+            float limite = determinarLimiteHorasPorContratacion(calendario, usuario);
+            float horasAsignadas = calcularHorasTotalesUsuario(oidUsuario, oidActividadActual);
+            if ((horasAsignadas + horasSolicitadas) - limite > EPSILON) {
+                throw new ValidacionNegocioException(
+                        String.format("El usuario %s supera el máximo de %.2f horas permitidas para su contratación.",
+                                obtenerDescripcionUsuario(usuario), limite));
+            }
+            usuariosProcesados.put(oidUsuario, usuario);
+        }
+
+        return usuariosProcesados;
+    }
+
+    private float determinarLimiteHorasPorContratacion(Calendario calendario, Usuario usuario) {
+        UsuarioDetalle detalle = usuario.getUsuarioDetalle();
+        String contratacion = detalle != null ? detalle.getContratacion() : null;
+        if (contratacion == null || contratacion.isBlank()) {
+            throw new ValidacionNegocioException(
+                    String.format("El usuario %s no tiene configurado el tipo de contratación.", obtenerDescripcionUsuario(usuario)));
+        }
+        String tipoNormalizado = contratacion.trim().toUpperCase();
+        Float limite;
+        switch (tipoNormalizado) {
+            case "PLANTA":
+                limite = calendario.getHorasPlanta();
+                break;
+            case "OCASIONAL":
+            case "OCASIONALES":
+                limite = calendario.getHorasOcasionales();
+                break;
+            default:
+                throw new ValidacionNegocioException(
+                        String.format("Solo usuarios con contratación PLANTA u OCASIONAL pueden asignarse a actividades. Usuario: %s.",
+                                obtenerDescripcionUsuario(usuario)));
+        }
+        return limite != null ? limite : HORAS_DEFAULT_CONTRATACION;
+    }
+
+    private String obtenerDescripcionUsuario(Usuario usuario) {
+        String identificacion = usuario.getIdentificacion() != null ? usuario.getIdentificacion() : "";
+        String nombres = usuario.getNombres() != null ? usuario.getNombres() : "";
+        String apellidos = usuario.getApellidos() != null ? usuario.getApellidos() : "";
+        return String.format("%s %s %s", identificacion, nombres, apellidos).trim();
     }
 }
