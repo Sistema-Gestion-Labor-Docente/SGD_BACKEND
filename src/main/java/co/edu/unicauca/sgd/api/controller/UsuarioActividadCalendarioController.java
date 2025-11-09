@@ -1,5 +1,6 @@
 package co.edu.unicauca.sgd.api.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
 import co.edu.unicauca.sgd.api.service.actividad.laborDocente.UsuarioActividadCalendarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -109,6 +111,20 @@ public class UsuarioActividadCalendarioController {
         }
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo())
                 .body(new ApiResponse<>(response.getCodigo(), response.getMensaje(), null));
+    }
+
+    @GetMapping("/validar-cupo")
+    @Operation(
+            summary = "Validar cupo de horas por cargo",
+            description = "Verifica si los usuarios aún tienen horas disponibles para un cargo/tipo de actividad en un calendario determinado.")
+    public ResponseEntity<ApiResponse<ValidacionHorasCargoDTOResponse>> validarCupoUsuarios(
+            @RequestParam(name = "oidTipoActividad", required = true) Integer oidTipoActividad,
+            @RequestParam(name = "oidCargoActividad", required = true) Integer oidCargoActividad,
+            @RequestParam(name = "oidCalendario", required = true) Integer oidCalendario,
+            @RequestParam(name = "oidUsuario", required = true) List<Integer> oidsUsuario) {
+        ApiResponse<ValidacionHorasCargoDTOResponse> response = usuarioActividadCalendarioService
+                .validarCupoUsuariosEnCargo(oidTipoActividad, oidCargoActividad, oidCalendario, oidsUsuario);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
     // Otros métodos específicos pueden ser añadidos aquí según sea necesario
