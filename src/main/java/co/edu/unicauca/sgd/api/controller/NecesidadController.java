@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateRequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
@@ -51,6 +53,14 @@ public class NecesidadController {
     @Operation(summary = "Crear necesidad", description = "Registra una nueva necesidad para un calendario")
     public ResponseEntity<ApiResponse<NecesidadDTOResponse>> save(@Valid @RequestBody NecesidadDTORequest request) {
         ApiResponse<NecesidadDTOResponse> response = necesidadService.guardar(request);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
+    }
+
+    @PostMapping("/lote")
+    @Operation(summary = "Crear necesidades por lote", description = "Crea múltiples necesidades para un calendario a partir de una lista de materias")
+    public ResponseEntity<ApiResponse<List<NecesidadDTOResponse>>> saveBulk(
+            @Valid @RequestBody NecesidadBulkCreateRequest request) {
+        ApiResponse<List<NecesidadDTOResponse>> response = necesidadService.guardarMasivo(request);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

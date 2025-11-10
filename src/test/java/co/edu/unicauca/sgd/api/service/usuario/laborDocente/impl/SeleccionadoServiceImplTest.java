@@ -155,4 +155,49 @@ class SeleccionadoServiceImplTest {
         assertThat(response.getData()).isNull();
         verify(seleccionadoMapper, never()).toResponse(any());
     }
+
+    @Test
+    void guardar_conCalendarioInexistenteRetorna404() {
+        SeleccionadoDTORequest request = SeleccionadoDTORequest.builder()
+                .oidCalendario(9)
+                .oidUsuario(3)
+                .build();
+
+        when(calendarioRepository.existsById(9)).thenReturn(false);
+
+        ApiResponse<SeleccionadoDTOResponse> response = service.guardar(request);
+
+        assertThat(response.getCodigo()).isEqualTo(404);
+        verify(usuarioRepository, never()).findById(any());
+        verify(seleccionadoRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizar_cambiandoCalendarioRetorna400() {
+        Seleccionado existente = new Seleccionado();
+        existente.setOidSeleccionado(7);
+        existente.setCalendario(new co.edu.unicauca.sgd.api.domain.Calendario());
+        existente.getCalendario().setOidcalendario(5);
+        existente.setUsuario(new Usuario(4));
+
+        SeleccionadoDTORequest request = SeleccionadoDTORequest.builder()
+                .oidCalendario(8)
+                .build();
+
+        when(seleccionadoRepository.findById(7)).thenReturn(Optional.of(existente));
+
+        ApiResponse<SeleccionadoDTOResponse> response = service.actualizar(7, request);
+
+        assertThat(response.getCodigo()).isEqualTo(400);
+        verify(seleccionadoRepository, never()).save(any());
+    }
+
+    @Test
+    void eliminar_cuandoNoExisteRetorna404() {
+        when(seleccionadoRepository.existsById(30)).thenReturn(false);
+
+        ApiResponse<Void> response = service.eliminar(30);
+
+        assertThat(response.getCodigo()).isEqualTo(404);
+    }
 }

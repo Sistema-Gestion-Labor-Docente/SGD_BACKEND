@@ -16,9 +16,19 @@ public interface NecesidadRepository extends JpaRepository<Necesidad, Integer>, 
     // para la validación del correquisito: verificar existencia de necesidad de la materia X
     boolean existsByCalendario_OidcalendarioAndMateria_IdMateria(Integer oidCalendario, Integer idMateria);
 
+    boolean existsByCalendario_OidcalendarioAndMateria_IdMateriaAndGrupo(Integer oidCalendario,
+                                                                         Integer idMateria,
+                                                                         String grupo);
+
     Optional<Necesidad> findByCalendario_OidcalendarioAndMateria_IdMateria(Integer oidCalendario, Integer idMateria);
 
+    Optional<Necesidad> findByCalendario_OidcalendarioAndMateria_IdMateriaAndGrupo(Integer oidCalendario,
+                                                                                   Integer idMateria,
+                                                                                   String grupo);
+
     List<Necesidad> findAllByCalendario_Oidcalendario(Integer oidCalendario);
+
+    List<Necesidad> findAllByCalendario_OidcalendarioAndMateria_IdMateria(Integer oidCalendario, Integer idMateria);
 
     // buscar por estado
     List<Necesidad> findAllByCalendario_OidcalendarioAndEstado(Integer oidCalendario, EstadoNecesidad estado);
