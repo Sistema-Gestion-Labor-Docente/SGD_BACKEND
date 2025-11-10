@@ -302,6 +302,12 @@ public class AsignacionServiceImpl implements AsignacionService {
     }
 
     private String obtenerDedicacion(Seleccionado seleccionado) {
+        if (seleccionado == null) {
+            return null;
+        }
+        if (seleccionado.getDedicacion() != null && !seleccionado.getDedicacion().isBlank()) {
+            return seleccionado.getDedicacion();
+        }
         Usuario usuario = seleccionado.getUsuario();
         if (usuario == null) {
             return null;

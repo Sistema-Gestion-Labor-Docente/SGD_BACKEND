@@ -19,6 +19,7 @@ public class SeleccionadoMapper {
                 .oidCalendario(s.getCalendario() != null ? s.getCalendario().getOidcalendario() : null)
                 .oidUsuario(s.getUsuario() != null ? s.getUsuario().getOidUsuario() : null)
                 .tipo(s.getTipo())
+                .dedicacion(s.getDedicacion())
                 .fechaCreacion(s.getFechaCreacion())
                 .usuarioCreacion(s.getUsuarioCreacion())
                 .fechaActualizacion(s.getFechaActualizacion())
@@ -46,6 +47,7 @@ public class SeleccionadoMapper {
         }
 
         s.setTipo(r.getTipo());
+        s.setDedicacion(r.getDedicacion());
 
         return s;
     }

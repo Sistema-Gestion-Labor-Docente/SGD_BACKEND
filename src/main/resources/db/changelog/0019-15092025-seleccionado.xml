@@ -29,6 +29,8 @@
       <!-- Guardamos el name() del enum ContratacionEnum (PLANTA, OCASIONAL, BECARIOS_Y_PRACTICANTES, BECARIOS_POSTGRADO, CATEDRA) -->
       <column name="TIPO" type="VARCHAR(50)"/>
 
+      <column name="DEDICACION" type="VARCHAR(100)"/>
+
       <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
         <constraints nullable="false"/>
       </column>

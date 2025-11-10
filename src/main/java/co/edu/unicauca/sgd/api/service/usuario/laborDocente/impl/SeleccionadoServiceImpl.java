@@ -25,6 +25,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -108,15 +109,16 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
     public ApiResponse<SeleccionadoDTOResponse> guardar(SeleccionadoDTORequest request) {
         try {
             validarCalendarioExiste(request.getOidCalendario());
-            validarUsuarioExiste(request.getOidUsuario());
+            Usuario usuario = obtenerUsuario(request.getOidUsuario());
             validarNoDuplicado(request.getOidCalendario(), request.getOidUsuario());
             if (request.getOidDepartamento() != null) {
-                validarPerteneceDepartamento(request.getOidUsuario(), request.getOidDepartamento());
+                validarPerteneceDepartamento(usuario, request.getOidDepartamento());
             }
 
             // preparar entidad
             Seleccionado entidad = seleccionadoMapper.convertToEntity(request);
-
+            entidad.setUsuario(usuario);
+            entidad.setDedicacion(resolverDedicacion(request.getDedicacion(), usuario));
             entidad.setUsuarioCreacion("system"); // TODO: cambiar por usuario autenticado
 
             Seleccionado guardado = seleccionadoRepository.save(entidad);
@@ -153,6 +155,10 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
 
             if (request.getTipo() != null && request.getTipo() != existente.getTipo()) {
                 existente.setTipo(request.getTipo());
+            }
+
+            if (request.getDedicacion() != null) {
+                existente.setDedicacion(request.getDedicacion());
             }
 
             existente.setUsuarioActualizacion("system"); // TODO: cambiar por usuario autenticado
@@ -194,12 +200,6 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
 
     /* ------------------ Helpers ------------------ */
 
-    private void validarUsuarioExiste(Integer oidUsuario) {
-        if (oidUsuario == null || !usuarioRepository.existsById(oidUsuario)) {
-            throw new IllegalStateException("Usuario no encontrado con ID: " + oidUsuario);
-        }
-    }
-
     private void validarCalendarioExiste(Integer oidCalendario) {
         if (oidCalendario == null || !calendarioRepository.existsById(oidCalendario)) {
             throw new IllegalStateException("Calendario no encontrado con ID: " + oidCalendario);
@@ -222,16 +222,13 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
         return new PageImpl<>(content, pageable, list.size());
     }
 
-    private void validarPerteneceDepartamento(Integer oidUsuario, Integer oidDepartamento) {
-        boolean pertenece = usuarioDepartamentoRepository.existsByUsuarioOidUsuarioAndDepartamentoOidDepartamento(oidUsuario, oidDepartamento);
+    private void validarPerteneceDepartamento(Usuario usuario, Integer oidDepartamento) {
+        boolean pertenece = usuarioDepartamentoRepository.existsByUsuarioOidUsuarioAndDepartamentoOidDepartamento(
+                usuario.getOidUsuario(), oidDepartamento);
         
         if (pertenece) {
             return;
         }
-
-        // Cargar usuario y departamento — si no existen, lanzar (evita crear registros incompletos)
-        Usuario usuario = usuarioRepository.findById(oidUsuario)
-                .orElseThrow(() -> new IllegalStateException("Usuario no encontrado con ID: " + oidUsuario));
 
         Departamento departamento = departamentoRepository.findById(oidDepartamento)
                 .orElseThrow(() -> new IllegalStateException("Departamento no encontrado con ID: " + oidDepartamento));
@@ -241,5 +238,27 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
         ud.setUsuario(usuario);            // @MapsId copiará el id en oidUsuario
         ud.setDepartamento(departamento);
         usuarioDepartamentoRepository.save(ud);
+    }
+
+    private Usuario obtenerUsuario(Integer oidUsuario) {
+        if (oidUsuario == null) {
+            throw new IllegalStateException("Usuario no encontrado con ID: null");
+        }
+        return usuarioRepository.findById(oidUsuario)
+                .orElseThrow(() -> new IllegalStateException("Usuario no encontrado con ID: " + oidUsuario));
+    }
+
+    private String resolverDedicacion(String dedicacionSolicitud, Usuario usuario) {
+        if (StringUtils.hasText(dedicacionSolicitud)) {
+            return dedicacionSolicitud;
+        }
+        return obtenerDedicacionDesdeUsuario(usuario);
+    }
+
+    private String obtenerDedicacionDesdeUsuario(Usuario usuario) {
+        if (usuario == null || usuario.getUsuarioDetalle() == null) {
+            return null;
+        }
+        return usuario.getUsuarioDetalle().getDedicacion();
     }
 }

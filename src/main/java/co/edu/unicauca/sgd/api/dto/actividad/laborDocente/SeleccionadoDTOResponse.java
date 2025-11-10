@@ -17,6 +17,7 @@ public class SeleccionadoDTOResponse {
     private Integer oidCalendario;
     private Integer oidUsuario;
     private ContratacionEnum tipo;
+    private String dedicacion;
     private LocalDateTime fechaCreacion;
     private String usuarioCreacion;
     private LocalDateTime fechaActualizacion;
