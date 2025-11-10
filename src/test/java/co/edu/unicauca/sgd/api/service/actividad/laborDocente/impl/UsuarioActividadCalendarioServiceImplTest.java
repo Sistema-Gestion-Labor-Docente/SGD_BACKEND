@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -15,11 +17,13 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -30,6 +34,7 @@ import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalend
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.ActividadCalendario;
+import co.edu.unicauca.sgd.api.domain.Asignacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
@@ -40,7 +45,11 @@ import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
 import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.exception.RecursoNoEncontradoException;
 import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
+import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
+import co.edu.unicauca.sgd.api.mapper.MateriaMapper;
+import co.edu.unicauca.sgd.api.mapper.NecesidadMapper;
 import co.edu.unicauca.sgd.api.mapper.UsuarioActividadCalendarioMapper;
+import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
 import co.edu.unicauca.sgd.api.repository.ActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
@@ -80,11 +89,21 @@ class UsuarioActividadCalendarioServiceImplTest {
     private TipoActividadRepository tipoActividadRepository;
     @Mock
     private FechaRepository fechaRepository;
+    @Mock
+    private AsignacionRepository asignacionRepository;
+
+    private AsignacionMapper asignacionMapper;
+    private NecesidadMapper necesidadMapper;
+    private MateriaMapper materiaMapper;
 
     private UsuarioActividadCalendarioServiceImpl service;
 
     @BeforeEach
     void setUp() {
+        asignacionMapper = new AsignacionMapper();
+        necesidadMapper = new NecesidadMapper();
+        materiaMapper = new MateriaMapper();
+
         service = new UsuarioActividadCalendarioServiceImpl(
                 actividadRepository,
                 usuarioRepository,
@@ -98,6 +117,10 @@ class UsuarioActividadCalendarioServiceImplTest {
                 eavAtributoRepository,
                 tipoActividadRepository,
                 fechaRepository,
+                asignacionRepository,
+                asignacionMapper,
+                necesidadMapper,
+                materiaMapper,
                 new ObjectMapper());
     }
 
@@ -139,16 +162,30 @@ class UsuarioActividadCalendarioServiceImplTest {
     }
 
     @Test
+    void listarPorTipoDocencia_parametrosObligatorios_falla() {
+        assertThrows(ValidacionNegocioException.class,
+                () -> service.listarPorTipoDocencia(null, 2, null, null, null, Pageable.unpaged()));
+        assertThrows(ValidacionNegocioException.class,
+                () -> service.listarPorTipoDocencia(1, null, null, null, null, Pageable.unpaged()));
+    }
+
+    @Test
     void listarPorTipoDocencia_sinResultados_devuelveMensajeSinDatos() {
         Pageable pageable = Pageable.unpaged();
-        when(actividadRepository.findByTipoActividad_Nombre("Docencia", pageable))
-                .thenReturn(Page.empty(pageable));
+        when(asignacionRepository.findAll(ArgumentMatchers.<Specification<Asignacion>>any(), same(pageable))).thenReturn(Page.empty(pageable));
 
-        ApiResponse<Page<DocenciaDTOResponse>> response = service.listarPorTipoDocencia(pageable);
+        ApiResponse<Page<DocenciaDTOResponse>> response =
+                service.listarPorTipoDocencia(1, 2, null, null, null, pageable);
 
         assertEquals(200, response.getCodigo());
         assertEquals("No se encontraron actividades de Docencia.", response.getMensaje());
         assertEquals(0, response.getData().getTotalElements());
+    }
+
+    @Test
+    void listarPorTipoDocencia_tipoContratacionInvalida_lanzaExcepcion() {
+        assertThrows(ValidacionNegocioException.class,
+                () -> service.listarPorTipoDocencia(1, 2, null, "Tipo inexistente", null, Pageable.unpaged()));
     }
 
     @Test
@@ -239,7 +276,7 @@ class UsuarioActividadCalendarioServiceImplTest {
         request.setOidTipoActividad(11);
         request.setOidEstadoActividad(22);
         request.setNombreActividad("Actividad");
-        request.setHoras(47f);
+        request.setHoras(41f);
         request.setOidCalendario(33);
         request.setOidsUsuarios(List.of(44));
 
@@ -268,7 +305,47 @@ class UsuarioActividadCalendarioServiceImplTest {
 
         ValidacionNegocioException exception = assertThrows(ValidacionNegocioException.class,
                 () -> service.crearActividadConRelaciones(request));
-        assertTrue(exception.getMessage().contains("44"), "Debe usar el límite por defecto de 44 horas.");
+        assertTrue(exception.getMessage().contains("40"), "Debe usar el límite por defecto de 40 horas.");
+    }
+
+    @Test
+    void crearActividadConRelaciones_usuarioPlantaMedioTiempoNoPuedeExcederMitadLimite() {
+        UsuarioActividadCalendarioDTORequest request = new UsuarioActividadCalendarioDTORequest();
+        request.setOidTipoActividad(11);
+        request.setOidEstadoActividad(22);
+        request.setNombreActividad("Actividad");
+        request.setHoras(11f);
+        request.setOidCalendario(33);
+        request.setOidsUsuarios(List.of(44));
+
+        TipoActividad tipoActividad = new TipoActividad();
+        tipoActividad.setOidTipoActividad(11);
+        EstadoActividad estadoActividad = new EstadoActividad();
+        estadoActividad.setOidEstadoActividad(22);
+        Calendario calendario = new Calendario();
+        calendario.setOidcalendario(33);
+        calendario.setHorasPlanta(20f);
+
+        UsuarioDetalle detalle = new UsuarioDetalle();
+        detalle.setContratacion("PLANTA");
+        detalle.setDedicacion("MEDIO TIEMPO");
+        Usuario usuario = new Usuario();
+        usuario.setOidUsuario(44);
+        usuario.setUsuarioDetalle(detalle);
+        usuario.setIdentificacion("3000");
+        usuario.setNombres("Docente");
+        usuario.setApellidos("Medio Tiempo");
+
+        when(tipoActividadRepository.findById(11)).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(22)).thenReturn(Optional.of(estadoActividad));
+        when(calendarioRepository.findById(33)).thenReturn(Optional.of(calendario));
+        when(usuarioRepository.findById(44)).thenReturn(Optional.of(usuario));
+        when(usuarioActividadCalendarioRepository.findByUsuario_OidUsuario(44)).thenReturn(List.of());
+
+        ValidacionNegocioException exception = assertThrows(ValidacionNegocioException.class,
+                () -> service.crearActividadConRelaciones(request));
+        assertTrue(exception.getMessage().contains("10"),
+                "Para medio tiempo el límite debería ser la mitad del configurado en el calendario.");
     }
 
     private UsuarioActividadCalendario relacionConHoras(float horas) {

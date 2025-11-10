@@ -185,12 +185,14 @@ class UsuarioActividadCalendarioControllerTest {
         Pageable pageable = Pageable.unpaged();
         Page<DocenciaDTOResponse> page = new PageImpl<>(List.of());
         ApiResponse<Page<DocenciaDTOResponse>> serviceResponse = new ApiResponse<>(200, "ok", page);
-        when(service.listarPorTipoDocencia(pageable)).thenReturn(serviceResponse);
+        when(service.listarPorTipoDocencia(eq(1), eq(2), eq(3), eq("Planta"), eq(4), same(pageable)))
+                .thenReturn(serviceResponse);
 
-        ResponseEntity<ApiResponse<Page<DocenciaDTOResponse>>> response = controller.listarDocencia(pageable);
+        ResponseEntity<ApiResponse<Page<DocenciaDTOResponse>>> response =
+                controller.listarDocencia(1, 2, 3, "Planta", 4, pageable);
 
         assertEquals(200, response.getStatusCodeValue());
         assertSame(serviceResponse, response.getBody());
-        verify(service).listarPorTipoDocencia(pageable);
+        verify(service).listarPorTipoDocencia(eq(1), eq(2), eq(3), eq("Planta"), eq(4), same(pageable));
     }
 }

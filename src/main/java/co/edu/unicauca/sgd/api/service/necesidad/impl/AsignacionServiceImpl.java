@@ -1,5 +1,6 @@
 package co.edu.unicauca.sgd.api.service.necesidad.impl;
 
+import java.text.Normalizer;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -18,11 +19,15 @@ import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.domain.Seleccionado;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
+import co.edu.unicauca.sgd.api.domain.Usuario;
+import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
+import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
+import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
 import co.edu.unicauca.sgd.api.exception.RecursoNoEncontradoException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionCalendarioInvalidoException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionDocenteDuplicadoException;
@@ -42,8 +47,14 @@ import co.edu.unicauca.sgd.api.service.necesidad.AsignacionService;
 @Service
 public class AsignacionServiceImpl implements AsignacionService {
 
-    private static final float PREPARACION_FACTOR = 2.5f;
-    private static final String DOCENCIA_DIRECTA = "DOCENCIA_DIRECTA";
+    private static final float PREPARACION_FACTOR = 3f;
+    private static final String DOCENCIA_DIRECTA = "DOCENCIA";
+    private static final float HORAS_MAX_PLANTA_TIEMPO_COMPLETO = 14f;
+    private static final float HORAS_MAX_PLANTA_MEDIO_TIEMPO = 8f;
+    private static final float HORAS_MAX_OCASIONAL_TIEMPO_COMPLETO = 16f;
+    private static final float HORAS_MAX_OCASIONAL_MEDIO_TIEMPO = 12f;
+    private static final float HORAS_MAX_CATEDRA_O_BECARIO = 12f;
+    private static final float EPSILON = 0.0001f;
 
     private final AsignacionRepository asignacionRepository;
     private final NecesidadRepository necesidadRepository;
@@ -114,6 +125,7 @@ public class AsignacionServiceImpl implements AsignacionService {
             prepararAsignacion(asignacion, request, true);
             asignacion = asignacionRepository.save(asignacion);
             redistribuirHoras(asignacion.getNecesidad());
+            validarHorasMaximasPorContratacion(asignacion.getSeleccionado());
             actualizarEstadoNecesidad(asignacion.getNecesidad());
             return new ApiResponse<>(201, "Asignación creada correctamente.", asignacionMapper.toResponse(asignacion));
         } catch (DataIntegrityViolationException e) {
@@ -137,6 +149,7 @@ public class AsignacionServiceImpl implements AsignacionService {
         asignacion = asignacionRepository.save(asignacion);
 
         redistribuirHoras(asignacion.getNecesidad());
+        validarHorasMaximasPorContratacion(asignacion.getSeleccionado());
         if (!Objects.equals(necesidadOriginal, asignacion.getNecesidad().getOidNecesidad())) {
             necesidadRepository.findById(necesidadOriginal)
                     .ifPresent(this::redistribuirHoras);
@@ -170,6 +183,8 @@ public class AsignacionServiceImpl implements AsignacionService {
             throw new AsignacionCalendarioInvalidoException();
         }
 
+        validarRequisitosCalendarioPorContratacion(seleccionado, necesidad.getCalendario());
+
         long totalAsignados = asignacionRepository.countByNecesidad_OidNecesidad(necesidad.getOidNecesidad());
         if (esNuevaAsignacion && totalAsignados >= 3) {
             throw new AsignacionLimiteDocentesException();
@@ -202,6 +217,114 @@ public class AsignacionServiceImpl implements AsignacionService {
         asignacion.setSeleccionado(seleccionado);
     }
 
+    private void validarRequisitosCalendarioPorContratacion(Seleccionado seleccionado, Calendario calendario) {
+        if (calendario == null) {
+            throw new ValidacionNegocioException("El calendario asociado a la necesidad no existe.");
+        }
+        ContratacionEnum tipo = seleccionado.getTipo();
+        if (tipo == null) {
+            throw new ValidacionNegocioException("El docente seleccionado no tiene tipo de contratación configurado.");
+        }
+        if (calendario.getSemanasClase() == null) {
+            throw new ValidacionNegocioException(String.format(
+                    "El calendario %s no tiene configuradas las semanas de clase requeridas para la contratación %s.",
+                    calendario.getOidcalendario(), tipo.getValor()));
+        }
+        if (requiereSemanasPreparacion(tipo) && calendario.getSemanasPreparacion() == null) {
+            throw new ValidacionNegocioException(String.format(
+                    "El calendario %s no tiene configuradas las semanas de preparación requeridas para la contratación %s.",
+                    calendario.getOidcalendario(), tipo.getValor()));
+        }
+    }
+
+    private boolean requiereSemanasPreparacion(ContratacionEnum tipo) {
+        return tipo == ContratacionEnum.PLANTA
+                || tipo == ContratacionEnum.OCASIONAL;
+    }
+
+    private boolean esContratacionSinPreparacion(ContratacionEnum tipo) {
+        return tipo == ContratacionEnum.CATEDRA
+                || tipo == ContratacionEnum.BECARIOS_Y_PRACTICANTES
+                || tipo == ContratacionEnum.BECARIOS_POSTGRADO;
+    }
+
+    private void validarHorasMaximasPorContratacion(Seleccionado seleccionado) {
+        if (seleccionado == null || seleccionado.getOidSeleccionado() == null) {
+            return;
+        }
+        ContratacionEnum tipo = seleccionado.getTipo();
+        if (tipo == null) {
+            throw new ValidacionNegocioException("El docente seleccionado no tiene tipo de contratación configurado.");
+        }
+        String dedicacion = obtenerDedicacion(seleccionado);
+        float limite = obtenerLimiteHorasDocencia(tipo, dedicacion);
+        if (limite <= 0f) {
+            return;
+        }
+        List<Asignacion> asignacionesDocente = asignacionRepository.findBySeleccionado_OidSeleccionado(seleccionado.getOidSeleccionado());
+        if (asignacionesDocente == null || asignacionesDocente.isEmpty()) {
+            return;
+        }
+        float totalHoras = asignacionesDocente.stream()
+                .map(Asignacion::getHorasDocencia)
+                .filter(Objects::nonNull)
+                .reduce(0f, Float::sum);
+        if (totalHoras - limite > EPSILON) {
+            throw new ValidacionNegocioException(String.format(
+                    "El docente %s supera el máximo de %.0f horas permitidas para su contratación %s.",
+                    obtenerNombreDocente(seleccionado), limite, tipo.getValor()));
+        }
+    }
+
+    private float obtenerLimiteHorasDocencia(ContratacionEnum tipo, String dedicacion) {
+        boolean medioTiempo = esDedicacionMedioTiempo(dedicacion);
+        switch (tipo) {
+            case PLANTA:
+                return medioTiempo ? HORAS_MAX_PLANTA_MEDIO_TIEMPO : HORAS_MAX_PLANTA_TIEMPO_COMPLETO;
+            case OCASIONAL:
+                return medioTiempo ? HORAS_MAX_OCASIONAL_MEDIO_TIEMPO : HORAS_MAX_OCASIONAL_TIEMPO_COMPLETO;
+            case CATEDRA:
+            case BECARIOS_Y_PRACTICANTES:
+                return HORAS_MAX_CATEDRA_O_BECARIO;
+            case BECARIOS_POSTGRADO:
+            default:
+                return 0f;
+        }
+    }
+
+    private String obtenerNombreDocente(Seleccionado seleccionado) {
+        if (seleccionado.getUsuario() == null) {
+            return "con OID " + seleccionado.getOidSeleccionado();
+        }
+        String nombres = seleccionado.getUsuario().getNombres() != null ? seleccionado.getUsuario().getNombres() : "";
+        String apellidos = seleccionado.getUsuario().getApellidos() != null ? seleccionado.getUsuario().getApellidos() : "";
+        return (nombres + " " + apellidos).trim();
+    }
+
+    private String obtenerDedicacion(Seleccionado seleccionado) {
+        Usuario usuario = seleccionado.getUsuario();
+        if (usuario == null) {
+            return null;
+        }
+        UsuarioDetalle detalle = usuario.getUsuarioDetalle();
+        return detalle != null ? detalle.getDedicacion() : null;
+    }
+
+    private boolean esDedicacionMedioTiempo(String dedicacion) {
+        if (dedicacion == null || dedicacion.isBlank()) {
+            return false;
+        }
+        String normalizada = normalizarTexto(dedicacion);
+        return "MEDIO TIEMPO".equals(normalizada);
+    }
+
+    private String normalizarTexto(String valor) {
+        return Normalizer.normalize(valor, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[\\s_]+", "")
+                .toUpperCase();
+    }
+
     private void redistribuirHoras(Necesidad necesidad) {
         List<Asignacion> asignaciones = asignacionRepository.findByNecesidad_OidNecesidad(necesidad.getOidNecesidad());
         if (asignaciones.isEmpty()) {
@@ -221,8 +344,10 @@ public class AsignacionServiceImpl implements AsignacionService {
         asignaciones.forEach(asignacion -> {
             asignacion.setHorasDocencia(horasPorDocente);
             asignacion.setSemanasDocencia(semanasDocencia);
-            asignacion.setHorasPreparacion(horasPreparacion);
-            asignacion.setSemanasPreparacion(semanasPreparacion);
+            ContratacionEnum tipo = asignacion.getSeleccionado() != null ? asignacion.getSeleccionado().getTipo() : null;
+            boolean sinPreparacion = esContratacionSinPreparacion(tipo);
+            asignacion.setHorasPreparacion(sinPreparacion ? 0f : horasPreparacion);
+            asignacion.setSemanasPreparacion(sinPreparacion ? 0f : semanasPreparacion);
 
             Actividad actividad = asignacion.getActividad();
             if (actividad != null) {
