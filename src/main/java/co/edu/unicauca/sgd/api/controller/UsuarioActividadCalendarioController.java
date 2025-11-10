@@ -131,8 +131,16 @@ public class UsuarioActividadCalendarioController {
 
     @GetMapping("/tipo/docencia")
     @Operation(summary = "Listar actividades de tipo Docencia", description = "Lista las actividades cuyo tipo es 'Docencia' con su DTO específico")
-    public ResponseEntity<ApiResponse<Page<DocenciaDTOResponse>>> listarDocencia(Pageable pageable) {
-        ApiResponse<Page<DocenciaDTOResponse>> response = usuarioActividadCalendarioService.listarPorTipoDocencia(pageable);
+    public ResponseEntity<ApiResponse<Page<DocenciaDTOResponse>>> listarDocencia(
+            @RequestParam(name = "oidCalendario") Integer oidCalendario,
+            @RequestParam(name = "oidDepartamento") Integer oidDepartamento,
+            @RequestParam(name = "oidUsuario", required = false) Integer oidUsuario,
+            @RequestParam(name = "tipoContratacion", required = false) String tipoContratacion,
+            @RequestParam(name = "semestre", required = false) Integer semestre,
+            Pageable pageable) {
+        ApiResponse<Page<DocenciaDTOResponse>> response =
+                usuarioActividadCalendarioService.listarPorTipoDocencia(
+                        oidCalendario, oidDepartamento, oidUsuario, tipoContratacion, semestre, pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

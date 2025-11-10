@@ -1,12 +1,15 @@
 package co.edu.unicauca.sgd.api.service.actividad.laborDocente.impl;
 
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -15,17 +18,20 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.ActividadCalendario;
+import co.edu.unicauca.sgd.api.domain.Asignacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import co.edu.unicauca.sgd.api.domain.EavAtributo;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
 import co.edu.unicauca.sgd.api.domain.Fecha;
+import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
@@ -40,13 +46,18 @@ import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDT
 import co.edu.unicauca.sgd.api.exception.AsignacionHorasExcedidasException;
 import co.edu.unicauca.sgd.api.exception.RecursoNoEncontradoException;
 import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
+import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.exception.usuarioactividad.UsuarioActividadCalendarioActualizacionException;
 import co.edu.unicauca.sgd.api.exception.usuarioactividad.UsuarioActividadCalendarioConsultaException;
 import co.edu.unicauca.sgd.api.exception.usuarioactividad.UsuarioActividadCalendarioCreacionException;
 import co.edu.unicauca.sgd.api.exception.usuarioactividad.UsuarioActividadCalendarioEliminacionException;
 import co.edu.unicauca.sgd.api.exception.usuarioactividad.UsuarioActividadCalendarioException;
 import co.edu.unicauca.sgd.api.exception.usuarioactividad.UsuarioActividadCalendarioValidacionException;
+import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
+import co.edu.unicauca.sgd.api.mapper.MateriaMapper;
+import co.edu.unicauca.sgd.api.mapper.NecesidadMapper;
 import co.edu.unicauca.sgd.api.mapper.UsuarioActividadCalendarioMapper;
+import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
 import co.edu.unicauca.sgd.api.repository.ActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
@@ -77,10 +88,14 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     private final EavAtributoRepository eavAtributoRepository;
     private final TipoActividadRepository tipoActividadRepository;
     private final FechaRepository fechaRepository;
+    private final AsignacionRepository asignacionRepository;
+    private final AsignacionMapper asignacionMapper;
+    private final NecesidadMapper necesidadMapper;
+    private final MateriaMapper materiaMapper;
     private final ObjectMapper objectMapper;
 
     private static final float EPSILON = 0.0001f;
-    private static final float HORAS_DEFAULT_CONTRATACION = 44f;
+    private static final float HORAS_DEFAULT_CONTRATACION = 40f;
     private static final int NOMBRE_PERIODO_INICIO = 1;
     private static final int NOMBRE_PERIODO_FIN = 10;
 
@@ -97,6 +112,10 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             EavAtributoRepository eavAtributoRepository,
             TipoActividadRepository tipoActividadRepository,
             FechaRepository fechaRepository,
+            AsignacionRepository asignacionRepository,
+            AsignacionMapper asignacionMapper,
+            NecesidadMapper necesidadMapper,
+            MateriaMapper materiaMapper,
             ObjectMapper objectMapper) {
         this.actividadRepository = actividadRepository;
         this.usuarioRepository = usuarioRepository;
@@ -110,6 +129,10 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         this.eavAtributoRepository = eavAtributoRepository;
         this.tipoActividadRepository = tipoActividadRepository;
         this.fechaRepository = fechaRepository;
+        this.asignacionRepository = asignacionRepository;
+        this.asignacionMapper = asignacionMapper;
+        this.necesidadMapper = necesidadMapper;
+        this.materiaMapper = materiaMapper;
         this.objectMapper = objectMapper;
     }
 
@@ -684,25 +707,160 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
     // Listar por tipo de actividad
     @Override
-    public ApiResponse<Page<DocenciaDTOResponse>> listarPorTipoDocencia(Pageable pageable) {
+    @Transactional
+    public ApiResponse<Page<DocenciaDTOResponse>> listarPorTipoDocencia(
+            Integer oidCalendario,
+            Integer oidDepartamento,
+            Integer oidUsuario,
+            String tipoContratacion,
+            Integer semestre,
+            Pageable pageable) {
+        if (oidCalendario == null) {
+            throw new ValidacionNegocioException("El oidCalendario es obligatorio para listar la docencia.");
+        }
+        if (oidDepartamento == null) {
+            throw new ValidacionNegocioException("El oidDepartamento es obligatorio para listar la docencia.");
+        }
+
+        Pageable pageableToUse = pageable != null ? pageable : Pageable.unpaged();
+        ContratacionEnum tipoEnum = parseContratacion(tipoContratacion);
+
         try {
-            Page<Actividad> actividades = actividadRepository.findByTipoActividad_Nombre("Docencia", pageable);
+            Specification<Asignacion> specification = Specification
+                    .where(conCalendario(oidCalendario))
+                    .and(conDepartamento(oidDepartamento));
 
-            Page<DocenciaDTOResponse> page = actividades.map(actividad -> {
-                List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_Actividad_OidActividad(actividad.getOidActividad());
-                Calendario calendario = relaciones.isEmpty() ? null : relaciones.get(0).getActividadCalendario().getCalendario();
-                List<AtributoDTO> atributos = eavAtributoService.obtenerAtributosPorActividad(actividad);
-                return mapper.toDocenciaResponse(actividad, relaciones, calendario, atributos);
-            });
+            if (oidUsuario != null) {
+                specification = specification.and(conUsuarioSeleccionado(oidUsuario));
+            }
+            if (tipoEnum != null) {
+                specification = specification.and(conTipoContratacion(tipoEnum));
+            }
+            if (semestre != null) {
+                specification = specification.and(conSemestre(semestre));
+            }
 
-            boolean hasContent = page.hasContent();
-            String message = hasContent ? "Actividades de Docencia encontradas" : "No se encontraron actividades de Docencia.";
-            return new ApiResponse<>(200, message, page);
+            Page<Asignacion> asignaciones = asignacionRepository.findAll(specification, pageableToUse);
+            if (asignaciones.isEmpty()) {
+                return new ApiResponse<>(200, "No se encontraron actividades de Docencia.", Page.empty(pageableToUse));
+            }
+
+            List<Integer> actividadIds = asignaciones.stream()
+                    .map(Asignacion::getActividad)
+                    .filter(Objects::nonNull)
+                    .map(Actividad::getOidActividad)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            Map<Integer, List<UsuarioActividadCalendario>> relacionesPorActividad =
+                    agruparRelacionesPorActividad(actividadIds);
+
+            Page<DocenciaDTOResponse> page = asignaciones.map(
+                    asignacion -> construirDocenciaDto(asignacion, relacionesPorActividad));
+
+            return new ApiResponse<>(200, "Actividades de Docencia encontradas", page);
         } catch (UsuarioActividadCalendarioException e) {
             throw e;
         } catch (Exception e) {
             throw new UsuarioActividadCalendarioConsultaException("Error al listar las actividades de tipo Docencia.", e);
         }
+    }
+
+    private Map<Integer, List<UsuarioActividadCalendario>> agruparRelacionesPorActividad(List<Integer> actividadIds) {
+        if (actividadIds == null || actividadIds.isEmpty()) {
+            return Map.of();
+        }
+        return usuarioActividadCalendarioRepository
+                .findByActividadCalendario_Actividad_OidActividadIn(actividadIds)
+                .stream()
+                .collect(Collectors.groupingBy(rel ->
+                        rel.getActividadCalendario().getActividad().getOidActividad()));
+    }
+
+    private DocenciaDTOResponse construirDocenciaDto(
+            Asignacion asignacion,
+            Map<Integer, List<UsuarioActividadCalendario>> relacionesPorActividad) {
+
+        Actividad actividad = asignacion.getActividad();
+        Necesidad necesidad = asignacion.getNecesidad();
+        Calendario calendario = necesidad != null ? necesidad.getCalendario() : null;
+
+        List<UsuarioActividadCalendario> relaciones = actividad != null
+                ? relacionesPorActividad.getOrDefault(actividad.getOidActividad(), List.of())
+                : List.of();
+        List<AtributoDTO> atributos = actividad != null
+                ? eavAtributoService.obtenerAtributosPorActividad(actividad)
+                : List.of();
+
+        DocenciaDTOResponse dto;
+        if (actividad != null) {
+            dto = mapper.toDocenciaResponse(actividad, relaciones, calendario, atributos);
+        } else {
+            dto = new DocenciaDTOResponse();
+            dto.setUsuarios(List.of());
+            if (calendario != null) {
+                dto.setOidCalendario(calendario.getOidcalendario());
+                dto.setNombreCalendario(calendario.getAnioCalendario() + " - " + calendario.getNumeroCalendario());
+            }
+        }
+
+        dto.setAsignacion(asignacionMapper.toResponse(asignacion));
+        if (necesidad != null) {
+            dto.setNecesidad(necesidadMapper.toResponse(necesidad));
+            if (necesidad.getMateria() != null) {
+                dto.setMateria(materiaMapper.toResponse(necesidad.getMateria()));
+            }
+        }
+        return dto;
+    }
+
+    private Specification<Asignacion> conCalendario(Integer oidCalendario) {
+        return (root, query, cb) -> cb.equal(
+                root.join("necesidad").join("calendario").get("oidcalendario"),
+                oidCalendario);
+    }
+
+    private Specification<Asignacion> conDepartamento(Integer oidDepartamento) {
+        return (root, query, cb) -> cb.equal(
+                root.join("necesidad").join("materia").join("departamento").get("oidDepartamento"),
+                oidDepartamento);
+    }
+
+    private Specification<Asignacion> conUsuarioSeleccionado(Integer oidUsuario) {
+        return (root, query, cb) -> cb.equal(
+                root.join("seleccionado").join("usuario").get("oidUsuario"),
+                oidUsuario);
+    }
+
+    private Specification<Asignacion> conTipoContratacion(ContratacionEnum tipo) {
+        return (root, query, cb) -> cb.equal(root.join("seleccionado").get("tipo"), tipo);
+    }
+
+    private Specification<Asignacion> conSemestre(Integer semestre) {
+        return (root, query, cb) -> cb.equal(
+                root.join("necesidad").join("materia").get("semestre"),
+                semestre);
+    }
+
+    private ContratacionEnum parseContratacion(String tipoContratacion) {
+        if (tipoContratacion == null || tipoContratacion.isBlank()) {
+            return null;
+        }
+        String normalizado = normalizarEtiqueta(tipoContratacion);
+        return Arrays.stream(ContratacionEnum.values())
+                .filter(valor -> normalizarEtiqueta(valor.name()).equals(normalizado)
+                        || normalizarEtiqueta(valor.getValor()).equals(normalizado))
+                .findFirst()
+                .orElseThrow(() -> new ValidacionNegocioException(
+                        "Tipo de contratación no válido: " + tipoContratacion));
+    }
+
+    private String normalizarEtiqueta(String valor) {
+        return Normalizer.normalize(valor, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[\\s_]+", "")
+                .toUpperCase();
     }
 
     @Override
@@ -889,22 +1047,26 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             throw new ValidacionNegocioException(
                     String.format("El usuario %s no tiene configurado el tipo de contratación.", obtenerDescripcionUsuario(usuario)));
         }
-        String tipoNormalizado = contratacion.trim().toUpperCase();
+        String tipoNormalizado = normalizarEtiqueta(contratacion);
+        boolean esPlanta = "PLANTA".equals(tipoNormalizado);
+        boolean esOcasional = "OCASIONAL".equals(tipoNormalizado) || "OCASIONALES".equals(tipoNormalizado);
+
         Float limite;
-        switch (tipoNormalizado) {
-            case "PLANTA":
-                limite = calendario.getHorasPlanta();
-                break;
-            case "OCASIONAL":
-            case "OCASIONALES":
-                limite = calendario.getHorasOcasionales();
-                break;
-            default:
-                throw new ValidacionNegocioException(
-                        String.format("Solo usuarios con contratación PLANTA u OCASIONAL pueden asignarse a actividades. Usuario: %s.",
-                                obtenerDescripcionUsuario(usuario)));
+        if (esPlanta) {
+            limite = calendario.getHorasPlanta();
+        } else if (esOcasional) {
+            limite = calendario.getHorasOcasionales();
+        } else {
+            throw new ValidacionNegocioException(
+                    String.format("Solo usuarios con contratación PLANTA u OCASIONAL pueden asignarse a actividades. Usuario: %s.",
+                            obtenerDescripcionUsuario(usuario)));
         }
-        return limite != null ? limite : HORAS_DEFAULT_CONTRATACION;
+
+        float maximoBase = limite != null ? limite : HORAS_DEFAULT_CONTRATACION;
+        boolean medioTiempo = esPlanta || esOcasional
+                ? esDedicacionMedioTiempo(detalle != null ? detalle.getDedicacion() : null)
+                : false;
+        return medioTiempo ? maximoBase / 2f : maximoBase;
     }
 
     private String obtenerDescripcionUsuario(Usuario usuario) {
@@ -912,5 +1074,13 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         String nombres = usuario.getNombres() != null ? usuario.getNombres() : "";
         String apellidos = usuario.getApellidos() != null ? usuario.getApellidos() : "";
         return String.format("%s %s %s", identificacion, nombres, apellidos).trim();
+    }
+
+    private boolean esDedicacionMedioTiempo(String dedicacion) {
+        if (dedicacion == null || dedicacion.isBlank()) {
+            return false;
+        }
+        String dedicacionNormalizada = normalizarEtiqueta(dedicacion);
+        return "MEDIOTIEMPO".equals(dedicacionNormalizada);
     }
 }

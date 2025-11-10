@@ -30,10 +30,14 @@ import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.domain.Seleccionado;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
+import co.edu.unicauca.sgd.api.domain.Usuario;
+import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
+import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
+import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionLimiteDocentesException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionOperacionNoPermitidaException;
 import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
@@ -84,9 +88,18 @@ class AsignacionServiceImplTest {
         necesidad.setMateria(materia);
         necesidad.setEstado(EstadoNecesidad.NO_ASIGNADA);
 
+        UsuarioDetalle detalle = new UsuarioDetalle();
+        detalle.setDedicacion("TIEMPO COMPLETO");
+        Usuario usuario = new Usuario();
+        usuario.setUsuarioDetalle(detalle);
+        usuario.setNombres("Docente");
+        usuario.setApellidos("Prueba");
+
         seleccionado = new Seleccionado();
         seleccionado.setOidSeleccionado(2);
         seleccionado.setCalendario(calendario);
+        seleccionado.setTipo(ContratacionEnum.PLANTA);
+        seleccionado.setUsuario(usuario);
     }
 
     @Test
@@ -119,7 +132,7 @@ class AsignacionServiceImplTest {
         when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
         when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
-        when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA_DIRECTA")).thenReturn(Optional.of(tipoActividad));
+        when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
         when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
         when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -129,6 +142,8 @@ class AsignacionServiceImplTest {
         Actividad actividadAsignacion = new Actividad();
         actividadAsignacion.setNombreActividad("Labor");
         asignacionGuardada.setActividad(actividadAsignacion);
+        when(asignacionRepository.findBySeleccionado_OidSeleccionado(2)).thenReturn(Collections.singletonList(asignacionGuardada));
+        when(asignacionRepository.findBySeleccionado_OidSeleccionado(2)).thenReturn(Collections.singletonList(asignacionGuardada));
 
         when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
             Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
@@ -151,6 +166,163 @@ class AsignacionServiceImplTest {
         verify(actividadRepository).save(any(Actividad.class));
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.ASIGNADA);
         verify(necesidadRepository).save(necesidad);
+    }
+
+    @Test
+    void crear_DeberiaFallarCuandoNoHaySemanasPreparacionParaPlanta() {
+        AsignacionDTORequest request = buildRequest();
+        necesidad.getCalendario().setSemanasPreparacion(null);
+
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
+
+        assertThrows(ValidacionNegocioException.class, () -> asignacionService.crear(request));
+    }
+
+    @Test
+    void crear_DeberiaFallarCuandoSuperaHorasPermitidas() {
+        AsignacionDTORequest request = buildRequest();
+
+        TipoActividad tipoActividad = new TipoActividad();
+        EstadoActividad estadoActividad = new EstadoActividad();
+
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
+        when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
+        when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
+        when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Asignacion asignacionGuardada = new Asignacion();
+        asignacionGuardada.setNecesidad(necesidad);
+        asignacionGuardada.setSeleccionado(seleccionado);
+        asignacionGuardada.setActividad(new Actividad());
+        asignacionGuardada.setHorasDocencia(6f);
+        asignacionGuardada.setHorasDocencia(12f);
+
+        Asignacion asignacionExistente = new Asignacion();
+        asignacionExistente.setSeleccionado(seleccionado);
+        asignacionExistente.setHorasDocencia(13f);
+
+        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+            Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
+            asignacion.setOidAsignacion(60);
+            asignacion.setSeleccionado(seleccionado);
+            asignacion.setHorasDocencia(12f);
+            return asignacion;
+        });
+        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Collections.singletonList(asignacionGuardada));
+        when(asignacionRepository.findBySeleccionado_OidSeleccionado(2)).thenReturn(Arrays.asList(asignacionExistente, asignacionGuardada));
+
+        assertThrows(ValidacionNegocioException.class, () -> asignacionService.crear(request));
+    }
+
+    @Test
+    void crear_PlantaMedioTiempoNoDebeExcederOchoHoras() {
+        AsignacionDTORequest request = buildRequest();
+        seleccionado.getUsuario().getUsuarioDetalle().setDedicacion("MEDIO TIEMPO");
+
+        TipoActividad tipoActividad = new TipoActividad();
+        EstadoActividad estadoActividad = new EstadoActividad();
+
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
+        when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
+        when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
+        when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Asignacion asignacionGuardada = new Asignacion();
+        asignacionGuardada.setNecesidad(necesidad);
+        asignacionGuardada.setSeleccionado(seleccionado);
+        asignacionGuardada.setActividad(new Actividad());
+
+        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+            Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
+            asignacion.setOidAsignacion(80);
+            asignacion.setHorasDocencia(12f);
+            asignacion.setSeleccionado(seleccionado);
+            asignacion.setNecesidad(necesidad);
+            return asignacion;
+        });
+        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Collections.singletonList(asignacionGuardada));
+        when(asignacionRepository.findBySeleccionado_OidSeleccionado(2))
+                .thenReturn(List.of(asignacionGuardada, asignacionGuardada));
+
+        assertThrows(ValidacionNegocioException.class, () -> asignacionService.crear(request));
+    }
+
+    @Test
+    void crear_OcasionalMedioTiempoNoDebeExcederDoceHoras() {
+        AsignacionDTORequest request = buildRequest();
+        seleccionado.setTipo(ContratacionEnum.OCASIONAL);
+        seleccionado.getUsuario().getUsuarioDetalle().setDedicacion("MEDIO TIEMPO");
+        necesidad.getMateria().setHorasSemana(20);
+
+        TipoActividad tipoActividad = new TipoActividad();
+        EstadoActividad estadoActividad = new EstadoActividad();
+
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
+        when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
+        when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
+        when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Asignacion asignacionGuardada = new Asignacion();
+        asignacionGuardada.setNecesidad(necesidad);
+        asignacionGuardada.setSeleccionado(seleccionado);
+        asignacionGuardada.setActividad(new Actividad());
+
+        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+            Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
+            asignacion.setOidAsignacion(81);
+            asignacion.setHorasDocencia(15f);
+            return asignacion;
+        });
+        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Collections.singletonList(asignacionGuardada));
+        when(asignacionRepository.findBySeleccionado_OidSeleccionado(2)).thenReturn(Collections.singletonList(asignacionGuardada));
+
+        assertThrows(ValidacionNegocioException.class, () -> asignacionService.crear(request));
+    }
+
+    @Test
+    void crear_Catedra_NoDebeAsignarHorasPreparacion() {
+        AsignacionDTORequest request = buildRequest();
+        seleccionado.setTipo(ContratacionEnum.CATEDRA);
+        necesidad.getCalendario().setSemanasPreparacion(null);
+
+        TipoActividad tipoActividad = new TipoActividad();
+        EstadoActividad estadoActividad = new EstadoActividad();
+
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
+        when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
+        when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
+        when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Asignacion asignacionGuardada = new Asignacion();
+        asignacionGuardada.setNecesidad(necesidad);
+        asignacionGuardada.setSeleccionado(seleccionado);
+        asignacionGuardada.setActividad(new Actividad());
+        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+            Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
+            asignacion.setOidAsignacion(70);
+            return asignacion;
+        });
+        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Collections.singletonList(asignacionGuardada));
+        when(asignacionRepository.findBySeleccionado_OidSeleccionado(2)).thenReturn(Collections.singletonList(asignacionGuardada));
+
+        ApiResponse<AsignacionDTOResponse> response = asignacionService.crear(request);
+
+        assertThat(response.getCodigo()).isEqualTo(201);
+        assertThat(asignacionGuardada.getHorasPreparacion()).isZero();
+        assertThat(asignacionGuardada.getSemanasPreparacion()).isZero();
     }
 
     @Test

@@ -32,8 +32,13 @@ public interface UsuarioActividadCalendarioService {
     ApiResponse<Void> eliminarRelacion(Integer oidActividad, Integer oidUsuario, Integer oidCalendario);
 
     // Listar por tipo de actividad
-
-    ApiResponse<Page<DocenciaDTOResponse>> listarPorTipoDocencia(Pageable pageable);
+    ApiResponse<Page<DocenciaDTOResponse>> listarPorTipoDocencia(
+            Integer oidCalendario,
+            Integer oidDepartamento,
+            Integer oidUsuario,
+            String tipoContratacion,
+            Integer semestre,
+            Pageable pageable);
 
     ApiResponse<ValidacionHorasCargoDTOResponse> validarCupoUsuariosEnCargo(
             Integer oidTipoActividad,
