@@ -37,6 +37,9 @@ public class Seleccionado {
     @Column(name = "TIPO", length = 50)
     private ContratacionEnum tipo;
 
+    @Column(name = "DEDICACION", length = 100)
+    private String dedicacion;
+
     @CreationTimestamp
     @Column(name = "FECHACREACION", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;

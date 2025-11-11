@@ -2,6 +2,8 @@ package co.edu.unicauca.sgd.api.service.calendario.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.text.Normalizer;
+import java.util.Arrays;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -305,7 +307,7 @@ public class CalendarioServiceImpl implements CalendarioService {
         logger.info("Creando listas de seleccionados iniciales para calendario ID: {}", calendario.getOidcalendario());
 
         // Roles a excluir (case-insensitive)
-        final List<String> rolesExcluidos = List.of("ESTUDIANTE", "SECRETARIA", "FACULTAD", "DECANO");
+        final List<String> rolesExcluidos = List.of("ESTUDIANTE", "SECRETARIO", "FACULTAD", "DECANO");
 
         // Obtenemos todos los departamentos
         List<Departamento> departamentos = departamentoRepository.findAll();
@@ -352,9 +354,11 @@ public class CalendarioServiceImpl implements CalendarioService {
                         Seleccionado s = new Seleccionado();
                         s.setCalendario(calendario);
                         s.setUsuario(usuario);
+                        if (usuario.getUsuarioDetalle() != null) {
+                            s.setDedicacion(usuario.getUsuarioDetalle().getDedicacion());
+                        }
 
-                        // Default para TIPO: PLANTA (ajusta si prefieres otra logica)
-                        s.setTipo(ContratacionEnum.PLANTA);
+                        s.setTipo(determinarTipoContratacion(usuario));
 
                         // UsuarioCreacion: usamos quien creo el calendario si esta, si no "SYSTEM"
                         s.setUsuarioCreacion(StringUtils.hasText(calendario.getUsuarioCreacion()) ? calendario.getUsuarioCreacion() : "SYSTEM");
@@ -374,6 +378,33 @@ public class CalendarioServiceImpl implements CalendarioService {
         }
 
         logger.info("Terminado de crear listas de seleccionados para calendario ID: {}", calendario.getOidcalendario());
+    }
+
+    private ContratacionEnum determinarTipoContratacion(Usuario usuario) {
+        String contratacion = (usuario != null && usuario.getUsuarioDetalle() != null)
+                ? usuario.getUsuarioDetalle().getContratacion()
+                : null;
+        ContratacionEnum tipo = parseContratacion(contratacion);
+        return tipo != null ? tipo : ContratacionEnum.PLANTA;
+    }
+
+    private ContratacionEnum parseContratacion(String contratacion) {
+        if (!StringUtils.hasText(contratacion)) {
+            return null;
+        }
+        String normalizado = normalizarEtiqueta(contratacion);
+        return Arrays.stream(ContratacionEnum.values())
+                .filter(valor -> normalizado.equals(normalizarEtiqueta(valor.name()))
+                        || normalizado.equals(normalizarEtiqueta(valor.getValor())))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String normalizarEtiqueta(String valor) {
+        return Normalizer.normalize(valor, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[\\s_]+", "")
+                .toUpperCase();
     }
 }
 

@@ -5,20 +5,31 @@ import org.springframework.stereotype.Component;
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.Seleccionado;
 import co.edu.unicauca.sgd.api.domain.Usuario;
+import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTOResponse;
+import co.edu.unicauca.sgd.api.service.actividad.ActividadDTOService;
 
 @Component
 public class SeleccionadoMapper {
 
+    private final ActividadDTOService actividadDTOService;
+
+    public SeleccionadoMapper(ActividadDTOService actividadDTOService) {
+        this.actividadDTOService = actividadDTOService;
+    }
+
     public SeleccionadoDTOResponse toResponse(Seleccionado s) {
         if (s == null) return null;
+
+        UsuarioDTO usuarioDto = (s.getUsuario() != null) ? actividadDTOService.convertToUsuarioDTO(s.getUsuario()) : null;
 
         return SeleccionadoDTOResponse.builder()
                 .oidSeleccionado(s.getOidSeleccionado())
                 .oidCalendario(s.getCalendario() != null ? s.getCalendario().getOidcalendario() : null)
-                .oidUsuario(s.getUsuario() != null ? s.getUsuario().getOidUsuario() : null)
+                .usuario(usuarioDto)
                 .tipo(s.getTipo())
+                .dedicacion(s.getDedicacion())
                 .fechaCreacion(s.getFechaCreacion())
                 .usuarioCreacion(s.getUsuarioCreacion())
                 .fechaActualizacion(s.getFechaActualizacion())
@@ -46,6 +57,7 @@ public class SeleccionadoMapper {
         }
 
         s.setTipo(r.getTipo());
+        s.setDedicacion(r.getDedicacion());
 
         return s;
     }

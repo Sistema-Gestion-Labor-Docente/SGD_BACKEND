@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadException;
+import co.edu.unicauca.sgd.api.exception.seleccionado.SeleccionadoException;
 import co.edu.unicauca.sgd.api.exception.usuarioactividad.UsuarioActividadCalendarioException;
 import jakarta.persistence.EntityNotFoundException;
 
@@ -99,6 +101,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleUsuarioActividadCalendarioException(UsuarioActividadCalendarioException ex) {
         HttpStatus status = ex.getStatus();
         logger.error("[ERROR] Usuario-Actividad-Calendario: {}", ex.getMessage(), ex);
+        return ResponseEntity.status(status)
+                .body(new ApiResponse<>(status.value(), ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(NecesidadException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNecesidadException(NecesidadException ex) {
+        HttpStatus status = ex.getStatus();
+        logger.warn("[WARN] Necesidad: {}", ex.getMessage());
+        return ResponseEntity.status(status)
+                .body(new ApiResponse<>(status.value(), ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(SeleccionadoException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSeleccionadoException(SeleccionadoException ex) {
+        HttpStatus status = ex.getStatus();
+        logger.warn("[WARN] Seleccionado: {}", ex.getMessage());
         return ResponseEntity.status(status)
                 .body(new ApiResponse<>(status.value(), ex.getMessage(), null));
     }

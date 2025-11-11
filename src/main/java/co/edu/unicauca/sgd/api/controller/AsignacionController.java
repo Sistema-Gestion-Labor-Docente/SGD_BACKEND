@@ -35,10 +35,17 @@ public class AsignacionController {
     @GetMapping
     @Operation(summary = "Listar asignaciones")
     public ResponseEntity<ApiResponse<Page<AsignacionDTOResponse>>> listar(
+            @RequestParam Integer oidCalendario,
+            @RequestParam Integer oidDepartamento,
             @RequestParam(required = false) Integer oidNecesidad,
             @RequestParam(required = false) Integer oidSeleccionado,
             Pageable pageable) {
-        ApiResponse<Page<AsignacionDTOResponse>> response = asignacionService.listar(oidNecesidad, oidSeleccionado, pageable);
+        ApiResponse<Page<AsignacionDTOResponse>> response = asignacionService.listar(
+                oidCalendario,
+                oidDepartamento,
+                oidNecesidad,
+                oidSeleccionado,
+                pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

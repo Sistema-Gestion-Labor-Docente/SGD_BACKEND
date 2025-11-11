@@ -25,4 +25,6 @@ public class SeleccionadoDTORequest {
     private ContratacionEnum tipo;
 
     private Integer oidDepartamento;
+
+    private String dedicacion;
 }
