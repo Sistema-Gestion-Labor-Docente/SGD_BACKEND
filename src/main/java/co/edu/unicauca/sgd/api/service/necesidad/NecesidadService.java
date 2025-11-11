@@ -6,7 +6,6 @@ import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
 import java.util.List;
-import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -16,6 +15,8 @@ public interface NecesidadService {
             Integer oidCalendario,
             Integer idMateria,
             EstadoNecesidad estado,
+            Integer oidPrograma,
+            Integer oidDepartamento,
             Pageable pageable);
 
     ApiResponse<NecesidadDTOResponse> buscarPorId(Integer oid);
@@ -27,9 +28,4 @@ public interface NecesidadService {
 
     ApiResponse<Void> eliminar(Integer oid);
 
-    ApiResponse<Map<String, Object>> cambiarEstadoMasivo(Integer oidCalendario,
-                                                         EstadoNecesidad estadoOrigen,
-                                                         EstadoNecesidad estadoDestino,
-                                                         Integer oidPrograma,
-                                                         Integer oidDepartamento);
 }

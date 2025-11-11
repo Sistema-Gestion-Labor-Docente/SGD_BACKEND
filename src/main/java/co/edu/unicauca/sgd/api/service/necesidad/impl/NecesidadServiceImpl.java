@@ -1,10 +1,8 @@
 package co.edu.unicauca.sgd.api.service.necesidad.impl;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -58,10 +56,23 @@ public class NecesidadServiceImpl implements NecesidadService {
     public ApiResponse<Page<NecesidadDTOResponse>> obtenerTodos(Integer oidCalendario,
                                                                 Integer idMateria,
                                                                 EstadoNecesidad estado,
+                                                                Integer oidPrograma,
+                                                                Integer oidDepartamento,
                                                                 Pageable pageable) {
         Pageable pageableToUse = pageable != null ? pageable : Pageable.unpaged();
 
         try {
+            if (oidCalendario == null) {
+                return new ApiResponse<>(400,
+                        "El calendario es obligatorio para la búsqueda de necesidades.",
+                        Page.empty(pageableToUse));
+            }
+            if (oidPrograma == null) {
+                return new ApiResponse<>(400,
+                        "El programa es obligatorio para la búsqueda de necesidades.",
+                        Page.empty(pageableToUse));
+            }
+
             Specification<Necesidad> specification = Specification.where(null);
 
             if (oidCalendario != null) {
@@ -74,6 +85,14 @@ public class NecesidadServiceImpl implements NecesidadService {
             }
             if (estado != null) {
                 specification = specification.and((root, query, cb) -> cb.equal(root.get("estado"), estado));
+            }
+            if (oidPrograma != null) {
+                specification = specification.and((root, query, cb) ->
+                        cb.equal(root.join("materia").join("plan").join("programa").get("oidPrograma"), oidPrograma));
+            }
+            if (oidDepartamento != null) {
+                specification = specification.and((root, query, cb) ->
+                        cb.equal(root.join("materia").join("departamento").get("oidDepartamento"), oidDepartamento));
             }
 
             Page<Necesidad> page = necesidadRepository.findAll(specification, pageableToUse);
@@ -295,78 +314,6 @@ public class NecesidadServiceImpl implements NecesidadService {
         }
     }
 
-    @Override
-    @Transactional
-    public ApiResponse<Map<String, Object>> cambiarEstadoMasivo(Integer oidCalendario,
-                                                                EstadoNecesidad estadoOrigen,
-                                                                EstadoNecesidad estadoDestino,
-                                                                Integer oidPrograma,
-                                                                Integer oidDepartamento) {
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("calendario", oidCalendario);
-        metadata.put("estadoOrigen", estadoOrigen != null ? estadoOrigen.name() : null);
-        metadata.put("estadoDestino", estadoDestino != null ? estadoDestino.name() : null);
-        if (oidPrograma != null) {
-            metadata.put("oidPrograma", oidPrograma);
-        }
-        if (oidDepartamento != null) {
-            metadata.put("oidDepartamento", oidDepartamento);
-        }
-
-        try {
-            validarCalendario(oidCalendario);
-
-            if (!esTransicionPermitida(estadoOrigen, estadoDestino)) {
-                throw new NecesidadValidationException("Transición de estado no permitida.");
-            }
-
-            if (requierePrograma(estadoOrigen, estadoDestino) && oidPrograma == null) {
-                throw new NecesidadValidationException("El programa es obligatorio para esta transición.");
-            }
-
-            if (requiereDepartamento(estadoOrigen, estadoDestino) && oidDepartamento == null) {
-                throw new NecesidadValidationException("El departamento es obligatorio para esta transición.");
-            }
-
-            List<Necesidad> necesidades = obtenerNecesidadesParaTransicion(
-                    oidCalendario, estadoOrigen, oidPrograma, oidDepartamento);
-            if (necesidades.isEmpty()) {
-                metadata.put("totalNecesidades", 0);
-                throw new NecesidadNotFoundException("No se encontraron necesidades para la transición solicitada.");
-            }
-
-            boolean debeValidarDepartamento = EstadoNecesidad.EN_REVISION_JEFE.equals(estadoDestino);
-
-            Map<String, List<Integer>> inconsistencias = validarRequisitosPrevios(necesidades, debeValidarDepartamento);
-            if (!inconsistencias.getOrDefault("sinGrupo", List.of()).isEmpty()
-                    || !inconsistencias.getOrDefault("sinCupo", List.of()).isEmpty()) {
-                return new ApiResponse<>(400,
-                        "Todas las necesidades deben tener grupo y cupo definidos antes de cambiar de estado.",
-                        Map.of("inconsistencias", inconsistencias));
-            }
-            if (debeValidarDepartamento && !inconsistencias.getOrDefault("sinDepartamento", List.of()).isEmpty()) {
-                return new ApiResponse<>(400,
-                        "Cada necesidad debe tener un departamento asociado antes de pasar a EN REVISION JEFE.",
-                        Map.of("inconsistencias", inconsistencias));
-            }
-
-            necesidades.forEach(necesidad -> {
-                necesidad.setEstado(estadoDestino);
-                necesidad.setUsuarioActualizacion("system");
-            });
-            necesidadRepository.saveAll(necesidades);
-
-            metadata.put("totalNecesidades", necesidades.size());
-            return new ApiResponse<>(200, "Estados actualizados correctamente.", metadata);
-        } catch (NecesidadException e) {
-            logger.warn("Error al cambiar estados masivamente: {}", e.getMessage());
-            return new ApiResponse<>(e.getStatus().value(), e.getMessage(), metadata);
-        } catch (Exception e) {
-            logger.error("Error interno al cambiar estados masivamente", e);
-            return new ApiResponse<>(500, "Error al cambiar el estado de las necesidades: " + e.getMessage(), metadata);
-        }
-    }
-
     private String normalizarGrupo(String grupo) {
         return (grupo != null) ? grupo.trim().toUpperCase() : null;
     }
@@ -415,85 +362,4 @@ public class NecesidadServiceImpl implements NecesidadService {
         return Optional.of(correquisito);
     }
 
-    private boolean esTransicionPermitida(EstadoNecesidad origen, EstadoNecesidad destino) {
-        if (origen == null || destino == null) {
-            return false;
-        }
-        return (EstadoNecesidad.BORRADOR.equals(origen) && EstadoNecesidad.EN_REVISION_SECRETARIO.equals(destino))
-                || (EstadoNecesidad.EN_REVISION_SECRETARIO.equals(origen) && EstadoNecesidad.BORRADOR.equals(destino))
-                || (EstadoNecesidad.EN_REVISION_SECRETARIO.equals(origen) && EstadoNecesidad.EN_REVISION_JEFE.equals(destino))
-                || (EstadoNecesidad.EN_REVISION_JEFE.equals(origen) && EstadoNecesidad.EN_REVISION_SECRETARIO.equals(destino))
-                || (EstadoNecesidad.EN_REVISION_JEFE.equals(origen) && EstadoNecesidad.NO_ASIGNADA.equals(destino));
-    }
-
-    private boolean requierePrograma(EstadoNecesidad origen, EstadoNecesidad destino) {
-        return (EstadoNecesidad.BORRADOR.equals(origen) && EstadoNecesidad.EN_REVISION_SECRETARIO.equals(destino))
-                || (EstadoNecesidad.EN_REVISION_SECRETARIO.equals(origen) && EstadoNecesidad.BORRADOR.equals(destino));
-    }
-
-    private boolean requiereDepartamento(EstadoNecesidad origen, EstadoNecesidad destino) {
-        return EstadoNecesidad.EN_REVISION_JEFE.equals(origen) && EstadoNecesidad.NO_ASIGNADA.equals(destino);
-    }
-
-    private List<Necesidad> obtenerNecesidadesParaTransicion(Integer oidCalendario,
-                                                             EstadoNecesidad estadoOrigen,
-                                                             Integer oidPrograma,
-                                                             Integer oidDepartamento) {
-        List<Necesidad> necesidades = necesidadRepository.findAllByCalendario_OidcalendarioAndEstado(oidCalendario, estadoOrigen);
-
-        return necesidades.stream()
-                .filter(necesidad -> {
-                    if (oidPrograma == null) {
-                        return true;
-                    }
-                    Materia materia = necesidad.getMateria();
-                    if (materia == null || materia.getPlan() == null || materia.getPlan().getPrograma() == null) {
-                        return false;
-                    }
-                    return oidPrograma.equals(materia.getPlan().getPrograma().getOidPrograma());
-                })
-                .filter(necesidad -> {
-                    if (oidDepartamento == null) {
-                        return true;
-                    }
-                    Materia materia = necesidad.getMateria();
-                    if (materia == null || materia.getDepartamento() == null) {
-                        return false;
-                    }
-                    return oidDepartamento.equals(materia.getDepartamento().getOidDepartamento());
-                })
-                .collect(Collectors.toList());
-    }
-
-    private Map<String, List<Integer>> validarRequisitosPrevios(List<Necesidad> necesidades,
-                                                                boolean validarDepartamento) {
-        List<Integer> sinGrupo = necesidades.stream()
-                .filter(necesidad -> necesidad.getGrupo() == null || necesidad.getGrupo().trim().isEmpty())
-                .map(Necesidad::getOidNecesidad)
-                .collect(Collectors.toList());
-
-        List<Integer> sinCupo = necesidades.stream()
-                .filter(necesidad -> necesidad.getCupo() == null || necesidad.getCupo() <= 0)
-                .map(Necesidad::getOidNecesidad)
-                .collect(Collectors.toList());
-
-        Map<String, List<Integer>> inconsistencias = new HashMap<>();
-        inconsistencias.put("sinGrupo", sinGrupo);
-        inconsistencias.put("sinCupo", sinCupo);
-
-        if (validarDepartamento) {
-            List<Integer> sinDepartamento = necesidades.stream()
-                    .filter(necesidad -> {
-                        Materia materia = necesidad.getMateria();
-                        return materia == null || materia.getDepartamento() == null
-                                || materia.getDepartamento().getOidDepartamento() == null;
-                    })
-                    .map(Necesidad::getOidNecesidad)
-                    .collect(Collectors.toList());
-            inconsistencias.put("sinDepartamento", sinDepartamento);
-        } else {
-            inconsistencias.put("sinDepartamento", List.of());
-        }
-        return inconsistencias;
-    }
 }

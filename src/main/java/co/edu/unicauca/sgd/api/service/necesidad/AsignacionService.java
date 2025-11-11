@@ -9,7 +9,11 @@ import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
 
 public interface AsignacionService {
 
-    ApiResponse<Page<AsignacionDTOResponse>> listar(Integer oidNecesidad, Integer oidSeleccionado, Pageable pageable);
+    ApiResponse<Page<AsignacionDTOResponse>> listar(Integer oidCalendario,
+                                                    Integer oidDepartamento,
+                                                    Integer oidNecesidad,
+                                                    Integer oidSeleccionado,
+                                                    Pageable pageable);
 
     ApiResponse<AsignacionDTOResponse> buscarPorId(Integer oidAsignacion);
 

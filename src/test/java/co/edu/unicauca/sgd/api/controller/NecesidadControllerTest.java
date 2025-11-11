@@ -21,7 +21,6 @@ import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateRequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
-import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
 import co.edu.unicauca.sgd.api.service.necesidad.NecesidadService;
 
 class NecesidadControllerTest {
@@ -43,14 +42,14 @@ class NecesidadControllerTest {
         ApiResponse<Page<NecesidadDTOResponse>> serviceResponse = new ApiResponse<>(200, "ok", page);
         Pageable pageable = Pageable.unpaged();
 
-        when(necesidadService.obtenerTodos(null, null, null, pageable)).thenReturn(serviceResponse);
+        when(necesidadService.obtenerTodos(1, null, null, 2, null, pageable)).thenReturn(serviceResponse);
 
         ResponseEntity<ApiResponse<Page<NecesidadDTOResponse>>> result =
-                controller.findAll(null, null, null, pageable);
+                controller.findAll(1, null, null, 2, null, pageable);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
-        verify(necesidadService).obtenerTodos(null, null, null, pageable);
+        verify(necesidadService).obtenerTodos(1, null, null, 2, null, pageable);
     }
 
     @Test
@@ -135,26 +134,4 @@ class NecesidadControllerTest {
         verify(necesidadService).eliminar(99);
     }
 
-    @Test
-    void toRevisionSecretario_shouldInvokeService() {
-        ApiResponse<Map<String, Object>> serviceResponse = new ApiResponse<>(200, "ok", Map.of());
-        when(necesidadService.cambiarEstadoMasivo(
-                1,
-                EstadoNecesidad.BORRADOR,
-                EstadoNecesidad.EN_REVISION_SECRETARIO,
-                2,
-                null)).thenReturn(serviceResponse);
-
-        ResponseEntity<ApiResponse<Map<String, Object>>> result =
-                controller.toRevisionSecretario(1, 2);
-
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(result.getBody()).isEqualTo(serviceResponse);
-        verify(necesidadService).cambiarEstadoMasivo(
-                1,
-                EstadoNecesidad.BORRADOR,
-                EstadoNecesidad.EN_REVISION_SECRETARIO,
-                2,
-                null);
-    }
 }

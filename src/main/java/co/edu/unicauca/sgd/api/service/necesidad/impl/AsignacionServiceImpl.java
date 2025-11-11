@@ -3,25 +3,24 @@ package co.edu.unicauca.sgd.api.service.necesidad.impl;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.Asignacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
-import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.domain.Seleccionado;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
-import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
+import co.edu.unicauca.sgd.api.domain.Materia;
+import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
@@ -81,32 +80,40 @@ public class AsignacionServiceImpl implements AsignacionService {
     }
 
     @Override
-    public ApiResponse<Page<AsignacionDTOResponse>> listar(Integer oidNecesidad, Integer oidSeleccionado, Pageable pageable) {
+    public ApiResponse<Page<AsignacionDTOResponse>> listar(Integer oidCalendario,
+                                                           Integer oidDepartamento,
+                                                           Integer oidNecesidad,
+                                                           Integer oidSeleccionado,
+                                                           Pageable pageable) {
         Pageable pageableToUse = pageable != null ? pageable : Pageable.unpaged();
 
-        List<Asignacion> asignaciones;
+        if (oidCalendario == null || oidDepartamento == null) {
+            return new ApiResponse<>(400, "El calendario y el departamento son obligatorios.", Page.empty(pageableToUse));
+        }
+
+        Specification<Asignacion> specification = Specification.where((root, query, cb) ->
+                cb.equal(root.join("necesidad").join("calendario").get("oidcalendario"), oidCalendario));
+
+        specification = specification.and((root, query, cb) ->
+                cb.equal(root.join("necesidad").join("materia").join("departamento").get("oidDepartamento"), oidDepartamento));
+
         if (oidNecesidad != null) {
-            asignaciones = asignacionRepository.findByNecesidad_OidNecesidad(oidNecesidad);
-        } else {
-            asignaciones = asignacionRepository.findAll(pageableToUse).getContent();
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.join("necesidad").get("oidNecesidad"), oidNecesidad));
         }
 
         if (oidSeleccionado != null) {
-            asignaciones = asignaciones.stream()
-                    .filter(a -> Objects.equals(a.getSeleccionado().getOidSeleccionado(), oidSeleccionado))
-                    .collect(Collectors.toList());
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.join("seleccionado").get("oidSeleccionado"), oidSeleccionado));
         }
 
-        if (asignaciones.isEmpty()) {
+        Page<Asignacion> asignaciones = asignacionRepository.findAll(specification, pageableToUse);
+
+        if (!asignaciones.hasContent()) {
             return new ApiResponse<>(204, "No se encontraron asignaciones.", Page.empty(pageableToUse));
         }
 
-        Page<AsignacionDTOResponse> page = new PageImpl<>(
-                asignaciones.stream().map(asignacionMapper::toResponse).collect(Collectors.toList()),
-                pageableToUse,
-                asignaciones.size()
-        );
-
+        Page<AsignacionDTOResponse> page = asignaciones.map(asignacionMapper::toResponse);
         return new ApiResponse<>(200, "Asignaciones recuperadas correctamente.", page);
     }
 

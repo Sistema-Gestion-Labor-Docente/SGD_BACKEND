@@ -3,10 +3,11 @@ package co.edu.unicauca.sgd.api.service.necesidad.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.notNull;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,15 +17,19 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.Asignacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.Departamento;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
 import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
@@ -81,6 +86,9 @@ class AsignacionServiceImplTest {
 
         Materia materia = new Materia();
         materia.setHorasSemana(12);
+        Departamento departamento = new Departamento();
+        departamento.setOidDepartamento(20);
+        materia.setDepartamento(departamento);
 
         necesidad = new Necesidad();
         necesidad.setOidNecesidad(1);
@@ -104,21 +112,32 @@ class AsignacionServiceImplTest {
 
     @Test
     void listar_DeberiaFiltrarPorSeleccionado() {
-        Asignacion asignacion1 = buildAsignacion(1, seleccionado.getOidSeleccionado());
-        Asignacion asignacion2 = buildAsignacion(2, 99);
+        Asignacion asignacion = buildAsignacion(1, seleccionado.getOidSeleccionado());
+        Page<Asignacion> page = new PageImpl<>(Collections.singletonList(asignacion), Pageable.unpaged(), 1);
 
-        when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Arrays.asList(asignacion1, asignacion2));
+        when(asignacionRepository.findAll(ArgumentMatchers.<Specification<Asignacion>>any(), eq(Pageable.unpaged()))).thenReturn(page);
 
         AsignacionDTOResponse dto = AsignacionDTOResponse.builder().build();
-        when(asignacionMapper.toResponse(asignacion1)).thenReturn(dto);
+        when(asignacionMapper.toResponse(asignacion)).thenReturn(dto);
 
         ApiResponse<Page<AsignacionDTOResponse>> response =
-                asignacionService.listar(1, seleccionado.getOidSeleccionado(), Pageable.unpaged());
+                asignacionService.listar(10, 20, 1, seleccionado.getOidSeleccionado(), Pageable.unpaged());
 
         assertThat(response.getCodigo()).isEqualTo(200);
         assertThat(response.getData().getTotalElements()).isEqualTo(1);
         assertThat(response.getData().getContent()).containsExactly(dto);
-        verify(asignacionRepository).findByNecesidad_OidNecesidad(1);
+        verify(asignacionRepository).findAll(ArgumentMatchers.<Specification<Asignacion>>any(), eq(Pageable.unpaged()));
+    }
+
+    @Test
+    void listar_DeberiaRetornar400SiFaltanParametrosObligatorios() {
+        ApiResponse<Page<AsignacionDTOResponse>> sinCalendario = asignacionService.listar(null, 20, null, null, Pageable.unpaged());
+        assertThat(sinCalendario.getCodigo()).isEqualTo(400);
+
+        ApiResponse<Page<AsignacionDTOResponse>> sinDepartamento = asignacionService.listar(10, null, null, null, Pageable.unpaged());
+        assertThat(sinDepartamento.getCodigo()).isEqualTo(400);
+
+        verify(asignacionRepository, never()).findAll(ArgumentMatchers.<Specification<Asignacion>>any(), any(Pageable.class));
     }
 
     @Test
@@ -134,7 +153,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
         when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
-        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
         asignacionGuardada.setNecesidad(necesidad);
@@ -145,7 +164,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.findBySeleccionado_OidSeleccionado(2)).thenReturn(Collections.singletonList(asignacionGuardada));
         when(asignacionRepository.findBySeleccionado_OidSeleccionado(2)).thenReturn(Collections.singletonList(asignacionGuardada));
 
-        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+        when(asignacionRepository.save(notNull(Asignacion.class))).thenAnswer(invocation -> {
             Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
             asignacion.setOidAsignacion(50);
             return asignacion;
@@ -153,7 +172,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.findByNecesidad_OidNecesidad(1)).thenReturn(Collections.singletonList(asignacionGuardada));
 
         AsignacionDTOResponse dto = AsignacionDTOResponse.builder().build();
-        when(asignacionMapper.toResponse(any(Asignacion.class))).thenReturn(dto);
+        when(asignacionMapper.toResponse(notNull(Asignacion.class))).thenReturn(dto);
 
         ApiResponse<AsignacionDTOResponse> response = asignacionService.crear(request);
 
@@ -162,8 +181,8 @@ class AsignacionServiceImplTest {
 
         Float horasEsperadas = 12f;
         assertThat(asignacionGuardada.getHorasDocencia()).isEqualTo(horasEsperadas);
-        verify(asignacionRepository).saveAll(anyList());
-        verify(actividadRepository).save(any(Actividad.class));
+        verify(asignacionRepository).saveAll(ArgumentMatchers.<Iterable<Asignacion>>any());
+        verify(actividadRepository).save(notNull(Actividad.class));
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.ASIGNADA);
         verify(necesidadRepository).save(necesidad);
     }
@@ -192,7 +211,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
         when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
-        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
         asignacionGuardada.setNecesidad(necesidad);
@@ -205,7 +224,7 @@ class AsignacionServiceImplTest {
         asignacionExistente.setSeleccionado(seleccionado);
         asignacionExistente.setHorasDocencia(13f);
 
-        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+        when(asignacionRepository.save(notNull(Asignacion.class))).thenAnswer(invocation -> {
             Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
             asignacion.setOidAsignacion(60);
             asignacion.setSeleccionado(seleccionado);
@@ -232,14 +251,14 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
         when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
-        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
         asignacionGuardada.setNecesidad(necesidad);
         asignacionGuardada.setSeleccionado(seleccionado);
         asignacionGuardada.setActividad(new Actividad());
 
-        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+        when(asignacionRepository.save(notNull(Asignacion.class))).thenAnswer(invocation -> {
             Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
             asignacion.setOidAsignacion(80);
             asignacion.setHorasDocencia(12f);
@@ -270,14 +289,14 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
         when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
-        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
         asignacionGuardada.setNecesidad(necesidad);
         asignacionGuardada.setSeleccionado(seleccionado);
         asignacionGuardada.setActividad(new Actividad());
 
-        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+        when(asignacionRepository.save(notNull(Asignacion.class))).thenAnswer(invocation -> {
             Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
             asignacion.setOidAsignacion(81);
             asignacion.setHorasDocencia(15f);
@@ -304,13 +323,13 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
         when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
-        when(actividadRepository.save(any(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
         asignacionGuardada.setNecesidad(necesidad);
         asignacionGuardada.setSeleccionado(seleccionado);
         asignacionGuardada.setActividad(new Actividad());
-        when(asignacionRepository.save(any(Asignacion.class))).thenAnswer(invocation -> {
+        when(asignacionRepository.save(notNull(Asignacion.class))).thenAnswer(invocation -> {
             Asignacion asignacion = invocation.getArgument(0, Asignacion.class);
             asignacion.setOidAsignacion(70);
             return asignacion;
@@ -380,7 +399,7 @@ class AsignacionServiceImplTest {
 
         assertThat(response.getCodigo()).isEqualTo(204);
         verify(asignacionRepository).delete(asignacion);
-        verify(asignacionRepository).saveAll(anyList());
+        verify(asignacionRepository).saveAll(ArgumentMatchers.<Iterable<Asignacion>>any());
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.ASIGNADA);
         verify(necesidadRepository, never()).save(necesidad);
     }
@@ -401,7 +420,7 @@ class AsignacionServiceImplTest {
 
         assertThat(response.getCodigo()).isEqualTo(204);
         verify(asignacionRepository).delete(asignacion);
-        verify(asignacionRepository, never()).saveAll(anyList());
+        verify(asignacionRepository, never()).saveAll(ArgumentMatchers.<Iterable<Asignacion>>any());
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.NO_ASIGNADA);
         verify(necesidadRepository).save(necesidad);
     }

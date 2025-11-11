@@ -59,11 +59,25 @@ class NecesidadServiceImplTest {
         when(necesidadRepository.findAll(ArgumentMatchers.<Specification<Necesidad>> any(), eq(pageable))).thenReturn(Page.empty(pageable));
 
         ApiResponse<Page<NecesidadDTOResponse>> response =
-                service.obtenerTodos(null, null, EstadoNecesidad.NO_ASIGNADA, pageable);
+                service.obtenerTodos(1, null, EstadoNecesidad.NO_ASIGNADA, 2, null, pageable);
 
         assertThat(response.getCodigo()).isEqualTo(200);
         assertThat(response.getMensaje()).isEqualTo("No se encontraron necesidades.");
         assertThat(response.getData().getContent()).isEmpty();
+    }
+
+    @Test
+    void obtenerTodos_sinCalendarioOProgramaDevuelve400() {
+        PageRequest pageable = PageRequest.of(0, 5);
+
+        ApiResponse<Page<NecesidadDTOResponse>> sinCalendario =
+                service.obtenerTodos(null, null, null, 2, null, pageable);
+        assertThat(sinCalendario.getCodigo()).isEqualTo(400);
+        verify(necesidadRepository, never()).findAll(ArgumentMatchers.<Specification<Necesidad>> any(), eq(pageable));
+
+        ApiResponse<Page<NecesidadDTOResponse>> sinPrograma =
+                service.obtenerTodos(1, null, null, null, null, pageable);
+        assertThat(sinPrograma.getCodigo()).isEqualTo(400);
     }
 
     @Test
