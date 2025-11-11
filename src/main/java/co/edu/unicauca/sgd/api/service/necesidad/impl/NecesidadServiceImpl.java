@@ -23,8 +23,10 @@ import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateRequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
+import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadCalendarioObligatorioException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadNotFoundException;
+import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadProgramaObligatorioException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadValidationException;
 import co.edu.unicauca.sgd.api.mapper.NecesidadMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
@@ -62,16 +64,7 @@ public class NecesidadServiceImpl implements NecesidadService {
         Pageable pageableToUse = pageable != null ? pageable : Pageable.unpaged();
 
         try {
-            if (oidCalendario == null) {
-                return new ApiResponse<>(400,
-                        "El calendario es obligatorio para la búsqueda de necesidades.",
-                        Page.empty(pageableToUse));
-            }
-            if (oidPrograma == null) {
-                return new ApiResponse<>(400,
-                        "El programa es obligatorio para la búsqueda de necesidades.",
-                        Page.empty(pageableToUse));
-            }
+            validarParametrosListado(oidCalendario, oidPrograma);
 
             Specification<Necesidad> specification = Specification.where(null);
 
@@ -103,6 +96,9 @@ public class NecesidadServiceImpl implements NecesidadService {
                     ? "Necesidades recuperadas correctamente."
                     : "No se encontraron necesidades.";
             return new ApiResponse<>(200, message, response);
+        } catch (NecesidadException e) {
+            logger.warn("Validación de listado de necesidades: {}", e.getMessage());
+            return new ApiResponse<>(e.getStatus().value(), e.getMessage(), Page.empty(pageableToUse));
         } catch (Exception e) {
             logger.error("Error al listar necesidades", e);
             return new ApiResponse<>(500, "Error al listar las necesidades: " + e.getMessage(), Page.empty(pageableToUse));
@@ -327,6 +323,15 @@ public class NecesidadServiceImpl implements NecesidadService {
             value = (value / 26) - 1;
         } while (value >= 0);
         return builder.toString();
+    }
+
+    private void validarParametrosListado(Integer oidCalendario, Integer oidPrograma) {
+        if (oidCalendario == null) {
+            throw new NecesidadCalendarioObligatorioException();
+        }
+        if (oidPrograma == null) {
+            throw new NecesidadProgramaObligatorioException();
+        }
     }
 
     private Calendario validarCalendario(Integer oidCalendario) {

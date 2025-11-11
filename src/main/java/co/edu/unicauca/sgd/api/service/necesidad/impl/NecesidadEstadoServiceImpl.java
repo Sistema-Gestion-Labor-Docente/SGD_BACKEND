@@ -16,8 +16,13 @@ import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
+import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadCalendarioObligatorioException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadException;
+import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadListaOidInvalidaException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadNotFoundException;
+import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadTransicionDepartamentoObligatorioException;
+import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadTransicionNoPermitidaException;
+import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadTransicionProgramaObligatorioException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadValidationException;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
@@ -59,15 +64,15 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
             validarCalendario(oidCalendario);
 
             if (!esTransicionPermitida(estadoOrigen, estadoDestino)) {
-                throw new NecesidadValidationException("Transición de estado no permitida.");
+                throw new NecesidadTransicionNoPermitidaException();
             }
 
             if (requierePrograma(estadoOrigen, estadoDestino) && oidPrograma == null) {
-                throw new NecesidadValidationException("El programa es obligatorio para esta transición.");
+                throw new NecesidadTransicionProgramaObligatorioException();
             }
 
             if (requiereDepartamento(estadoOrigen, estadoDestino) && oidDepartamento == null) {
-                throw new NecesidadValidationException("El departamento es obligatorio para esta transición.");
+                throw new NecesidadTransicionDepartamentoObligatorioException();
             }
 
             List<Necesidad> necesidades = obtenerNecesidadesParaTransicion(
@@ -121,7 +126,7 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
 
         try {
             if (oidNecesidades == null || oidNecesidades.isEmpty()) {
-                throw new NecesidadValidationException("Debe proporcionar al menos una necesidad.");
+                throw new NecesidadListaOidInvalidaException();
             }
             if (!esTransicionPermitida(estadoOrigen, estadoDestino)) {
                 throw new NecesidadValidationException("Transición de estado no permitida.");
@@ -132,7 +137,7 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
                     .distinct()
                     .collect(Collectors.toList());
             if (oidSinDuplicados.isEmpty()) {
-                throw new NecesidadValidationException("Los identificadores proporcionados no son válidos.");
+                throw new NecesidadListaOidInvalidaException();
             }
 
             List<Necesidad> necesidades = necesidadRepository.findAllById(oidSinDuplicados);
@@ -195,7 +200,7 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
 
     private Calendario validarCalendario(Integer oidCalendario) {
         if (oidCalendario == null) {
-            throw new NecesidadValidationException("El calendario es obligatorio.");
+            throw new NecesidadCalendarioObligatorioException();
         }
         return calendarioRepository.findById(oidCalendario)
                 .orElseThrow(() -> new NecesidadNotFoundException("Calendario no encontrado con ID: " + oidCalendario));
