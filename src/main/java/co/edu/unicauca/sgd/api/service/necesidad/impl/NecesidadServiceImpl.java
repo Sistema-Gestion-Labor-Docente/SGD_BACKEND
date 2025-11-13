@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.Materia;
@@ -54,17 +55,24 @@ public class NecesidadServiceImpl implements NecesidadService {
         this.necesidadMapper = necesidadMapper;
     }
 
+    private static final int SEMESTRE_MIN = 1;
+    private static final int SEMESTRE_MAX = 10;
+
     @Override
     public ApiResponse<Page<NecesidadDTOResponse>> obtenerTodos(Integer oidCalendario,
                                                                 Integer idMateria,
                                                                 EstadoNecesidad estado,
                                                                 Integer oidPrograma,
                                                                 Integer oidDepartamento,
+                                                                String nombreMateria,
+                                                                Integer semestreMateria,
+                                                                String codigoMateria,
                                                                 Pageable pageable) {
         Pageable pageableToUse = pageable != null ? pageable : Pageable.unpaged();
 
         try {
             validarParametrosListado(oidCalendario, oidPrograma);
+            validarSemestre(semestreMateria);
 
             Specification<Necesidad> specification = Specification.where(null);
 
@@ -87,6 +95,20 @@ public class NecesidadServiceImpl implements NecesidadService {
                 specification = specification.and((root, query, cb) ->
                         cb.equal(root.join("materia").join("departamento").get("oidDepartamento"), oidDepartamento));
             }
+            if (StringUtils.hasText(nombreMateria)) {
+                String likeNombre = "%" + nombreMateria.trim().toUpperCase() + "%";
+                specification = specification.and((root, query, cb) ->
+                        cb.like(cb.upper(root.join("materia").get("nombre")), likeNombre));
+            }
+            if (semestreMateria != null) {
+                specification = specification.and((root, query, cb) ->
+                        cb.equal(root.join("materia").get("semestre"), semestreMateria));
+            }
+            if (StringUtils.hasText(codigoMateria)) {
+                String likeCodigo = "%" + codigoMateria.trim().toUpperCase() + "%";
+                specification = specification.and((root, query, cb) ->
+                        cb.like(cb.upper(root.join("materia").get("codigo")), likeCodigo));
+            }
 
             Page<Necesidad> page = necesidadRepository.findAll(specification, pageableToUse);
             Page<NecesidadDTOResponse> response = page.map(necesidadMapper::toResponse);
@@ -102,6 +124,14 @@ public class NecesidadServiceImpl implements NecesidadService {
         } catch (Exception e) {
             logger.error("Error al listar necesidades", e);
             return new ApiResponse<>(500, "Error al listar las necesidades: " + e.getMessage(), Page.empty(pageableToUse));
+        }
+    }
+
+    private void validarSemestre(Integer semestreMateria) {
+        if (semestreMateria != null
+                && (semestreMateria < SEMESTRE_MIN || semestreMateria > SEMESTRE_MAX)) {
+            throw new NecesidadValidationException(
+                    String.format("El semestre de la materia debe estar entre %d y %d.", SEMESTRE_MIN, SEMESTRE_MAX));
         }
     }
 

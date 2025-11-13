@@ -38,21 +38,23 @@ class AsignacionControllerTest {
     void listar_DeberiaDelegarEnServicio() {
         Page<AsignacionDTOResponse> page = new PageImpl<>(Collections.singletonList(AsignacionDTOResponse.builder().build()));
         ApiResponse<Page<AsignacionDTOResponse>> response = new ApiResponse<>(200, "ok", page);
-        when(asignacionService.listar(10, 20, 1, 2, Pageable.unpaged())).thenReturn(response);
+        when(asignacionService.listar(10, 20, 1, 2, "Calculo", 4, "MAT101", Pageable.unpaged())).thenReturn(response);
 
-        ResponseEntity<ApiResponse<Page<AsignacionDTOResponse>>> result = controller.listar(10, 20, 1, 2, Pageable.unpaged());
+        ResponseEntity<ApiResponse<Page<AsignacionDTOResponse>>> result =
+                controller.listar(10, 20, 1, 2, "Calculo", 4, "MAT101", Pageable.unpaged());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(response);
-        verify(asignacionService).listar(10, 20, 1, 2, Pageable.unpaged());
+        verify(asignacionService).listar(10, 20, 1, 2, "Calculo", 4, "MAT101", Pageable.unpaged());
     }
 
     @Test
     void listar_DeberiaRetornarOkSiServicioRetorna204() {
         ApiResponse<Page<AsignacionDTOResponse>> response = new ApiResponse<>(204, "sin datos", Page.empty());
-        when(asignacionService.listar(10, 20, null, null, Pageable.unpaged())).thenReturn(response);
+        when(asignacionService.listar(10, 20, null, null, null, null, null, Pageable.unpaged())).thenReturn(response);
 
-        ResponseEntity<ApiResponse<Page<AsignacionDTOResponse>>> result = controller.listar(10, 20, null, null, Pageable.unpaged());
+        ResponseEntity<ApiResponse<Page<AsignacionDTOResponse>>> result =
+                controller.listar(10, 20, null, null, null, null, null, Pageable.unpaged());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(response);

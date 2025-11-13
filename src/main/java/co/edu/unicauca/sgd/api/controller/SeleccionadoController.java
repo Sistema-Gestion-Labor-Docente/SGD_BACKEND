@@ -39,10 +39,23 @@ public class SeleccionadoController {
     public ResponseEntity<ApiResponse<Page<SeleccionadoDTOResponse>>> findAll(
             @RequestParam(required = false) Integer oidCalendario,
             @RequestParam(required = false) Integer oidDepartamento,
+            @RequestParam(required = false) String identificacion,
+            @RequestParam(required = false) String nombreCompleto,
+            @RequestParam(required = false) String correo,
+            @RequestParam(required = false) String contratacion,
+            @RequestParam(required = false) String dedicacion,
             Pageable pageable) {
 
         ApiResponse<Page<SeleccionadoDTOResponse>> response =
-                seleccionadoService.obtenerTodos(oidCalendario, oidDepartamento, pageable);
+                seleccionadoService.obtenerTodos(
+                        oidCalendario,
+                        oidDepartamento,
+                        identificacion,
+                        nombreCompleto,
+                        correo,
+                        contratacion,
+                        dedicacion,
+                        pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

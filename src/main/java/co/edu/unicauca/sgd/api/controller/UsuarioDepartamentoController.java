@@ -33,10 +33,23 @@ public class UsuarioDepartamentoController {
     public ResponseEntity<ApiResponse<Page<UsuarioDepartamentoDTOResponse>>> findAll(
             @RequestParam(required = false) Integer oidUsuario,
             @RequestParam(required = false) Integer oidDepartamento,
+            @RequestParam(required = false) String identificacion,
+            @RequestParam(required = false) String nombreCompleto,
+            @RequestParam(required = false) String correo,
+            @RequestParam(required = false) String contratacion,
+            @RequestParam(required = false) String dedicacion,
             Pageable pageable) {
 
         ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response =
-                service.obtenerTodos(oidUsuario, oidDepartamento, pageable);
+                service.obtenerTodos(
+                        oidUsuario,
+                        oidDepartamento,
+                        identificacion,
+                        nombreCompleto,
+                        correo,
+                        contratacion,
+                        dedicacion,
+                        pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

@@ -11,7 +11,14 @@ import co.edu.unicauca.sgd.api.dto.materias.UsuarioDepartamentoDTOResponse;
 
 public interface UsuarioDepartamentoService {
 
-    ApiResponse<Page<UsuarioDepartamentoDTOResponse>> obtenerTodos(Integer oidUsuario, Integer oidDepartamento, Pageable pageable);
+    ApiResponse<Page<UsuarioDepartamentoDTOResponse>> obtenerTodos(Integer oidUsuario,
+                                                                   Integer oidDepartamento,
+                                                                   String identificacion,
+                                                                   String nombreCompleto,
+                                                                   String correo,
+                                                                   String contratacion,
+                                                                   String dedicacion,
+                                                                   Pageable pageable);
 
     ApiResponse<UsuarioDepartamentoDTOResponse> buscarPorUsuario(Integer oidUsuario);
 

@@ -121,7 +121,7 @@ class AsignacionServiceImplTest {
         when(asignacionMapper.toResponse(asignacion)).thenReturn(dto);
 
         ApiResponse<Page<AsignacionDTOResponse>> response =
-                asignacionService.listar(10, 20, 1, seleccionado.getOidSeleccionado(), Pageable.unpaged());
+                asignacionService.listar(10, 20, 1, seleccionado.getOidSeleccionado(), null, null, null, Pageable.unpaged());
 
         assertThat(response.getCodigo()).isEqualTo(200);
         assertThat(response.getData().getTotalElements()).isEqualTo(1);
@@ -131,12 +131,23 @@ class AsignacionServiceImplTest {
 
     @Test
     void listar_DeberiaRetornar400SiFaltanParametrosObligatorios() {
-        ApiResponse<Page<AsignacionDTOResponse>> sinCalendario = asignacionService.listar(null, 20, null, null, Pageable.unpaged());
+        ApiResponse<Page<AsignacionDTOResponse>> sinCalendario =
+                asignacionService.listar(null, 20, null, null, null, null, null, Pageable.unpaged());
         assertThat(sinCalendario.getCodigo()).isEqualTo(400);
 
-        ApiResponse<Page<AsignacionDTOResponse>> sinDepartamento = asignacionService.listar(10, null, null, null, Pageable.unpaged());
+        ApiResponse<Page<AsignacionDTOResponse>> sinDepartamento =
+                asignacionService.listar(10, null, null, null, null, null, null, Pageable.unpaged());
         assertThat(sinDepartamento.getCodigo()).isEqualTo(400);
 
+        verify(asignacionRepository, never()).findAll(ArgumentMatchers.<Specification<Asignacion>>any(), any(Pageable.class));
+    }
+
+    @Test
+    void listar_DeberiaRetornar400SiSemestreInvalido() {
+        ApiResponse<Page<AsignacionDTOResponse>> response =
+                asignacionService.listar(10, 20, null, null, null, 20, null, Pageable.unpaged());
+
+        assertThat(response.getCodigo()).isEqualTo(400);
         verify(asignacionRepository, never()).findAll(ArgumentMatchers.<Specification<Asignacion>>any(), any(Pageable.class));
     }
 

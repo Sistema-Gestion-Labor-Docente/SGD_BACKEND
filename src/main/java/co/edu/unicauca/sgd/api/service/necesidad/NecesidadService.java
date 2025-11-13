@@ -17,6 +17,9 @@ public interface NecesidadService {
             EstadoNecesidad estado,
             Integer oidPrograma,
             Integer oidDepartamento,
+            String nombreMateria,
+            Integer semestreMateria,
+            String codigoMateria,
             Pageable pageable);
 
     ApiResponse<NecesidadDTOResponse> buscarPorId(Integer oid);

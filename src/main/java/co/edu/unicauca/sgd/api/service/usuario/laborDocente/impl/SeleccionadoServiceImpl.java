@@ -7,6 +7,7 @@ import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTOResponse;
+import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.exception.seleccionado.SeleccionadoException;
 import co.edu.unicauca.sgd.api.exception.seleccionado.SeleccionadoNotFoundException;
 import co.edu.unicauca.sgd.api.exception.seleccionado.SeleccionadoValidationException;
@@ -24,13 +25,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
+import jakarta.persistence.criteria.Subquery;
+
+import java.text.Normalizer;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +45,16 @@ import java.util.stream.Collectors;
 public class SeleccionadoServiceImpl implements SeleccionadoService {
 
     private static final Logger logger = LoggerFactory.getLogger(SeleccionadoServiceImpl.class);
+    private static final Pattern IDENTIFICACION_PATTERN = Pattern.compile("^\\d{7,15}$");
+    private static final Map<String, String> DEDICACIONES_PERMITIDAS = Map.of(
+            normalizeValue("MEDIO TIEMPO"), "MEDIO TIEMPO",
+            normalizeValue("TIEMPO COMPLETO"), "TIEMPO COMPLETO",
+            normalizeValue("HORAS CATEDRA"), "HORAS CATEDRA"
+    );
+    private static final String CONTRATACIONES_PERMITIDAS =
+            Arrays.stream(ContratacionEnum.values())
+                    .map(ContratacionEnum::getValor)
+                    .collect(Collectors.joining(", "));
 
     private final SeleccionadoRepository seleccionadoRepository;
     private final SeleccionadoMapper seleccionadoMapper;
@@ -48,45 +65,88 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
 
     @Override
     public ApiResponse<Page<SeleccionadoDTOResponse>> obtenerTodos(Integer oidCalendario,
-                                                                  Integer oidDepartamento,
-                                                                  Pageable pageable) {
+                                                                    Integer oidDepartamento,
+                                                                    String identificacion,
+                                                                    String nombreCompleto,
+                                                                    String correo,
+                                                                    String contratacion,
+                                                                    String dedicacion,
+                                                                    Pageable pageable) {
+        Pageable pageableToUse = pageable != null ? pageable : Pageable.unpaged();
         try {
-            // Caso: filtrar por calendario y departamento (JOIN con UsuarioDepartamento)
-            if (oidCalendario != null && oidDepartamento != null) {
-                List<Seleccionado> list = seleccionadoRepository.findByCalendarioAndDepartamento(oidCalendario, oidDepartamento);
-                List<SeleccionadoDTOResponse> dtos = list.stream().map(seleccionadoMapper::toResponse).collect(Collectors.toList());
-                Page<SeleccionadoDTOResponse> page = listToPage(dtos, pageable);
-                logger.info("Seleccionados encontrados para calendario={}, departamento={}: {}", oidCalendario, oidDepartamento, page.getTotalElements());
-                String message = page.hasContent()
-                        ? "Seleccionados encontrados correctamente."
-                        : "No se encontraron seleccionados para los filtros suministrados.";
-                return new ApiResponse<>(200, message, page);
-            }
+            String identificacionFiltro = sanitizeIdentificacion(identificacion);
+            ContratacionEnum contratacionFiltro = resolveContratacion(contratacion);
+            String dedicacionFiltro = resolveDedicacion(dedicacion);
+            String nombreFiltro = sanitizeText(nombreCompleto);
+            String correoFiltro = sanitizeText(correo);
 
-            // Caso: filtrar por calendario
+            Specification<Seleccionado> spec = (root, query, cb) -> {
+                query.distinct(true);
+                return cb.conjunction();
+            };
+
             if (oidCalendario != null) {
-                List<Seleccionado> list = seleccionadoRepository.findByCalendarioOidcalendario(oidCalendario);
-                List<SeleccionadoDTOResponse> dtos = list.stream().map(seleccionadoMapper::toResponse).collect(Collectors.toList());
-                Page<SeleccionadoDTOResponse> page = listToPage(dtos, pageable);
-                logger.info("Seleccionados encontrados para calendario={}: {}", oidCalendario, page.getTotalElements());
-                String message = page.hasContent()
-                        ? "Seleccionados encontrados correctamente."
-                        : "No se encontraron seleccionados para los filtros suministrados.";
-                return new ApiResponse<>(200, message, page);
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(root.join("calendario").get("oidcalendario"), oidCalendario));
+            }
+            if (oidDepartamento != null) {
+                spec = spec.and((root, query, cb) -> {
+                    Subquery<Integer> subquery = query.subquery(Integer.class);
+                    var udRoot = subquery.from(UsuarioDepartamento.class);
+                    subquery.select(udRoot.get("oidUsuario"))
+                            .where(
+                                    cb.equal(udRoot.get("departamento").get("oidDepartamento"), oidDepartamento),
+                                    cb.equal(udRoot.get("oidUsuario"), root.join("usuario").get("oidUsuario"))
+                            );
+                    return cb.exists(subquery);
+                });
+            }
+            if (identificacionFiltro != null) {
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(root.join("usuario").get("identificacion"), identificacionFiltro));
+            }
+            if (StringUtils.hasText(nombreFiltro)) {
+                String nombreLike = "%" + nombreFiltro.toUpperCase(Locale.ROOT) + "%";
+                spec = spec.and((root, query, cb) ->
+                        cb.like(
+                                cb.upper(cb.concat(cb.concat(root.join("usuario").get("nombres"), " "),
+                                        root.join("usuario").get("apellidos"))),
+                                nombreLike));
+            }
+            if (StringUtils.hasText(correoFiltro)) {
+                String correoLike = "%" + correoFiltro.toUpperCase(Locale.ROOT) + "%";
+                spec = spec.and((root, query, cb) ->
+                        cb.like(cb.upper(root.join("usuario").get("correo")), correoLike));
+            }
+            if (contratacionFiltro != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("tipo"), contratacionFiltro));
+            }
+            if (dedicacionFiltro != null) {
+                String dedicacionUpper = dedicacionFiltro.toUpperCase(Locale.ROOT);
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(cb.upper(root.get("dedicacion")), dedicacionUpper));
             }
 
-            // Caso: sin filtros -> paginación normal usando repository
-            Page<Seleccionado> pageEnt = seleccionadoRepository.findAll(pageable);
-            Page<SeleccionadoDTOResponse> pageDto = pageEnt.map(seleccionadoMapper::toResponse);
-            logger.info("Seleccionados encontrados (todos): {}", pageDto.getTotalElements());
+            Page<Seleccionado> page = seleccionadoRepository.findAll(spec, pageableToUse);
+            Page<SeleccionadoDTOResponse> pageDto = page.map(seleccionadoMapper::toResponse);
+
+            boolean hasFilters = oidCalendario != null || oidDepartamento != null
+                    || identificacionFiltro != null || StringUtils.hasText(nombreFiltro)
+                    || StringUtils.hasText(correoFiltro) || contratacionFiltro != null || dedicacionFiltro != null;
             String message = pageDto.hasContent()
                     ? "Seleccionados encontrados correctamente."
-                    : "No se encontraron seleccionados.";
+                    : (hasFilters ? "No se encontraron seleccionados para los filtros suministrados."
+                            : "No se encontraron seleccionados.");
+
+            logger.info("Seleccionados encontrados: {}", pageDto.getTotalElements());
             return new ApiResponse<>(200, message, pageDto);
 
+        } catch (SeleccionadoException e) {
+            logger.warn("Error al recuperar seleccionados: {}", e.getMessage());
+            return new ApiResponse<>(e.getStatus().value(), e.getMessage(), Page.empty(pageableToUse));
         } catch (Exception e) {
-            logger.error("Error al recuperar seleccionados: {}", e.getMessage(), e);
-            return new ApiResponse<>(500, "Error al recuperar los seleccionados: " + e.getMessage(), Page.empty(pageable));
+            logger.error("Error al recuperar seleccionados", e);
+            return new ApiResponse<>(500, "Error al recuperar los seleccionados: " + e.getMessage(), Page.empty(pageableToUse));
         }
     }
 
@@ -212,16 +272,6 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
         }
     }
 
-    private Page<SeleccionadoDTOResponse> listToPage(List<SeleccionadoDTOResponse> list, Pageable pageable) {
-        if (pageable == null) {
-            return new PageImpl<>(list);
-        }
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), list.size());
-        List<SeleccionadoDTOResponse> content = (start <= end) ? list.subList(start, end) : List.of();
-        return new PageImpl<>(content, pageable, list.size());
-    }
-
     private void validarPerteneceDepartamento(Usuario usuario, Integer oidDepartamento) {
         boolean pertenece = usuarioDepartamentoRepository.existsByUsuarioOidUsuarioAndDepartamentoOidDepartamento(
                 usuario.getOidUsuario(), oidDepartamento);
@@ -260,5 +310,56 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
             return null;
         }
         return usuario.getUsuarioDetalle().getDedicacion();
+    }
+
+    private String sanitizeIdentificacion(String identificacion) {
+        if (!StringUtils.hasText(identificacion)) {
+            return null;
+        }
+        String trimmed = identificacion.trim();
+        if (!IDENTIFICACION_PATTERN.matcher(trimmed).matches()) {
+            throw new SeleccionadoValidationException("La identificación debe contener entre 7 y 15 dígitos numéricos.");
+        }
+        return trimmed;
+    }
+
+    private ContratacionEnum resolveContratacion(String contratacion) {
+        if (!StringUtils.hasText(contratacion)) {
+            return null;
+        }
+        String normalized = normalizeValue(contratacion);
+        for (ContratacionEnum tipo : ContratacionEnum.values()) {
+            if (normalized.equals(normalizeValue(tipo.name()))
+                    || normalized.equals(normalizeValue(tipo.getValor()))) {
+                return tipo;
+            }
+        }
+        throw new SeleccionadoValidationException(
+                "La contratación indicada no es válida. Valores permitidos: " + CONTRATACIONES_PERMITIDAS + ".");
+    }
+
+    private String resolveDedicacion(String dedicacion) {
+        if (!StringUtils.hasText(dedicacion)) {
+            return null;
+        }
+        String normalized = normalizeValue(dedicacion);
+        String canonical = DEDICACIONES_PERMITIDAS.get(normalized);
+        if (canonical == null) {
+            throw new SeleccionadoValidationException(
+                    "La dedicación indicada no es válida. Valores permitidos: MEDIO TIEMPO, TIEMPO COMPLETO, HORAS CATEDRA.");
+        }
+        return canonical;
+    }
+
+    private String sanitizeText(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private static String normalizeValue(String value) {
+        if (value == null) {
+            return null;
+        }
+        String upper = value.trim().toUpperCase(Locale.ROOT);
+        return Normalizer.normalize(upper, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
     }
 }

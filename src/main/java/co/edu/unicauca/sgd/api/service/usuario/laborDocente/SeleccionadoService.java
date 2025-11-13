@@ -11,8 +11,13 @@ import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTORespons
 public interface SeleccionadoService {
 
     ApiResponse<Page<SeleccionadoDTOResponse>> obtenerTodos(Integer oidCalendario,
-                                                          Integer oidDepartamento,
-                                                          Pageable pageable);
+                                                            Integer oidDepartamento,
+                                                            String identificacion,
+                                                            String nombreCompleto,
+                                                            String correo,
+                                                            String contratacion,
+                                                            String dedicacion,
+                                                            Pageable pageable);
     
     ApiResponse<SeleccionadoDTOResponse> buscarPorId(Integer oid);
 
