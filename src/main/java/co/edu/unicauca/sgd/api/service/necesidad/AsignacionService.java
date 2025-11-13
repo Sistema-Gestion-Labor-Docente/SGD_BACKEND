@@ -13,6 +13,9 @@ public interface AsignacionService {
                                                     Integer oidDepartamento,
                                                     Integer oidNecesidad,
                                                     Integer oidSeleccionado,
+                                                    String nombreMateria,
+                                                    Integer semestreMateria,
+                                                    String codigoMateria,
                                                     Pageable pageable);
 
     ApiResponse<AsignacionDTOResponse> buscarPorId(Integer oidAsignacion);

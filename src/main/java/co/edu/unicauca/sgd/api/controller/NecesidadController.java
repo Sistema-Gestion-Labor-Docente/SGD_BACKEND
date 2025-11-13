@@ -38,9 +38,21 @@ public class NecesidadController {
             @RequestParam(required = false) EstadoNecesidad estado,
             @RequestParam Integer oidPrograma,
             @RequestParam(required = false) Integer oidDepartamento,
+            @RequestParam(required = false) String nombreMateria,
+            @RequestParam(required = false) Integer semestreMateria,
+            @RequestParam(required = false) String codigoMateria,
             Pageable pageable) {
         ApiResponse<Page<NecesidadDTOResponse>> response =
-                necesidadService.obtenerTodos(oidCalendario, idMateria, estado, oidPrograma, oidDepartamento, pageable);
+                necesidadService.obtenerTodos(
+                        oidCalendario,
+                        idMateria,
+                        estado,
+                        oidPrograma,
+                        oidDepartamento,
+                        nombreMateria,
+                        semestreMateria,
+                        codigoMateria,
+                        pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

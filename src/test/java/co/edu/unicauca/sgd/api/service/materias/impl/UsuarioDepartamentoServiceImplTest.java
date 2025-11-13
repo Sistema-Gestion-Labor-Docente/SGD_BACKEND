@@ -76,7 +76,8 @@ class UsuarioDepartamentoServiceImplTest {
         when(mapper.toResponse(entity)).thenReturn(dto);
         when(usuarioActividadCalendarioRepository.sumarHorasPorUsuarios(anyList())).thenReturn(Collections.emptyList());
 
-        ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response = service.obtenerTodos(10, 20, pageable);
+        ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response =
+                service.obtenerTodos(10, 20, null, null, null, null, null, pageable);
 
         assertEquals(200, response.getCodigo());
         assertNotNull(response.getData());
@@ -92,7 +93,8 @@ class UsuarioDepartamentoServiceImplTest {
 
         when(repository.findAll(ArgumentMatchers.<Specification<UsuarioDepartamento>>any(), eq(pageable))).thenReturn(emptyPage);
 
-        ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response = service.obtenerTodos(null, null, pageable);
+        ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response =
+                service.obtenerTodos(null, null, null, null, null, null, null, pageable);
 
         assertEquals(200, response.getCodigo());
         assertEquals("No se encontraron asignaciones usuario-departamento.", response.getMensaje());
@@ -106,7 +108,17 @@ class UsuarioDepartamentoServiceImplTest {
         when(repository.findAll(ArgumentMatchers.<Specification<UsuarioDepartamento>>any(), eq(pageable))).thenThrow(new RuntimeException("DB down"));
 
         assertThrows(UsuarioDepartamentoInternalException.class,
-                () -> service.obtenerTodos(null, null, pageable));
+                () -> service.obtenerTodos(null, null, null, null, null, null, null, pageable));
+    }
+
+    @Test
+    void obtenerTodos_identificacionInvalidaLanzaValidacion() {
+        Pageable pageable = PageRequest.of(0, 5);
+
+        assertThrows(UsuarioDepartamentoValidationException.class,
+                () -> service.obtenerTodos(null, null, "ABC123", null, null, null, null, pageable));
+
+        verify(repository, never()).findAll(ArgumentMatchers.<Specification<UsuarioDepartamento>>any(), eq(pageable));
     }
 
     @Test

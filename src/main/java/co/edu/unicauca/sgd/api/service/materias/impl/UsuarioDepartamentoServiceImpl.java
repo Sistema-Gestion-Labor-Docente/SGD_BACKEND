@@ -1,8 +1,12 @@
 package co.edu.unicauca.sgd.api.service.materias.impl;
 
+import java.text.Normalizer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -12,11 +16,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.UsuarioDepartamentoDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.UsuarioDepartamentoDTOResponse;
+import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoAlreadyExistsException;
 import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoException;
 import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoInternalException;
@@ -34,6 +40,16 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
 
     private static final Logger logger = LoggerFactory.getLogger(UsuarioDepartamentoServiceImpl.class);
     private static final String DOCENCIA = "DOCENCIA";
+    private static final Pattern IDENTIFICACION_PATTERN = Pattern.compile("^\\d{7,15}$");
+    private static final Map<String, String> DEDICACIONES_PERMITIDAS = Map.of(
+            normalizeValue("MEDIO TIEMPO"), "MEDIO TIEMPO",
+            normalizeValue("TIEMPO COMPLETO"), "TIEMPO COMPLETO",
+            normalizeValue("HORAS CATEDRA"), "HORAS CATEDRA"
+    );
+    private static final String CONTRATACIONES_PERMITIDAS =
+            Arrays.stream(ContratacionEnum.values())
+                    .map(ContratacionEnum::getValor)
+                    .collect(Collectors.joining(", "));
 
     private final UsuarioDepartamentoRepository repository;
 
@@ -53,15 +69,59 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
     @Override
     @Transactional
     public ApiResponse<Page<UsuarioDepartamentoDTOResponse>> obtenerTodos(
-            Integer oidUsuario, Integer oidDepartamento, Pageable pageable) {
+            Integer oidUsuario,
+            Integer oidDepartamento,
+            String identificacion,
+            String nombreCompleto,
+            String correo,
+            String contratacion,
+            String dedicacion,
+            Pageable pageable) {
         try {
-            Specification<UsuarioDepartamento> spec = Specification.where(null);
+            String identificacionFiltro = sanitizeIdentificacion(identificacion);
+            String contratacionFiltro = resolveContratacion(contratacion);
+            String dedicacionFiltro = resolveDedicacion(dedicacion);
+            String nombreFiltro = sanitizeText(nombreCompleto);
+            String correoFiltro = sanitizeText(correo);
+
+            Specification<UsuarioDepartamento> spec = (root, query, cb) -> {
+                query.distinct(true);
+                return cb.conjunction();
+            };
 
             if (oidUsuario != null) {
                 spec = spec.and((root, query, cb) -> cb.equal(root.get("oidUsuario"), oidUsuario));
             }
             if (oidDepartamento != null) {
-                spec = spec.and((root, query, cb) -> cb.equal(root.get("departamento").get("oidDepartamento"), oidDepartamento));
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(root.get("departamento").get("oidDepartamento"), oidDepartamento));
+            }
+            if (identificacionFiltro != null) {
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(root.join("usuario").get("identificacion"), identificacionFiltro));
+            }
+            if (StringUtils.hasText(nombreFiltro)) {
+                String nombreLike = "%" + nombreFiltro.toUpperCase(Locale.ROOT) + "%";
+                spec = spec.and((root, query, cb) ->
+                        cb.like(
+                                cb.upper(cb.concat(cb.concat(root.join("usuario").get("nombres"), " "),
+                                        root.join("usuario").get("apellidos"))),
+                                nombreLike));
+            }
+            if (StringUtils.hasText(correoFiltro)) {
+                String correoLike = "%" + correoFiltro.toUpperCase(Locale.ROOT) + "%";
+                spec = spec.and((root, query, cb) ->
+                        cb.like(cb.upper(root.join("usuario").get("correo")), correoLike));
+            }
+            if (contratacionFiltro != null) {
+                String contratacionUpper = contratacionFiltro.toUpperCase(Locale.ROOT);
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(cb.upper(root.join("usuario").join("usuarioDetalle").get("contratacion")), contratacionUpper));
+            }
+            if (dedicacionFiltro != null) {
+                String dedicacionUpper = dedicacionFiltro.toUpperCase(Locale.ROOT);
+                spec = spec.and((root, query, cb) ->
+                        cb.equal(cb.upper(root.join("usuario").join("usuarioDetalle").get("dedicacion")), dedicacionUpper));
             }
 
             Page<UsuarioDepartamento> page = repository.findAll(spec, pageable);
@@ -253,5 +313,57 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
             }
         }
         return horasPorUsuario;
+    }
+
+    private String sanitizeIdentificacion(String identificacion) {
+        if (!StringUtils.hasText(identificacion)) {
+            return null;
+        }
+        String trimmed = identificacion.trim();
+        if (!IDENTIFICACION_PATTERN.matcher(trimmed).matches()) {
+            throw new UsuarioDepartamentoValidationException(
+                    "La identificación debe contener entre 7 y 15 dígitos numéricos.");
+        }
+        return trimmed;
+    }
+
+    private String resolveContratacion(String contratacion) {
+        if (!StringUtils.hasText(contratacion)) {
+            return null;
+        }
+        String normalizedInput = normalizeValue(contratacion);
+        for (ContratacionEnum tipo : ContratacionEnum.values()) {
+            if (normalizedInput.equals(normalizeValue(tipo.name()))
+                    || normalizedInput.equals(normalizeValue(tipo.getValor()))) {
+                return tipo.getValor();
+            }
+        }
+        throw new UsuarioDepartamentoValidationException(
+                "La contratación indicada no es válida. Valores permitidos: " + CONTRATACIONES_PERMITIDAS + ".");
+    }
+
+    private String resolveDedicacion(String dedicacion) {
+        if (!StringUtils.hasText(dedicacion)) {
+            return null;
+        }
+        String normalized = normalizeValue(dedicacion);
+        String canonical = DEDICACIONES_PERMITIDAS.get(normalized);
+        if (canonical == null) {
+            throw new UsuarioDepartamentoValidationException(
+                    "La dedicación indicada no es válida. Valores permitidos: MEDIO TIEMPO, TIEMPO COMPLETO, HORAS CATEDRA.");
+        }
+        return canonical;
+    }
+
+    private String sanitizeText(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private static String normalizeValue(String value) {
+        if (value == null) {
+            return null;
+        }
+        String upper = value.trim().toUpperCase(Locale.ROOT);
+        return Normalizer.normalize(upper, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
     }
 }

@@ -39,24 +39,28 @@ class SeleccionadoControllerTest {
     void findAll_ShouldReturnServiceResponseStatusAndBody() {
         Page<SeleccionadoDTOResponse> page = new PageImpl<>(java.util.List.of(new SeleccionadoDTOResponse()));
         ApiResponse<Page<SeleccionadoDTOResponse>> serviceResponse = new ApiResponse<>(200, "ok", page);
-        when(seleccionadoService.obtenerTodos(1, 2, Pageable.unpaged())).thenReturn(serviceResponse);
+        when(seleccionadoService.obtenerTodos(1, 2, "12345678", "Juan Perez", "correo@demo.com",
+                "PLANTA", "TIEMPO COMPLETO", Pageable.unpaged())).thenReturn(serviceResponse);
 
         ResponseEntity<ApiResponse<Page<SeleccionadoDTOResponse>>> result =
-                controller.findAll(1, 2, Pageable.unpaged());
+                controller.findAll(1, 2, "12345678", "Juan Perez", "correo@demo.com",
+                        "PLANTA", "TIEMPO COMPLETO", Pageable.unpaged());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
-        verify(seleccionadoService).obtenerTodos(1, 2, Pageable.unpaged());
+        verify(seleccionadoService).obtenerTodos(1, 2, "12345678", "Juan Perez", "correo@demo.com",
+                "PLANTA", "TIEMPO COMPLETO", Pageable.unpaged());
     }
 
     @Test
     void findAll_ShouldForceOkStatusWhenServiceReturns204() {
         ApiResponse<Page<SeleccionadoDTOResponse>> serviceResponse =
                 new ApiResponse<>(204, "sin datos", Page.empty());
-        when(seleccionadoService.obtenerTodos(null, null, Pageable.unpaged())).thenReturn(serviceResponse);
+        when(seleccionadoService.obtenerTodos(null, null, null, null, null, null, null, Pageable.unpaged()))
+                .thenReturn(serviceResponse);
 
         ResponseEntity<ApiResponse<Page<SeleccionadoDTOResponse>>> result =
-                controller.findAll(null, null, Pageable.unpaged());
+                controller.findAll(null, null, null, null, null, null, null, Pageable.unpaged());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);

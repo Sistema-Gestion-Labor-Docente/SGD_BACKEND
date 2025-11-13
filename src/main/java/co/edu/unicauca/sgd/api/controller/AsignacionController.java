@@ -39,12 +39,18 @@ public class AsignacionController {
             @RequestParam Integer oidDepartamento,
             @RequestParam(required = false) Integer oidNecesidad,
             @RequestParam(required = false) Integer oidSeleccionado,
+            @RequestParam(required = false) String nombreMateria,
+            @RequestParam(required = false) Integer semestreMateria,
+            @RequestParam(required = false) String codigoMateria,
             Pageable pageable) {
         ApiResponse<Page<AsignacionDTOResponse>> response = asignacionService.listar(
                 oidCalendario,
                 oidDepartamento,
                 oidNecesidad,
                 oidSeleccionado,
+                nombreMateria,
+                semestreMateria,
+                codigoMateria,
                 pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }

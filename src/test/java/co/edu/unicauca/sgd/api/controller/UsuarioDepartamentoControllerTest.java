@@ -62,16 +62,23 @@ class UsuarioDepartamentoControllerTest {
                 PageRequest.of(0, 10),
                 1);
         ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response = new ApiResponse<>(200, "ok", page);
-        when(service.obtenerTodos(eq(1), eq(2), any(PageRequest.class))).thenReturn(response);
+        when(service.obtenerTodos(eq(1), eq(2), eq("12345678"), eq("Juan"), eq("correo@example.com"),
+                eq("PLANTA"), eq("TIEMPO COMPLETO"), any(PageRequest.class))).thenReturn(response);
 
         mockMvc.perform(get("/api/departamentos/usuarios")
                 .param("oidUsuario", "1")
                 .param("oidDepartamento", "2")
+                .param("identificacion", "12345678")
+                .param("nombreCompleto", "Juan")
+                .param("correo", "correo@example.com")
+                .param("contratacion", "PLANTA")
+                .param("dedicacion", "TIEMPO COMPLETO")
                 .param("page", "0")
                 .param("size", "10"))
             .andExpect(status().isOk());
 
-        verify(service).obtenerTodos(eq(1), eq(2), any(PageRequest.class));
+        verify(service).obtenerTodos(eq(1), eq(2), eq("12345678"), eq("Juan"),
+                eq("correo@example.com"), eq("PLANTA"), eq("TIEMPO COMPLETO"), any(PageRequest.class));
     }
 
     @Test
