@@ -13,6 +13,7 @@ public class CargoActividadDTOResponse {
     private String nombre;
     private String tipo;
     private Float maxHorasSemana;
+    private Integer maxActividades;
     private Integer oidTipoActividad;
     private String nombreTipoActividad;
 

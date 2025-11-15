@@ -36,6 +36,9 @@ public class CargoActividad {
     @Column(name = "MAXHORASSEMANA", nullable = false)
     private Float maxHorasSemana;
 
+    @Column(name = "MAXACTIVIDADES")
+    private Integer maxActividades;
+
     @ManyToOne
     @JoinColumn(name = "OIDTIPOACTIVIDAD", nullable = false)
     private TipoActividad tipoActividad;

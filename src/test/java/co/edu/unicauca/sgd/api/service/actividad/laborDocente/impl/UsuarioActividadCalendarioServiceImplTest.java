@@ -31,6 +31,7 @@ import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioUsuarioDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.ActividadCalendario;
@@ -59,6 +60,7 @@ import co.edu.unicauca.sgd.api.repository.EstadoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
 import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.EavAtributoService;
 
@@ -75,6 +77,8 @@ class UsuarioActividadCalendarioServiceImplTest {
     private ActividadCalendarioRepository actividadCalendarioRepository;
     @Mock
     private UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository;
+    @Mock
+    private UsuarioDepartamentoRepository usuarioDepartamentoRepository;
     @Mock
     private UsuarioActividadCalendarioMapper mapper;
     @Mock
@@ -110,6 +114,7 @@ class UsuarioActividadCalendarioServiceImplTest {
                 calendarioRepository,
                 actividadCalendarioRepository,
                 usuarioActividadCalendarioRepository,
+                usuarioDepartamentoRepository,
                 mapper,
                 cargoActividadRepository,
                 estadoActividadRepository,
@@ -198,6 +203,7 @@ class UsuarioActividadCalendarioServiceImplTest {
     void validarCupoUsuariosEnCargo_conCargoCalculaMenorCupo() {
         CargoActividad cargo = new CargoActividad();
         cargo.setOidCargoActividad(9);
+        cargo.setTipo("PROFESOR");
         cargo.setMaxHorasSemana(12f);
         TipoActividad tipo = new TipoActividad();
         tipo.setOidTipoActividad(4);
@@ -206,10 +212,10 @@ class UsuarioActividadCalendarioServiceImplTest {
         when(cargoActividadRepository.findById(9)).thenReturn(Optional.of(cargo));
 
         when(usuarioActividadCalendarioRepository
-                .findByUsuario_OidUsuarioAndActividadCalendario_CargoActividad_OidCargoActividad(1, 9))
+                .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(1, 9))
                 .thenReturn(List.of(relacionConHoras(4f)));
         when(usuarioActividadCalendarioRepository
-                .findByUsuario_OidUsuarioAndActividadCalendario_CargoActividad_OidCargoActividad(2, 9))
+                .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(2, 9))
                 .thenReturn(List.of(relacionConHoras(12f)));
 
         Fecha inicio = new Fecha();
@@ -239,9 +245,8 @@ class UsuarioActividadCalendarioServiceImplTest {
         request.setOidTipoActividad(1);
         request.setOidEstadoActividad(2);
         request.setNombreActividad("Actividad test");
-        request.setHoras(4f);
         request.setOidCalendario(3);
-        request.setOidsUsuarios(List.of(10));
+        request.setUsuarios(List.of(usuarioRequest(10, 4f, null)));
 
         TipoActividad tipoActividad = new TipoActividad();
         tipoActividad.setOidTipoActividad(1);
@@ -276,9 +281,8 @@ class UsuarioActividadCalendarioServiceImplTest {
         request.setOidTipoActividad(11);
         request.setOidEstadoActividad(22);
         request.setNombreActividad("Actividad");
-        request.setHoras(41f);
         request.setOidCalendario(33);
-        request.setOidsUsuarios(List.of(44));
+        request.setUsuarios(List.of(usuarioRequest(44, 41f, null)));
 
         TipoActividad tipoActividad = new TipoActividad();
         tipoActividad.setOidTipoActividad(11);
@@ -314,9 +318,8 @@ class UsuarioActividadCalendarioServiceImplTest {
         request.setOidTipoActividad(11);
         request.setOidEstadoActividad(22);
         request.setNombreActividad("Actividad");
-        request.setHoras(11f);
         request.setOidCalendario(33);
-        request.setOidsUsuarios(List.of(44));
+        request.setUsuarios(List.of(usuarioRequest(44, 11f, null)));
 
         TipoActividad tipoActividad = new TipoActividad();
         tipoActividad.setOidTipoActividad(11);
@@ -357,5 +360,13 @@ class UsuarioActividadCalendarioServiceImplTest {
         UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
         relacion.setActividadCalendario(actividadCalendario);
         return relacion;
+    }
+
+    private UsuarioActividadCalendarioUsuarioDTO usuarioRequest(Integer oidUsuario, Float horas, Integer oidCargo) {
+        UsuarioActividadCalendarioUsuarioDTO dto = new UsuarioActividadCalendarioUsuarioDTO();
+        dto.setOidUsuario(oidUsuario);
+        dto.setHoras(horas);
+        dto.setOidCargoActividad(oidCargo);
+        return dto;
     }
 }

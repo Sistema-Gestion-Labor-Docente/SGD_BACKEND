@@ -7,6 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.LastModifiedBy;
 
+import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -34,9 +35,16 @@ public class UsuarioActividadCalendario {
     @JoinColumn(name = "OIDUSUARIO", nullable = false)
     private Usuario usuario;
 
-   @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "OIDACTIVIDADCALENDARIO", nullable = false)
     private ActividadCalendario actividadCalendario;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "OIDCARGOACTIVIDAD")
+    private CargoActividad cargoActividad;
+
+    @Column(name = "HORASACTIVIDAD")
+    private Float horasActividad;
 
     @Column(name = "FECHACREACION", updatable = false, nullable = false)
     @CreationTimestamp

@@ -12,6 +12,7 @@
             <column name="NOMBRE" value="Dirección trabajos de Docencia - Pregrado (máx 5 trabajos)"/>
             <column name="TIPO" value="PROFESOR"/>
             <column name="MAXHORASSEMANA" value="10"/>
+            <column name="MAXACTIVIDADES" valueNumeric="5"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="9"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -37,7 +38,7 @@
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Dirección de trabajo de Investigación para Doctorado"/>
             <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="3"/>
+            <column name="MAXHORASSEMANA" value="4"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="7"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -71,7 +72,7 @@
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Coordinador Pregrado"/>
             <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="MAXHORASSEMANA" value="20"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -79,7 +80,7 @@
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Coordinador Programa Transversal"/>
             <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="MAXHORASSEMANA" value="20"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -87,7 +88,7 @@
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Coordinador Unilingua"/>
             <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="MAXHORASSEMANA" value="15"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -95,31 +96,7 @@
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Director de Escuela o Centro, Jefes de División"/>
             <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="20"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
-            <column name="FECHACREACION" valueDate="NOW()"/>
-            <column name="USUARIOCREACION" value="seeder"/>
-        </insert>
-        <insert tableName="CARGOACTIVIDAD">
-            <column name="NOMBRE" value="Jefe de Departamento (hasta 20 profesores)"/>
-            <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="15"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
-            <column name="FECHACREACION" valueDate="NOW()"/>
-            <column name="USUARIOCREACION" value="seeder"/>
-        </insert>
-        <insert tableName="CARGOACTIVIDAD">
-            <column name="NOMBRE" value="Jefe de Departamento (más de 20 profesores)"/>
-            <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="20"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
-            <column name="FECHACREACION" valueDate="NOW()"/>
-            <column name="USUARIOCREACION" value="seeder"/>
-        </insert>
-        <insert tableName="CARGOACTIVIDAD">
-            <column name="NOMBRE" value="Rector (a), Vicerrector (a), Decano (a)"/>
-            <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="20"/>
+            <column name="MAXHORASSEMANA" value="40"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -128,7 +105,7 @@
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Gestor de Calidad"/>
             <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="5"/>
+            <column name="MAXHORASSEMANA" value="15"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -136,7 +113,7 @@
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Integrante Comité Curricular Central"/>
             <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="1"/>
+            <column name="MAXHORASSEMANA" value="5"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -158,9 +135,25 @@
             <column name="USUARIOCREACION" value="seeder"/>
         </insert>
         <insert tableName="CARGOACTIVIDAD">
-            <column name="NOMBRE" value="Representante al consejo de Investigaciones, Consejo de Cultura y Bienestar, Consejo de la Unidad de Salud y consejo de Facultad"/>
+            <column name="NOMBRE" value="Representante al Comité de Personal Docente de la Facultad; Comité Interno de Asignación y Reconocimiento de Puntaje (CIARP); y Comité de Ética"/>
             <column name="TIPO" value="PROFESOR"/>
             <column name="MAXHORASSEMANA" value="2"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Representante al Consejo Académico"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="10"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Representante al consejo de Investigaciones, Consejo de Cultura y Bienestar, Consejo de la Unidad de Salud y consejo de Facultad"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="5"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="8"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -186,7 +179,7 @@
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Auditor Interno de calidad (requeridos por el Centro de Gestión de la Calidad y Acreditación Institucional)"/>
             <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="5"/>
+            <column name="MAXHORASSEMANA" value="2"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="10"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -195,7 +188,7 @@
             <column name="NOMBRE" value="Planeación y Evaluación Curricular e Institucional - Planta"/>
             <column name="TIPO" value="PROFESOR"/>
             <column name="MAXHORASSEMANA" value="40"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="10"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="40"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
         </insert>

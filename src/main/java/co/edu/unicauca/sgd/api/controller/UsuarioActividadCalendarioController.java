@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioCreacionResultadoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
@@ -65,6 +66,15 @@ public class UsuarioActividadCalendarioController {
     public ResponseEntity<ApiResponse<UsuarioActividadCalendarioDTOResponse>> save(@Valid @RequestBody UsuarioActividadCalendarioDTORequest dto) {
         ApiResponse<UsuarioActividadCalendarioDTOResponse> response =
                 usuarioActividadCalendarioService.crearActividadConRelaciones(dto);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
+    }
+
+    @PostMapping("/batch")
+    @Operation(summary = "Crear múltiples actividades", description = "Crea varias actividades y devuelve cuáles se registraron exitosamente.")
+    public ResponseEntity<ApiResponse<List<UsuarioActividadCalendarioCreacionResultadoDTO>>> saveBatch(
+            @RequestBody List<@Valid UsuarioActividadCalendarioDTORequest> dtos) {
+        ApiResponse<List<UsuarioActividadCalendarioCreacionResultadoDTO>> response =
+                usuarioActividadCalendarioService.crearActividadesConRelaciones(dtos);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

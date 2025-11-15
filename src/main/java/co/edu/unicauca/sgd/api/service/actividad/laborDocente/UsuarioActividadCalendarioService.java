@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioCreacionResultadoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
@@ -14,6 +15,8 @@ import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDT
 public interface UsuarioActividadCalendarioService {
 
     ApiResponse<UsuarioActividadCalendarioDTOResponse> crearActividadConRelaciones(UsuarioActividadCalendarioDTORequest request);
+
+    ApiResponse<List<UsuarioActividadCalendarioCreacionResultadoDTO>> crearActividadesConRelaciones(List<UsuarioActividadCalendarioDTORequest> requests);
 
     ApiResponse<UsuarioActividadCalendarioDTOResponse> actualizarActividadConRelaciones(Integer oidActividad, UsuarioActividadCalendarioDTORequest request);
     
