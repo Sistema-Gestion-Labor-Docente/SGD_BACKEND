@@ -78,6 +78,8 @@ public class CargoActividadServiceImpl implements CargoActividadService {
             if (request.getOidTipoActividad() == null) {
                 throw new IllegalArgumentException("El tipo de actividad es obligatorio.");
             }
+            validarTipoCargo(request.getTipo());
+            validarMaximoActividades(request.getMaxActividades());
             TipoActividad tipoActividad = tipoActividadRepository.findById(request.getOidTipoActividad())
                     .orElseThrow(() -> new IllegalStateException("Tipo de actividad no encontrado con ID: " + request.getOidTipoActividad()));
 
@@ -102,6 +104,8 @@ public class CargoActividadServiceImpl implements CargoActividadService {
             if (request.getOidTipoActividad() == null) {
                 throw new IllegalArgumentException("El tipo de actividad es obligatorio.");
             }
+            validarTipoCargo(request.getTipo());
+            validarMaximoActividades(request.getMaxActividades());
             CargoActividad entity = cargoActividadRepository.findById(oid)
                     .orElseThrow(() -> new IllegalStateException("CargoActividad no encontrado con ID: " + oid));
             TipoActividad tipoActividad = tipoActividadRepository.findById(request.getOidTipoActividad())
@@ -134,6 +138,22 @@ public class CargoActividadServiceImpl implements CargoActividadService {
             return new ApiResponse<>(404, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al eliminar cargo de actividad: " + e.getMessage(), null);
+        }
+    }
+
+    private void validarTipoCargo(String tipo) {
+        if (tipo == null) {
+            throw new IllegalArgumentException("El tipo de cargo es obligatorio.");
+        }
+        String normalized = tipo.trim().toUpperCase();
+        if (!"PROFESOR".equals(normalized) && !"PROGRAMADEPARTAMENTO".equals(normalized)) {
+            throw new IllegalArgumentException("Tipo de cargo no válido. Solo se permiten PROFESOR o PROGRAMADEPARTAMENTO.");
+        }
+    }
+
+    private void validarMaximoActividades(Integer maxActividades) {
+        if (maxActividades != null && maxActividades < 0) {
+            throw new IllegalArgumentException("El máximo de actividades no puede ser negativo.");
         }
     }
 }

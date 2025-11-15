@@ -15,6 +15,7 @@ public class CargoActividadMapper {
         entity.setNombre(dto.getNombre());
         entity.setTipo(dto.getTipo());
         entity.setMaxHorasSemana(dto.getMaxHorasSemana());
+        entity.setMaxActividades(dto.getMaxActividades());
         entity.setTipoActividad(tipoActividad);
         // usuarioCreacion y fechaCreacion se setean en service según el contexto
         return entity;
@@ -24,6 +25,7 @@ public class CargoActividadMapper {
         entity.setNombre(dto.getNombre());
         entity.setTipo(dto.getTipo());
         entity.setMaxHorasSemana(dto.getMaxHorasSemana());
+        entity.setMaxActividades(dto.getMaxActividades());
         entity.setTipoActividad(tipoActividad);
     }
 
@@ -33,6 +35,7 @@ public class CargoActividadMapper {
         dto.setNombre(entity.getNombre());
         dto.setTipo(entity.getTipo());
         dto.setMaxHorasSemana(entity.getMaxHorasSemana());
+        dto.setMaxActividades(entity.getMaxActividades());
         dto.setOidTipoActividad(entity.getTipoActividad().getOidTipoActividad());
         dto.setNombreTipoActividad(entity.getTipoActividad().getNombre());
         dto.setFechaCreacion(entity.getFechaCreacion());

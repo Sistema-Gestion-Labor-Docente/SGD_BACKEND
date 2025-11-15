@@ -19,12 +19,13 @@
             <column name="TIPO" type="VARCHAR(30)">
                 <constraints nullable="false"/>
             </column>
-            <column name="MAXHORASSEMANA" type="FLOAT8">
-                <constraints nullable="false"/>
-            </column>
-            <column name="OIDTIPOACTIVIDAD" type="INT">
-                <constraints nullable="false"/>
-            </column>
+      <column name="MAXHORASSEMANA" type="FLOAT8">
+        <constraints nullable="false"/>
+      </column>
+      <column name="MAXACTIVIDADES" type="INT"/>
+      <column name="OIDTIPOACTIVIDAD" type="INT">
+        <constraints nullable="false"/>
+      </column>
             <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
                 <constraints nullable="false"/>
             </column>

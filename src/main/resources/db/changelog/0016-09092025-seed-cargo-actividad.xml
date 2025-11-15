@@ -12,6 +12,7 @@
             <column name="NOMBRE" value="Dirección trabajos de Docencia - Pregrado (máx 5 trabajos)"/>
             <column name="TIPO" value="PROFESOR"/>
             <column name="MAXHORASSEMANA" value="10"/>
+            <column name="MAXACTIVIDADES" valueNumeric="5"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="9"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
@@ -94,30 +95,6 @@
         </insert>
         <insert tableName="CARGOACTIVIDAD">
             <column name="NOMBRE" value="Director de Escuela o Centro, Jefes de División"/>
-            <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="40"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
-            <column name="FECHACREACION" valueDate="NOW()"/>
-            <column name="USUARIOCREACION" value="seeder"/>
-        </insert>
-        <insert tableName="CARGOACTIVIDAD">
-            <column name="NOMBRE" value="Jefe de Departamento (hasta 20 profesores)"/>
-            <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="15"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
-            <column name="FECHACREACION" valueDate="NOW()"/>
-            <column name="USUARIOCREACION" value="seeder"/>
-        </insert>
-        <insert tableName="CARGOACTIVIDAD">
-            <column name="NOMBRE" value="Jefe de Departamento (más de 20 profesores)"/>
-            <column name="TIPO" value="PROFESOR"/>
-            <column name="MAXHORASSEMANA" value="20"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>
-            <column name="FECHACREACION" valueDate="NOW()"/>
-            <column name="USUARIOCREACION" value="seeder"/>
-        </insert>
-        <insert tableName="CARGOACTIVIDAD">
-            <column name="NOMBRE" value="Rector (a), Vicerrector (a), Decano (a)"/>
             <column name="TIPO" value="PROFESOR"/>
             <column name="MAXHORASSEMANA" value="40"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="4"/>

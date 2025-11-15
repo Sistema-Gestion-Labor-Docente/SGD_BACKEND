@@ -23,7 +23,6 @@
       <column name="OIDCALENDARIO" type="INT">
         <constraints nullable="false"/>
       </column>
-      <column name="OIDCARGOACTIVIDAD" type="INT"/>
       <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
         <constraints nullable="false"/>
       </column>
@@ -48,15 +47,6 @@
       referencedTableName="CALENDARIO"
       referencedColumnNames="OIDCALENDARIO"
       constraintName="FK_AC_CALENDARIO"
-      onDelete="RESTRICT"
-      onUpdate="RESTRICT"/>
-
-    <addForeignKeyConstraint
-      baseTableName="ACTIVIDADCALENDARIO"
-      baseColumnNames="OIDCARGOACTIVIDAD"
-      referencedTableName="CARGOACTIVIDAD"
-      referencedColumnNames="OIDCARGOACTIVIDAD"
-      constraintName="FK_AC_CARGOACTIVIDAD"
       onDelete="RESTRICT"
       onUpdate="RESTRICT"/>
 

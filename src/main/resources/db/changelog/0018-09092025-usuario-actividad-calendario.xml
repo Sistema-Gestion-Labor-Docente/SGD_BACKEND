@@ -24,6 +24,10 @@
             <constraints nullable="false"/>
         </column>
 
+        <column name="OIDCARGOACTIVIDAD" type="INT"/>
+
+        <column name="HORASACTIVIDAD" type="FLOAT"/>
+
         <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
             <constraints nullable="false"/>
         </column>
@@ -52,6 +56,15 @@
             referencedTableName="ACTIVIDADCALENDARIO"
             referencedColumnNames="OIDACTIVIDADCALENDARIO"
             constraintName="FK_UAC_ACTIVIDADCALENDARIO"
+            onDelete="RESTRICT"
+            onUpdate="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="USUARIOACTIVIDADCALENDARIO"
+            baseColumnNames="OIDCARGOACTIVIDAD"
+            referencedTableName="CARGOACTIVIDAD"
+            referencedColumnNames="OIDCARGOACTIVIDAD"
+            constraintName="FK_UAC_CARGOACTIVIDAD"
             onDelete="RESTRICT"
             onUpdate="RESTRICT"/>
 

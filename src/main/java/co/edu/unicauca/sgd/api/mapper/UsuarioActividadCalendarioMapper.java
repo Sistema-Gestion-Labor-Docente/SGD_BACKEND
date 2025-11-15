@@ -44,12 +44,13 @@ public class UsuarioActividadCalendarioMapper {
         actividadDto.setTipoActividad(actividad.getTipoActividad());
 
         // CargoActividad: tomar de la primera relación si existe
-        if (!relaciones.isEmpty() && relaciones.get(0).getActividadCalendario().getCargoActividad() != null) {
-            CargoActividad ca = relaciones.get(0).getActividadCalendario().getCargoActividad();
+        if (!relaciones.isEmpty() && relaciones.get(0).getCargoActividad() != null) {
+            CargoActividad ca = relaciones.get(0).getCargoActividad();
             CargoActividadDTOResponse cargoDto = new CargoActividadDTOResponse();
             cargoDto.setOidCargoActividad(ca.getOidCargoActividad());
             cargoDto.setNombre(ca.getNombre());
             cargoDto.setMaxHorasSemana(ca.getMaxHorasSemana());
+            cargoDto.setMaxActividades(ca.getMaxActividades());
             actividadDto.setCargoActividad(cargoDto);
         } else {
             actividadDto.setCargoActividad(null);

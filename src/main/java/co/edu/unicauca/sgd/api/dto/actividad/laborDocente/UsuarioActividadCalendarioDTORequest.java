@@ -2,6 +2,7 @@ package co.edu.unicauca.sgd.api.dto.actividad.laborDocente;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,15 +11,13 @@ import lombok.NoArgsConstructor;
 public class UsuarioActividadCalendarioDTORequest {
 
     private Integer oidActividad;
-    private Integer oidCargoActividad;
     private Integer oidTipoActividad;
     private Integer oidEstadoActividad;
     private String nombreActividad;
-    private Float horas;
     private Float semanas;
     private List<AtributoExtendidoDTO> atributos;
 
-    // Relación
     private Integer oidCalendario;
-    private List<Integer> oidsUsuarios;
+    @Valid
+    private List<UsuarioActividadCalendarioUsuarioDTO> usuarios;
 }

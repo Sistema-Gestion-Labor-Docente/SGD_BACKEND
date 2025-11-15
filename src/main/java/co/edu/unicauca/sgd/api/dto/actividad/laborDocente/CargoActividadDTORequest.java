@@ -17,6 +17,8 @@ public class CargoActividadDTORequest {
     @NotNull
     private Float maxHorasSemana;
 
+    private Integer maxActividades;
+
     @NotNull
     private Integer oidTipoActividad;
 }

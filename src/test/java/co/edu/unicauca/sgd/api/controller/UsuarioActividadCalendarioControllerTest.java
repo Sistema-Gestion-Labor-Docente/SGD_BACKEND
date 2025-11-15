@@ -3,7 +3,6 @@ package co.edu.unicauca.sgd.api.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.same;
@@ -11,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -26,9 +24,10 @@ import org.springframework.http.ResponseEntity;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
-import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioCreacionResultadoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
 import co.edu.unicauca.sgd.api.service.actividad.laborDocente.UsuarioActividadCalendarioService;
 
 @ExtendWith(MockitoExtension.class)
@@ -87,6 +86,23 @@ class UsuarioActividadCalendarioControllerTest {
         assertEquals(201, response.getStatusCodeValue());
         assertSame(serviceResponse, response.getBody());
         verify(service).crearActividadConRelaciones(dto);
+    }
+
+    @Test
+    void saveBatch_invocaServicioYRetornaRespuesta() {
+        List<UsuarioActividadCalendarioDTORequest> dtos = List.of(new UsuarioActividadCalendarioDTORequest());
+        List<UsuarioActividadCalendarioCreacionResultadoDTO> resultados = List.of(
+                UsuarioActividadCalendarioCreacionResultadoDTO.builder().indice(0).exito(true).build());
+        ApiResponse<List<UsuarioActividadCalendarioCreacionResultadoDTO>> serviceResponse =
+                new ApiResponse<>(200, "procesado", resultados);
+        when(service.crearActividadesConRelaciones(dtos)).thenReturn(serviceResponse);
+
+        ResponseEntity<ApiResponse<List<UsuarioActividadCalendarioCreacionResultadoDTO>>> response =
+                controller.saveBatch(dtos);
+
+        assertEquals(200, response.getStatusCodeValue());
+        assertSame(resultados, response.getBody().getData());
+        verify(service).crearActividadesConRelaciones(dtos);
     }
 
     @Test

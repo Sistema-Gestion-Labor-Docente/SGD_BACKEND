@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
-import co.edu.unicauca.sgd.api.repository.projection.ActividadUsuariosProjection;
 import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasProjection;
 
 @Repository
@@ -44,9 +43,20 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
 
     List<UsuarioActividadCalendario> findByActividadCalendario_Actividad_OidActividadIn(List<Integer> oidActividades);
 
-    List<UsuarioActividadCalendario> findByUsuario_OidUsuarioAndActividadCalendario_CargoActividad_OidCargoActividad(Integer oidUsuario, Integer oidCargoActividad);
+    List<UsuarioActividadCalendario> findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(Integer oidUsuario, Integer oidCargoActividad);
 
     List<UsuarioActividadCalendario> findByUsuario_OidUsuarioAndActividadCalendario_Actividad_TipoActividad_OidTipoActividad(Integer oidUsuario, Integer oidTipoActividad);
+
+    @Query("""
+        SELECT uac
+        FROM UsuarioActividadCalendario uac
+        JOIN UsuarioDepartamento ud ON ud.usuario = uac.usuario
+        WHERE ud.departamento.oidDepartamento = :oidDepartamento
+          AND uac.cargoActividad.oidCargoActividad = :oidCargoActividad
+    """)
+    List<UsuarioActividadCalendario> findByDepartamentoAndCargo(
+            @Param("oidDepartamento") Integer oidDepartamento,
+            @Param("oidCargoActividad") Integer oidCargoActividad);
 
     @Query(
       value = """
@@ -87,7 +97,7 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
 
     @Query("""
         SELECT uac.usuario.oidUsuario AS oidUsuario,
-               COALESCE(SUM(COALESCE(a.horas, 0)), 0) AS totalHoras
+               COALESCE(SUM(COALESCE(uac.horasActividad, COALESCE(a.horas, 0))), 0) AS totalHoras
         FROM UsuarioActividadCalendario uac
         JOIN uac.actividadCalendario ac
         JOIN ac.actividad a
@@ -97,7 +107,7 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
     List<UsuarioHorasProjection> sumarHorasPorUsuarios(@Param("oidUsuarios") List<Integer> oidUsuarios);
 
     @Query("""
-        SELECT COALESCE(SUM(COALESCE(a.horas, 0)), 0)
+        SELECT COALESCE(SUM(COALESCE(uac.horasActividad, COALESCE(a.horas, 0))), 0)
         FROM UsuarioActividadCalendario uac
         JOIN uac.actividadCalendario ac
         JOIN ac.actividad a

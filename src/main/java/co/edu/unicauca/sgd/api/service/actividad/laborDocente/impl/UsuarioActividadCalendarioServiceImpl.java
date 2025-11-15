@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,13 +36,16 @@ import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
+import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioCreacionResultadoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioUsuarioDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
 import co.edu.unicauca.sgd.api.exception.AsignacionHorasExcedidasException;
 import co.edu.unicauca.sgd.api.exception.RecursoNoEncontradoException;
@@ -67,6 +71,7 @@ import co.edu.unicauca.sgd.api.repository.EstadoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
 import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.EavAtributoService;
 import co.edu.unicauca.sgd.api.service.actividad.laborDocente.UsuarioActividadCalendarioService;
@@ -81,6 +86,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     private final CalendarioRepository calendarioRepository;
     private final ActividadCalendarioRepository actividadCalendarioRepository;
     private final UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository;
+    private final UsuarioDepartamentoRepository usuarioDepartamentoRepository;
     private final UsuarioActividadCalendarioMapper mapper;
     private final CargoActividadRepository cargoActividadRepository;
     private final EstadoActividadRepository estadoActividadRepository;
@@ -105,6 +111,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             CalendarioRepository calendarioRepository,
             ActividadCalendarioRepository actividadCalendarioRepository,
             UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository,
+            UsuarioDepartamentoRepository usuarioDepartamentoRepository,
             UsuarioActividadCalendarioMapper mapper,
             CargoActividadRepository cargoActividadRepository,
             EstadoActividadRepository estadoActividadRepository,
@@ -122,6 +129,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         this.calendarioRepository = calendarioRepository;
         this.actividadCalendarioRepository = actividadCalendarioRepository;
         this.usuarioActividadCalendarioRepository = usuarioActividadCalendarioRepository;
+        this.usuarioDepartamentoRepository = usuarioDepartamentoRepository;
         this.mapper = mapper;
         this.cargoActividadRepository = cargoActividadRepository;
         this.estadoActividadRepository = estadoActividadRepository;
@@ -140,107 +148,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     @Transactional
     public ApiResponse<UsuarioActividadCalendarioDTOResponse> crearActividadConRelaciones(@Valid UsuarioActividadCalendarioDTORequest request) {
         try {
-            CargoActividad cargoActividad = null;
-            if (request.getOidCargoActividad() != null) {
-                cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
-                        .orElseThrow(() -> new RecursoNoEncontradoException("Cargo de actividad no encontrado"));
-            }
-
-            TipoActividad tipoActividad = resolverTipoActividad(cargoActividad, request, null);
-
-            EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Estado de actividad no encontrado"));
-
-            Calendario calendario = calendarioRepository.findById(request.getOidCalendario())
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
-
-            Map<Integer, Usuario> usuariosValidadosPorContratacion = validarHorasPorContratacionUsuarios(
-                    request.getOidsUsuarios(),
-                    request.getHoras(),
-                    calendario,
-                    null
-            );
-
-            validarMaximoHorasUsuarios(
-                    request.getOidsUsuarios(),
-                    request.getHoras(),
-                    cargoActividad,
-                    tipoActividad,
-                    null
-            );
-
-            // 1. Crear Actividad
-            Actividad actividad = new Actividad();
-            actividad.setTipoActividad(tipoActividad);
-            actividad.setEstadoActividad(estadoActividad);
-            actividad.setNombreActividad(request.getNombreActividad());
-            actividad.setHoras(request.getHoras());
-            actividad.setSemanas(request.getSemanas());
-            actividad = actividadRepository.save(actividad);
-
-            final Actividad actividadFinal = actividad;
-
-            // 2. Obtener Calendario y crear/obtener ActividadCalendario
-            ActividadCalendario actividadCalendario = actividadCalendarioRepository
-                    .findByActividad_OidActividadAndCalendario_Oidcalendario(actividad.getOidActividad(), calendario.getOidcalendario())
-                    .orElseGet(() -> {
-                        ActividadCalendario ac = new ActividadCalendario();
-                        ac.setActividad(actividadFinal);
-                        ac.setCalendario(calendario);
-                        ac.setUsuarioCreacion("system");
-                        return actividadCalendarioRepository.save(ac);
-                    });
-
-            // Si la actividadCalendario ya existía pero el cargo es distinto, actualizamos
-            if (cargoActividad != null || actividadCalendario.getCargoActividad() != null) {
-                actividadCalendario.setCargoActividad(cargoActividad);
-                actividadCalendario = actividadCalendarioRepository.save(actividadCalendario);
-            }
-
-            // 3. Crear relaciones UsuarioActividadCalendario apuntando a actividadCalendario
-            List<Integer> usuariosSolicitados = request.getOidsUsuarios() == null ? List.of() : request.getOidsUsuarios();
-            for (Integer oidUsuario : usuariosSolicitados) {
-                Usuario usuario = usuariosValidadosPorContratacion.get(oidUsuario);
-                if (usuario == null) {
-                    usuario = usuarioRepository.findById(oidUsuario)
-                            .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
-                }
-                // No crear duplicados
-                boolean exists = usuarioActividadCalendarioRepository.existsByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(actividadCalendario.getOidActividadCalendario(), oidUsuario);
-                if (!exists) {
-                    UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
-                    relacion.setUsuario(usuario);
-                    relacion.setActividadCalendario(actividadCalendario);
-                    relacion.setUsuarioCreacion("system");
-                    usuarioActividadCalendarioRepository.save(relacion);
-                }
-            }
-
-            // 4. Guardar atributos EAV usando el servicio central (igual que antes)
-            if (request.getAtributos() != null && !request.getAtributos().isEmpty()) {
-                Map<String, EavAtributo> cacheAtributos = eavAtributoRepository.findAll().stream()
-                        .collect(Collectors.toMap(EavAtributo::getNombre, Function.identity()));
-
-                ActividadBaseDTO actividadBaseDTO = new ActividadBaseDTO();
-                actividadBaseDTO.setOidActividad(actividad.getOidActividad());
-                actividadBaseDTO.setAtributos(
-                        request.getAtributos().stream()
-                                .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
-                                .collect(Collectors.toList())
-                );
-
-                eavAtributoService.guardarAtributosDinamicos(actividadBaseDTO, actividad, cacheAtributos);
-            }
-
-            // 5. Devolver DTOResponse (solo relaciones del actividadCalendario creado)
-            List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository.findByActividadCalendario_OidActividadCalendario(actividadCalendario.getOidActividadCalendario());
-            UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(
-                    actividad, relaciones, calendario,
-                    (request.getAtributos() != null) ? request.getAtributos().stream()
-                            .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
-                            .collect(Collectors.toList()) : List.of()
-            );
-
+            UsuarioActividadCalendarioDTOResponse dto = ejecutarCreacionActividad(request);
             return new ApiResponse<>(201, "Actividad creada con relaciones", dto);
         } catch (UsuarioActividadCalendarioException | RecursoNoEncontradoException
                  | ValidacionNegocioException | AsignacionHorasExcedidasException e) {
@@ -248,6 +156,34 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         } catch (Exception e) {
             throw new UsuarioActividadCalendarioCreacionException("Error al crear la actividad con sus relaciones.", e);
         }
+    }
+
+    @Override
+    public ApiResponse<List<UsuarioActividadCalendarioCreacionResultadoDTO>> crearActividadesConRelaciones(List<UsuarioActividadCalendarioDTORequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new ValidacionNegocioException("Debe suministrar al menos una actividad para crear.");
+        }
+        List<UsuarioActividadCalendarioCreacionResultadoDTO> resultados = new ArrayList<>(requests.size());
+        for (int i = 0; i < requests.size(); i++) {
+            UsuarioActividadCalendarioDTORequest request = requests.get(i);
+            try {
+                UsuarioActividadCalendarioDTOResponse dto = ejecutarCreacionActividad(request);
+                resultados.add(UsuarioActividadCalendarioCreacionResultadoDTO.builder()
+                        .indice(i)
+                        .exito(true)
+                        .mensaje("Actividad creada correctamente.")
+                        .actividad(dto)
+                        .build());
+            } catch (Exception ex) {
+                resultados.add(UsuarioActividadCalendarioCreacionResultadoDTO.builder()
+                        .indice(i)
+                        .exito(false)
+                        .mensaje(ex.getMessage())
+                        .actividad(null)
+                        .build());
+            }
+        }
+        return new ApiResponse<>(200, "Procesamiento masivo finalizado.", resultados);
     }
 
     @Override
@@ -263,46 +199,193 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         }
     }
 
+    private UsuarioActividadCalendarioDTOResponse ejecutarCreacionActividad(UsuarioActividadCalendarioDTORequest request) {
+        if (request.getUsuarios() == null || request.getUsuarios().isEmpty()) {
+            throw new ValidacionNegocioException("Debe especificar al menos un usuario para la actividad.");
+        }
+        Map<Integer, Float> horasPorUsuario = new HashMap<>();
+        Map<Integer, Integer> cargoIdsPorUsuario = new HashMap<>();
+        Set<Integer> cargoIdsSolicitados = new HashSet<>();
+        for (UsuarioActividadCalendarioUsuarioDTO usuarioDTO : request.getUsuarios()) {
+            if (usuarioDTO.getOidUsuario() == null) {
+                throw new ValidacionNegocioException("Cada usuario debe incluir su identificador.");
+            }
+            if (usuarioDTO.getHoras() == null || usuarioDTO.getHoras() <= 0) {
+                throw new ValidacionNegocioException("Las horas por usuario deben ser mayores a cero.");
+            }
+            horasPorUsuario.merge(usuarioDTO.getOidUsuario(), usuarioDTO.getHoras(), Float::sum);
+            if (usuarioDTO.getOidCargoActividad() != null) {
+                cargoIdsPorUsuario.put(usuarioDTO.getOidUsuario(), usuarioDTO.getOidCargoActividad());
+                cargoIdsSolicitados.add(usuarioDTO.getOidCargoActividad());
+            }
+        }
+
+        Map<Integer, CargoActividad> cargosRegistrados = cargarCargos(cargoIdsSolicitados);
+        Map<Integer, CargoActividad> cargoPorUsuario = new HashMap<>();
+        for (Map.Entry<Integer, Integer> entry : cargoIdsPorUsuario.entrySet()) {
+            CargoActividad cargo = cargosRegistrados.get(entry.getValue());
+            if (cargo == null) {
+                throw new RecursoNoEncontradoException("Cargo de actividad no encontrado: " + entry.getValue());
+            }
+            cargoPorUsuario.put(entry.getKey(), cargo);
+        }
+
+        TipoActividad tipoActividad = resolverTipoActividad(cargoPorUsuario.values(), request, null);
+        EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Estado de actividad no encontrado"));
+
+        Calendario calendario = calendarioRepository.findById(request.getOidCalendario())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
+
+        Map<Integer, Integer> departamentosPorUsuario = resolverDepartamentosParaValidaciones(cargoPorUsuario);
+
+        Map<Integer, Usuario> usuariosValidadosPorContratacion = validarHorasPorContratacionUsuarios(
+                horasPorUsuario,
+                calendario,
+                null
+        );
+
+        validarMaximoHorasUsuarios(
+                horasPorUsuario,
+                cargoPorUsuario,
+                departamentosPorUsuario,
+                tipoActividad,
+                null
+        );
+
+        validarMaximoActividadesPorUsuario(new HashSet<>(horasPorUsuario.keySet()), cargoPorUsuario, null);
+
+        Actividad actividad = new Actividad();
+        actividad.setTipoActividad(tipoActividad);
+        actividad.setEstadoActividad(estadoActividad);
+        actividad.setNombreActividad(request.getNombreActividad());
+        actividad.setHoras(horasPorUsuario.values().stream().reduce(0f, Float::sum));
+        actividad.setSemanas(request.getSemanas());
+        actividad = actividadRepository.save(actividad);
+
+        final Actividad actividadFinal = actividad;
+
+        ActividadCalendario actividadCalendario = actividadCalendarioRepository
+                .findByActividad_OidActividadAndCalendario_Oidcalendario(actividad.getOidActividad(), calendario.getOidcalendario())
+                .orElseGet(() -> {
+                    ActividadCalendario ac = new ActividadCalendario();
+                    ac.setActividad(actividadFinal);
+                    ac.setCalendario(calendario);
+                    ac.setUsuarioCreacion("system");
+                    return actividadCalendarioRepository.save(ac);
+                });
+
+        for (Integer oidUsuario : horasPorUsuario.keySet()) {
+            Usuario usuario = usuariosValidadosPorContratacion.getOrDefault(oidUsuario,
+                    usuarioRepository.findById(oidUsuario)
+                            .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado")));
+            boolean exists = usuarioActividadCalendarioRepository.existsByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(
+                    actividadCalendario.getOidActividadCalendario(), oidUsuario);
+            if (!exists) {
+                UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
+                relacion.setUsuario(usuario);
+                relacion.setActividadCalendario(actividadCalendario);
+                relacion.setCargoActividad(cargoPorUsuario.get(oidUsuario));
+                relacion.setHorasActividad(horasPorUsuario.get(oidUsuario));
+                relacion.setUsuarioCreacion("system");
+                usuarioActividadCalendarioRepository.save(relacion);
+            }
+        }
+
+        if (request.getAtributos() != null && !request.getAtributos().isEmpty()) {
+            Map<String, EavAtributo> cacheAtributos = eavAtributoRepository.findAll().stream()
+                    .collect(Collectors.toMap(EavAtributo::getNombre, Function.identity()));
+
+            ActividadBaseDTO actividadBaseDTO = new ActividadBaseDTO();
+            actividadBaseDTO.setOidActividad(actividad.getOidActividad());
+            actividadBaseDTO.setAtributos(
+                    request.getAtributos().stream()
+                            .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
+                            .collect(Collectors.toList())
+            );
+
+            eavAtributoService.guardarAtributosDinamicos(actividadBaseDTO, actividad, cacheAtributos);
+        }
+
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
+                .findByActividadCalendario_OidActividadCalendario(actividadCalendario.getOidActividadCalendario());
+        return mapper.toResponse(
+                actividad,
+                relaciones,
+                calendario,
+                (request.getAtributos() != null) ? request.getAtributos().stream()
+                        .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
+                        .collect(Collectors.toList()) : List.of()
+        );
+    }
+
     private ApiResponse<UsuarioActividadCalendarioDTOResponse> ejecutarActualizacionActividad(
             Integer oidActividad,
             UsuarioActividadCalendarioDTORequest request) {
         Actividad actividad = actividadRepository.findById(oidActividad)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Actividad no encontrada"));
 
-        CargoActividad cargoActividad = null;
-        if (request.getOidCargoActividad() != null) {
-            cargoActividad = cargoActividadRepository.findById(request.getOidCargoActividad())
-                    .orElseThrow(() -> new RecursoNoEncontradoException("Cargo de actividad no encontrado"));
+        if (request.getUsuarios() == null || request.getUsuarios().isEmpty()) {
+            throw new ValidacionNegocioException("Debe especificar al menos un usuario para la actividad.");
+        }
+        Map<Integer, Float> horasPorUsuario = new HashMap<>();
+        Map<Integer, Integer> cargoIdsPorUsuario = new HashMap<>();
+        Set<Integer> cargoIdsSolicitados = new HashSet<>();
+        for (UsuarioActividadCalendarioUsuarioDTO usuarioDTO : request.getUsuarios()) {
+            if (usuarioDTO.getOidUsuario() == null) {
+                throw new ValidacionNegocioException("Cada usuario debe incluir su identificador.");
+            }
+            if (usuarioDTO.getHoras() == null || usuarioDTO.getHoras() <= 0) {
+                throw new ValidacionNegocioException("Las horas por usuario deben ser mayores a cero.");
+            }
+            horasPorUsuario.merge(usuarioDTO.getOidUsuario(), usuarioDTO.getHoras(), Float::sum);
+            if (usuarioDTO.getOidCargoActividad() != null) {
+                cargoIdsPorUsuario.put(usuarioDTO.getOidUsuario(), usuarioDTO.getOidCargoActividad());
+                cargoIdsSolicitados.add(usuarioDTO.getOidCargoActividad());
+            }
+        }
+
+        Map<Integer, CargoActividad> cargosRegistrados = cargarCargos(cargoIdsSolicitados);
+        Map<Integer, CargoActividad> cargoPorUsuario = new HashMap<>();
+        for (Map.Entry<Integer, Integer> entry : cargoIdsPorUsuario.entrySet()) {
+            CargoActividad cargo = cargosRegistrados.get(entry.getValue());
+            if (cargo == null) {
+                throw new RecursoNoEncontradoException("Cargo de actividad no encontrado: " + entry.getValue());
+            }
+            cargoPorUsuario.put(entry.getKey(), cargo);
         }
 
         EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Estado de actividad no encontrado"));
 
-        TipoActividad tipoActividad = resolverTipoActividad(cargoActividad, request, actividad);
+        TipoActividad tipoActividad = resolverTipoActividad(cargoPorUsuario.values(), request, actividad);
 
         Calendario calendarioDestino = calendarioRepository.findById(request.getOidCalendario())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Calendario no encontrado"));
 
+        Map<Integer, Integer> departamentosPorUsuario = resolverDepartamentosParaValidaciones(cargoPorUsuario);
+
         Map<Integer, Usuario> usuariosValidadosPorContratacion = validarHorasPorContratacionUsuarios(
-                request.getOidsUsuarios(),
-                request.getHoras(),
+                horasPorUsuario,
                 calendarioDestino,
                 actividad.getOidActividad()
         );
 
         validarMaximoHorasUsuarios(
-                request.getOidsUsuarios(),
-                request.getHoras(),
-                cargoActividad,
+                horasPorUsuario,
+                cargoPorUsuario,
+                departamentosPorUsuario,
                 tipoActividad,
                 actividad.getOidActividad()
         );
+
+        validarMaximoActividadesPorUsuario(new HashSet<>(horasPorUsuario.keySet()), cargoPorUsuario, actividad.getOidActividad());
 
         // Actualizar datos base de Actividad
         actividad.setTipoActividad(tipoActividad);
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
-        actividad.setHoras(request.getHoras());
+        actividad.setHoras(horasPorUsuario.values().stream().reduce(0f, Float::sum));
         actividad.setSemanas(request.getSemanas());
         actividad = actividadRepository.save(actividad);
 
@@ -319,13 +402,6 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                     return actividadCalendarioRepository.save(ac);
                 });
 
-
-        // Si existe pero cargo distinto, actualizar
-        if (cargoActividad != null || actividadCalendarioDestino.getCargoActividad() != null) {
-            actividadCalendarioDestino.setCargoActividad(cargoActividad);
-            actividadCalendarioDestino = actividadCalendarioRepository.save(actividadCalendarioDestino);
-        }
-
         // Sincronizar relaciones de usuarios:
         //  - obtener relaciones existentes para la actividad en el calendario destino
         List<UsuarioActividadCalendario> relacionesExistentes = usuarioActividadCalendarioRepository.findByActividadCalendario_OidActividadCalendario(actividadCalendarioDestino.getOidActividadCalendario());
@@ -333,7 +409,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                 .map(r -> r.getUsuario().getOidUsuario())
                 .collect(Collectors.toSet());
 
-        Set<Integer> solicitados = new HashSet<>(request.getOidsUsuarios() == null ? List.of() : request.getOidsUsuarios());
+        Set<Integer> solicitados = new HashSet<>(horasPorUsuario.keySet());
 
         // Añadir nuevos
         for (Integer oidUsuario : solicitados) {
@@ -346,6 +422,8 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                 UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
                 relacion.setUsuario(usuario);
                 relacion.setActividadCalendario(actividadCalendarioDestino);
+                relacion.setCargoActividad(cargoPorUsuario.get(oidUsuario));
+                relacion.setHorasActividad(horasPorUsuario.get(oidUsuario));
                 relacion.setUsuarioCreacion("system");
                 usuarioActividadCalendarioRepository.save(relacion);
             }
@@ -356,6 +434,10 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             Integer oidUsuarioExistente = exist.getUsuario().getOidUsuario();
             if (!solicitados.contains(oidUsuarioExistente)) {
                 usuarioActividadCalendarioRepository.deleteByActividadCalendario_OidActividadCalendarioAndUsuario_OidUsuario(actividadCalendarioDestino.getOidActividadCalendario(), oidUsuarioExistente);
+            } else {
+                exist.setCargoActividad(cargoPorUsuario.get(oidUsuarioExistente));
+                exist.setHorasActividad(horasPorUsuario.get(oidUsuarioExistente));
+                usuarioActividadCalendarioRepository.save(exist);
             }
         }
 
@@ -399,9 +481,32 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         return new ApiResponse<>(200, "Actividad actualizada con relaciones", dto);
     }
 
-    private TipoActividad resolverTipoActividad(CargoActividad cargoActividad, UsuarioActividadCalendarioDTORequest request, Actividad actividadActual) {
-        if (cargoActividad != null && cargoActividad.getTipoActividad() != null) {
-            return cargoActividad.getTipoActividad();
+    private Map<Integer, CargoActividad> cargarCargos(Set<Integer> cargoIds) {
+        if (cargoIds == null || cargoIds.isEmpty()) {
+            return Map.of();
+        }
+        return cargoActividadRepository.findAllById(cargoIds).stream()
+                .collect(Collectors.toMap(CargoActividad::getOidCargoActividad, Function.identity()));
+    }
+
+    private TipoActividad resolverTipoActividad(Collection<CargoActividad> cargos, UsuarioActividadCalendarioDTORequest request, Actividad actividadActual) {
+        CargoActividad referencia = null;
+        if (cargos != null) {
+            for (CargoActividad cargo : cargos) {
+                if (cargo == null) {
+                    continue;
+                }
+                if (referencia == null) {
+                    referencia = cargo;
+                } else if (referencia.getTipoActividad() != null && cargo.getTipoActividad() != null
+                        && !Objects.equals(referencia.getTipoActividad().getOidTipoActividad(),
+                        cargo.getTipoActividad().getOidTipoActividad())) {
+                    throw new ValidacionNegocioException("Todos los cargos asociados deben pertenecer al mismo tipo de actividad.");
+                }
+            }
+        }
+        if (referencia != null && referencia.getTipoActividad() != null) {
+            return referencia.getTipoActividad();
         }
         if (request.getOidTipoActividad() != null) {
             return tipoActividadRepository.findById(request.getOidTipoActividad())
@@ -413,34 +518,61 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         throw new ValidacionNegocioException("Debe especificar un cargo o un tipo de actividad para la asignación.");
     }
 
-    private void validarMaximoHorasUsuarios(List<Integer> oidsUsuarios,
-                                            Float horasActividad,
-                                            CargoActividad cargoActividad,
+    private void validarMaximoHorasUsuarios(Map<Integer, Float> horasPorUsuario,
+                                            Map<Integer, CargoActividad> cargoPorUsuario,
+                                            Map<Integer, Integer> departamentoPorUsuario,
                                             TipoActividad tipoActividad,
                                             Integer oidActividadActual) {
-        if (oidsUsuarios == null || oidsUsuarios.isEmpty()) {
+        if (horasPorUsuario == null || horasPorUsuario.isEmpty()) {
             return;
         }
 
-        float horasSolicitadas = horasActividad == null ? 0f : horasActividad;
-        Set<Integer> usuariosUnicos = new HashSet<>(oidsUsuarios);
-
-        Float limiteHorasPorTipo = null;
-        TipoActividad tipoActividadEvaluado = tipoActividad;
-        if (tipoActividadEvaluado == null) {
+        if (tipoActividad == null) {
             throw new ValidacionNegocioException("No se pudo determinar el tipo de actividad para validar horas.");
         }
-        if (cargoActividad == null) {
-            limiteHorasPorTipo = obtenerMaximoHorasPorTipoActividad(tipoActividadEvaluado.getOidTipoActividad());
-        }
 
-        for (Integer oidUsuario : usuariosUnicos) {
-            float horasAsignadas = cargoActividad != null
-                    ? calcularHorasPorUsuarioYCargo(oidUsuario, cargoActividad.getOidCargoActividad(), oidActividadActual)
-                    : calcularHorasPorUsuarioYTipoActividad(oidUsuario, tipoActividadEvaluado.getOidTipoActividad(), oidActividadActual);
+        Float limiteHorasPorTipo = (cargoPorUsuario == null || cargoPorUsuario.isEmpty())
+                ? obtenerMaximoHorasPorTipoActividad(tipoActividad.getOidTipoActividad())
+                : null;
 
-            float limite = cargoActividad != null
-                    ? (cargoActividad.getMaxHorasSemana() == null ? Float.MAX_VALUE : cargoActividad.getMaxHorasSemana())
+        Map<Integer, Map<Integer, Float>> horasSolicitadasPorCargoDepto = new HashMap<>();
+
+        for (Map.Entry<Integer, Float> entry : horasPorUsuario.entrySet()) {
+            Integer oidUsuario = entry.getKey();
+            float horasSolicitadas = entry.getValue() == null ? 0f : entry.getValue();
+            CargoActividad cargoUsuario = cargoPorUsuario != null ? cargoPorUsuario.get(oidUsuario) : null;
+
+            if (cargoUsuario != null && esCargoTipoProgramaDepartamento(cargoUsuario)) {
+                if (cargoUsuario.getMaxHorasSemana() == null) {
+                    continue;
+                }
+                Integer oidDepartamento = departamentoPorUsuario != null ? departamentoPorUsuario.get(oidUsuario) : null;
+                if (oidDepartamento == null) {
+                    throw new ValidacionNegocioException(
+                            String.format("El usuario %d no tiene un departamento asignado para el cargo %s.",
+                                    oidUsuario, cargoUsuario.getNombre()));
+                }
+                Map<Integer, Float> horasPorDepto = horasSolicitadasPorCargoDepto
+                        .computeIfAbsent(cargoUsuario.getOidCargoActividad(), id -> new HashMap<>());
+                float acumuladoDepto = horasPorDepto.getOrDefault(oidDepartamento, 0f) + horasSolicitadas;
+                horasPorDepto.put(oidDepartamento, acumuladoDepto);
+
+                float horasAsignadasDepto = calcularHorasPorDepartamentoYCargo(
+                        oidDepartamento, cargoUsuario.getOidCargoActividad(), oidActividadActual);
+                if ((horasAsignadasDepto + acumuladoDepto) - cargoUsuario.getMaxHorasSemana() > EPSILON) {
+                    throw new ValidacionNegocioException(
+                            String.format("El departamento %d supera el máximo de %.2f horas para el cargo %s.",
+                                    oidDepartamento, cargoUsuario.getMaxHorasSemana(), cargoUsuario.getNombre()));
+                }
+                continue;
+            }
+
+            float horasAsignadas = cargoUsuario != null
+                    ? calcularHorasPorUsuarioYCargo(oidUsuario, cargoUsuario.getOidCargoActividad(), oidActividadActual)
+                    : calcularHorasPorUsuarioYTipoActividad(oidUsuario, tipoActividad.getOidTipoActividad(), oidActividadActual);
+
+            float limite = cargoUsuario != null
+                    ? (cargoUsuario.getMaxHorasSemana() == null ? Float.MAX_VALUE : cargoUsuario.getMaxHorasSemana())
                     : (limiteHorasPorTipo == null ? Float.MAX_VALUE : limiteHorasPorTipo);
 
             if (limite != Float.MAX_VALUE && (horasAsignadas + horasSolicitadas) - limite > EPSILON) {
@@ -454,7 +586,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             return 0f;
         }
         List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
-                .findByUsuario_OidUsuarioAndActividadCalendario_CargoActividad_OidCargoActividad(oidUsuario, oidCargoActividad);
+                .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(oidUsuario, oidCargoActividad);
         return sumarHorasRelacionadas(relaciones, oidActividadActual);
     }
 
@@ -476,6 +608,77 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         return sumarHorasRelacionadas(relaciones, oidActividadActual);
     }
 
+    private void validarMaximoActividadesPorUsuario(Set<Integer> usuarios,
+                                                    Map<Integer, CargoActividad> cargoPorUsuario,
+                                                    Integer oidActividadActual) {
+        if (usuarios == null || usuarios.isEmpty() || cargoPorUsuario == null || cargoPorUsuario.isEmpty()) {
+            return;
+        }
+        for (Integer oidUsuario : usuarios) {
+            CargoActividad cargo = cargoPorUsuario.get(oidUsuario);
+            if (cargo == null || cargo.getMaxActividades() == null) {
+                continue;
+            }
+            List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
+                    .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(oidUsuario, cargo.getOidCargoActividad());
+            int actividadesAsignadas = contarActividadesRelacionadas(relaciones, oidActividadActual);
+            if (actividadesAsignadas + 1 > cargo.getMaxActividades()) {
+                throw new ValidacionNegocioException(
+                        String.format("El usuario %d ya alcanzó el máximo de %d actividades para el cargo %s.",
+                                oidUsuario, cargo.getMaxActividades(), cargo.getNombre()));
+            }
+        }
+    }
+
+    private int contarActividadesRelacionadas(List<UsuarioActividadCalendario> relaciones, Integer oidActividadActual) {
+        if (relaciones == null || relaciones.isEmpty()) {
+            return 0;
+        }
+        return (int) relaciones.stream()
+                .map(rel -> rel.getActividadCalendario() != null ? rel.getActividadCalendario().getActividad() : null)
+                .filter(Objects::nonNull)
+                .map(Actividad::getOidActividad)
+                .filter(Objects::nonNull)
+                .filter(oid -> oidActividadActual == null || !oid.equals(oidActividadActual))
+                .distinct()
+                .count();
+    }
+
+    private float calcularHorasPorDepartamentoYCargo(Integer oidDepartamento, Integer oidCargoActividad, Integer oidActividadActual) {
+        if (oidDepartamento == null || oidCargoActividad == null) {
+            return 0f;
+        }
+        List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
+                .findByDepartamentoAndCargo(oidDepartamento, oidCargoActividad);
+        return sumarHorasPorRelaciones(relaciones, oidActividadActual);
+    }
+
+    private float sumarHorasPorRelaciones(List<UsuarioActividadCalendario> relaciones, Integer oidActividadActual) {
+        if (relaciones == null || relaciones.isEmpty()) {
+            return 0f;
+        }
+        double total = 0d;
+        for (UsuarioActividadCalendario relacion : relaciones) {
+            if (relacion == null) {
+                continue;
+            }
+            ActividadCalendario actividadCalendario = relacion.getActividadCalendario();
+            Actividad actividad = actividadCalendario != null ? actividadCalendario.getActividad() : null;
+            Integer oidActividad = actividad != null ? actividad.getOidActividad() : null;
+            if (oidActividad != null && oidActividad.equals(oidActividadActual)) {
+                continue;
+            }
+            Float horas = relacion.getHorasActividad();
+            if (horas == null && actividad != null) {
+                horas = actividad.getHoras();
+            }
+            if (horas != null) {
+                total += horas;
+            }
+        }
+        return (float) total;
+    }
+
     private float sumarHorasRelacionadas(List<UsuarioActividadCalendario> relaciones, Integer oidActividadActual) {
         if (relaciones == null || relaciones.isEmpty()) {
             return 0f;
@@ -483,15 +686,21 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         Set<Integer> actividadesProcesadas = new HashSet<>();
         double total = 0d;
         for (UsuarioActividadCalendario relacion : relaciones) {
-            if (relacion == null || relacion.getActividadCalendario() == null) {
+            if (relacion == null) {
                 continue;
             }
-            Actividad actividad = relacion.getActividadCalendario().getActividad();
-            if (actividad == null) {
-                continue;
-            }
-            Integer oidActividad = actividad.getOidActividad();
+            ActividadCalendario actividadCalendario = relacion.getActividadCalendario();
+            Actividad actividad = actividadCalendario != null ? actividadCalendario.getActividad() : null;
+            Integer oidActividad = actividad != null ? actividad.getOidActividad() : null;
             if (oidActividad != null && oidActividad.equals(oidActividadActual)) {
+                continue;
+            }
+            Float horasRelacion = relacion.getHorasActividad();
+            if (horasRelacion != null) {
+                total += horasRelacion;
+                continue;
+            }
+            if (actividad == null) {
                 continue;
             }
             if (oidActividad != null && !actividadesProcesadas.add(oidActividad)) {
@@ -514,6 +723,42 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                 .filter(value -> value != null)
                 .max(Float::compare)
                 .orElse(null);
+    }
+
+    private Map<Integer, Integer> resolverDepartamentosParaValidaciones(Map<Integer, CargoActividad> cargoPorUsuario) {
+        if (cargoPorUsuario == null || cargoPorUsuario.isEmpty()) {
+            return Map.of();
+        }
+        Set<Integer> usuariosNecesitanDepartamento = cargoPorUsuario.entrySet().stream()
+                .filter(entry -> esCargoTipoProgramaDepartamento(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+        if (usuariosNecesitanDepartamento.isEmpty()) {
+            return Map.of();
+        }
+        return obtenerDepartamentosPorUsuarios(usuariosNecesitanDepartamento);
+    }
+
+    private Map<Integer, Integer> obtenerDepartamentosPorUsuarios(Set<Integer> usuarios) {
+        if (usuarios == null || usuarios.isEmpty()) {
+            return Map.of();
+        }
+        List<UsuarioDepartamento> asignaciones = usuarioDepartamentoRepository.findAllById(usuarios);
+        Map<Integer, Integer> departamentoPorUsuario = asignaciones.stream()
+                .collect(Collectors.toMap(UsuarioDepartamento::getOidUsuario,
+                        ud -> ud.getDepartamento() != null ? ud.getDepartamento().getOidDepartamento() : null));
+        for (Integer usuario : usuarios) {
+            Integer departamento = departamentoPorUsuario.get(usuario);
+            if (departamento == null) {
+                throw new ValidacionNegocioException(
+                        String.format("El usuario %d no tiene un departamento asignado.", usuario));
+            }
+        }
+        return departamentoPorUsuario;
+    }
+
+    private boolean esCargoTipoProgramaDepartamento(CargoActividad cargoActividad) {
+        return cargoActividad != null && "PROGRAMADEPARTAMENTO".equalsIgnoreCase(cargoActividad.getTipo());
     }
 
     @Override
@@ -921,23 +1166,46 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             throw new ValidacionNegocioException("No existe un límite de horas configurado para el cargo o tipo de actividad proporcionado.");
         }
 
+        boolean validarPorDepartamento = cargoActividad != null && esCargoTipoProgramaDepartamento(cargoActividad);
         boolean puedeAsignar = true;
         Float menorDisponible = null;
         Integer usuarioMenorCupo = null;
 
-        for (Integer oidUsuario : usuariosEvaluados) {
-            float horasAsignadas = cargoActividad != null
-                    ? calcularHorasPorUsuarioYCargo(oidUsuario, cargoActividad.getOidCargoActividad(), null)
-                    : calcularHorasPorUsuarioYTipoActividad(oidUsuario, tipoActividad.getOidTipoActividad(), null);
-
-            float disponible = limiteHoras - horasAsignadas;
-            if (disponible <= EPSILON) {
-                puedeAsignar = false;
+        if (validarPorDepartamento) {
+            Map<Integer, Integer> departamentos = obtenerDepartamentosPorUsuarios(usuariosEvaluados);
+            Map<Integer, Float> horasDepartamento = new HashMap<>();
+            for (Integer depto : new HashSet<>(departamentos.values())) {
+                horasDepartamento.put(depto,
+                        calcularHorasPorDepartamentoYCargo(depto, cargoActividad.getOidCargoActividad(), null));
             }
-            float disponibleNormalizado = disponible < 0 ? 0f : disponible;
-            if (menorDisponible == null || disponibleNormalizado < menorDisponible) {
-                menorDisponible = disponibleNormalizado;
-                usuarioMenorCupo = oidUsuario;
+
+            for (Integer oidUsuario : usuariosEvaluados) {
+                Integer depto = departamentos.get(oidUsuario);
+                float disponible = limiteHoras - horasDepartamento.getOrDefault(depto, 0f);
+                if (disponible <= EPSILON) {
+                    puedeAsignar = false;
+                }
+                float disponibleNormalizado = disponible < 0 ? 0f : disponible;
+                if (menorDisponible == null || disponibleNormalizado < menorDisponible) {
+                    menorDisponible = disponibleNormalizado;
+                    usuarioMenorCupo = oidUsuario;
+                }
+            }
+        } else {
+            for (Integer oidUsuario : usuariosEvaluados) {
+                float horasAsignadas = cargoActividad != null
+                        ? calcularHorasPorUsuarioYCargo(oidUsuario, cargoActividad.getOidCargoActividad(), null)
+                        : calcularHorasPorUsuarioYTipoActividad(oidUsuario, tipoActividad.getOidTipoActividad(), null);
+
+                float disponible = limiteHoras - horasAsignadas;
+                if (disponible <= EPSILON) {
+                    puedeAsignar = false;
+                }
+                float disponibleNormalizado = disponible < 0 ? 0f : disponible;
+                if (menorDisponible == null || disponibleNormalizado < menorDisponible) {
+                    menorDisponible = disponibleNormalizado;
+                    usuarioMenorCupo = oidUsuario;
+                }
             }
         }
 
@@ -1009,26 +1277,25 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         return fecha.getFechaFin();
     }
 
-    private Map<Integer, Usuario> validarHorasPorContratacionUsuarios(List<Integer> oidsUsuarios,
-                                                                      Float horasActividad,
+    private Map<Integer, Usuario> validarHorasPorContratacionUsuarios(Map<Integer, Float> horasPorUsuario,
                                                                       Calendario calendario,
                                                                       Integer oidActividadActual) {
-        if (oidsUsuarios == null || oidsUsuarios.isEmpty()) {
+        if (horasPorUsuario == null || horasPorUsuario.isEmpty()) {
             return Map.of();
         }
         if (calendario == null) {
             throw new ValidacionNegocioException("Debe especificar un calendario válido para la asignación.");
         }
-        float horasSolicitadas = horasActividad == null ? 0f : horasActividad;
-        Set<Integer> usuariosUnicos = new HashSet<>(oidsUsuarios);
         Map<Integer, Usuario> usuariosProcesados = new HashMap<>();
 
-        for (Integer oidUsuario : usuariosUnicos) {
+        for (Map.Entry<Integer, Float> entry : horasPorUsuario.entrySet()) {
+            Integer oidUsuario = entry.getKey();
             Usuario usuario = usuarioRepository.findById(oidUsuario)
                     .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
 
             float limite = determinarLimiteHorasPorContratacion(calendario, usuario);
             float horasAsignadas = calcularHorasTotalesUsuario(oidUsuario, oidActividadActual);
+            float horasSolicitadas = entry.getValue() == null ? 0f : entry.getValue();
             if ((horasAsignadas + horasSolicitadas) - limite > EPSILON) {
                 throw new ValidacionNegocioException(
                         String.format("El usuario %s supera el máximo de %.2f horas permitidas para su contratación.",
