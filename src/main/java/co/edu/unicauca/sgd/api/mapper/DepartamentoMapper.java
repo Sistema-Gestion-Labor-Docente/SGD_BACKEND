@@ -13,12 +13,14 @@ public class DepartamentoMapper {
         Departamento d = new Departamento();
         d.setNombre(dto.getNombre());
         d.setFacultad(dto.getFacultad());
+        d.setCodigoKira(dto.getCodigoKira());
         return d;
     }
 
     public void actualizarCamposBasicos(Departamento existente, DepartamentoDTORequest dto) {
         existente.setNombre(dto.getNombre());
         existente.setFacultad(dto.getFacultad());
+        existente.setCodigoKira(dto.getCodigoKira());
         // jefe lo actualiza el service
     }
 
@@ -27,6 +29,7 @@ public class DepartamentoMapper {
         dto.setOidDepartamento(entidad.getOidDepartamento());
         dto.setNombre(entidad.getNombre());
         dto.setFacultad(entidad.getFacultad());
+        dto.setCodigoKira(entidad.getCodigoKira());
 
         if (entidad.getJefe() != null) {
             dto.setJefeOidUsuario(entidad.getJefe().getOidUsuario());

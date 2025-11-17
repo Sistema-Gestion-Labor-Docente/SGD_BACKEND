@@ -11,5 +11,6 @@ public class ProgramaDTORequest {
     @NotNull
     private String nombre;
     private String nombreCorto;
+    private String codigoKira;
     private Integer coordinadorOidUsuario;
 }

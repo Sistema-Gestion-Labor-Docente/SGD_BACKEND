@@ -9,6 +9,7 @@ public class DepartamentoDTORequest {
 
     private String nombre;
     private String facultad;
+    private String codigoKira;
     private Integer jefeOidUsuario;
 
 }
