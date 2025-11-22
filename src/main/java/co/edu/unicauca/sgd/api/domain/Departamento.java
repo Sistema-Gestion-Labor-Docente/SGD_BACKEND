@@ -32,9 +32,6 @@ public class Departamento {
   @Column(name = "FACULTAD", nullable = false)
   private String facultad;
 
-  @Column(name = "CODIGOKIRA", unique = true)
-  private String codigoKira;
-
   @OneToOne(fetch = FetchType.LAZY, optional = true)
   @JoinColumn(name = "JEFE_OIDUSUARIO", unique = true)
   private Usuario jefe;

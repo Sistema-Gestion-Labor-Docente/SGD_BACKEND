@@ -13,14 +13,12 @@ public class ProgramaMapper {
         Programa programa = new Programa();
         programa.setNombre(dto.getNombre());
         programa.setNombreCorto(dto.getNombreCorto());
-        programa.setCodigoKira(dto.getCodigoKira());
         return programa;
     }
 
     public void actualizarCamposBasicos(Programa existente, ProgramaDTORequest dto) {
         existente.setNombre(dto.getNombre());
         existente.setNombreCorto(dto.getNombreCorto());
-        existente.setCodigoKira(dto.getCodigoKira());
     }
 
     public ProgramaDTOResponse toResponse(Programa entidad) {
@@ -28,7 +26,6 @@ public class ProgramaMapper {
         dto.setOidPrograma(entidad.getOidPrograma());
         dto.setNombre(entidad.getNombre());
         dto.setNombreCorto(entidad.getNombreCorto());
-        dto.setCodigoKira(entidad.getCodigoKira());
 
         if (entidad.getCoordinador() != null) {
             dto.setCoordinadorOidUsuario(entidad.getCoordinador().getOidUsuario());

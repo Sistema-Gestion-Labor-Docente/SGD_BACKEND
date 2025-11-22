@@ -15,7 +15,6 @@
         <constraints nullable="false"/>
       </column>
       <column name="FACULTAD" type="VARCHAR(255)"/>
-      <column name="CODIGOKIRA" type="VARCHAR(50)"/>
       <column name="FECHACREACION" type="TIMESTAMP">
         <constraints nullable="false"/>
       </column>
