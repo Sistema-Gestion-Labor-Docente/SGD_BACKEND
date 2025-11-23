@@ -120,7 +120,6 @@ class UsuarioDepartamentoRepositoryTest {
         actividad.setTipoActividad(tipoActividad);
         actividad.setEstadoActividad(estadoAprobado);
         actividad.setNombreActividad("Actividad " + identificacion);
-        actividad.setHoras(4f);
         actividad.setSemanas(1f);
         entityManager.persist(actividad);
 
@@ -140,6 +139,7 @@ class UsuarioDepartamentoRepositoryTest {
         UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
         relacion.setUsuario(usuario);
         relacion.setActividadCalendario(actividadCalendario);
+        relacion.setHorasActividad(4f);
         relacion.setUsuarioCreacion("system");
         entityManager.persist(relacion);
 

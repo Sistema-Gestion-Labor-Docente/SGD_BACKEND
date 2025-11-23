@@ -9,5 +9,6 @@ import co.edu.unicauca.sgd.api.domain.Calendario;
 @Repository
 public interface CalendarioRepository extends JpaRepository<Calendario, Integer>, JpaSpecificationExecutor<Calendario> {
 
+    boolean existsByAnioCalendarioAndNumeroCalendario(String anioCalendario, Integer numeroCalendario);
 }
 

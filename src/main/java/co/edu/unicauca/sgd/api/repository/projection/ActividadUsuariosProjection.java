@@ -6,7 +6,6 @@ public interface ActividadUsuariosProjection {
     Integer getOidCargoActividad();
     Integer getOidCalendario();
     String getNombreActividad();
-    Double getHoras();
     Double getSemanas();
     Integer getIdLaborDocente();
     Boolean getInformeEjecutivo();

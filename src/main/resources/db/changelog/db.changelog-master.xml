@@ -6,6 +6,9 @@
           http://www.liquibase.org/xml/ns/dbchangelog
           https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
 
+    <include file="db/changelog/0000-15082025-core-sdg.xml"/>
+    <include file="db/changelog/0000-15082025-core-sdg-constraints.xml"/>
+    <include file="db/changelog/0000-15082025-core-sdg-seed.xml" context="data"/>
     <include file="db/changelog/0001-17082025-domain-tipo-fecha.xml"/>
     <include file="db/changelog/0002-17082025-sequences.xml"/>
     <include file="db/changelog/0003-17082025-table-calendario.xml"/>
@@ -28,4 +31,6 @@
     <include file="db/changelog/0020-24092025-seed-new-eav-atributos.xml" context="data"/>
     <include file="db/changelog/0021-17012026-table-necesidad.xml"/>
     <include file="db/changelog/0022-17012026-table-asignacion.xml"/>
+    <include file="db/changelog/0023-17012026-seed-usuario-departamento-relations.xml"/>
+    <include file="db/changelog/0024-17012026-actividad-asignaciondefault.xml"/>
 </databaseChangeLog>

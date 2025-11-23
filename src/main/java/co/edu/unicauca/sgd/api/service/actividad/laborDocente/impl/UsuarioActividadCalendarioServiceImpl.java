@@ -259,7 +259,6 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         actividad.setTipoActividad(tipoActividad);
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
-        actividad.setHoras(horasPorUsuario.values().stream().reduce(0f, Float::sum));
         actividad.setSemanas(request.getSemanas());
         actividad = actividadRepository.save(actividad);
 
@@ -385,7 +384,6 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         actividad.setTipoActividad(tipoActividad);
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
-        actividad.setHoras(horasPorUsuario.values().stream().reduce(0f, Float::sum));
         actividad.setSemanas(request.getSemanas());
         actividad = actividadRepository.save(actividad);
 
@@ -669,9 +667,6 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                 continue;
             }
             Float horas = relacion.getHorasActividad();
-            if (horas == null && actividad != null) {
-                horas = actividad.getHoras();
-            }
             if (horas != null) {
                 total += horas;
             }
@@ -699,16 +694,6 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             if (horasRelacion != null) {
                 total += horasRelacion;
                 continue;
-            }
-            if (actividad == null) {
-                continue;
-            }
-            if (oidActividad != null && !actividadesProcesadas.add(oidActividad)) {
-                continue;
-            }
-            Float horas = actividad.getHoras();
-            if (horas != null) {
-                total += horas;
             }
         }
         return (float) total;

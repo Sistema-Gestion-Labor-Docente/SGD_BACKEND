@@ -124,16 +124,6 @@ public class ActividadServiceImpl implements ActividadService {
 
         for (ActividadBaseDTO dto : actividadesDTO) {
             try {
-                /* 
-                if (dto.getEsLaborDocente()) {
-                    Optional<Actividad> existente = actividadRepository.findByIdLaborDocente(dto.getIdLaborDocente());
-                    if (existente.isPresent()) {
-                        logger.info("Actividad duplicada detectada con idLaborDocente: " + dto.getIdLaborDocente());
-                        errores.add("Actividad duplicada con idLaborDocente: " + dto.getIdLaborDocente());
-                        continue;
-                    }
-                }
-                */
                 if (dto.getTipoActividad() == null || dto.getTipoActividad().getOidTipoActividad() == null) {
                     throw new ValidationException(400, "El tipo de actividad no puede ser nulo.");
                 }
@@ -141,9 +131,6 @@ public class ActividadServiceImpl implements ActividadService {
                     .orElseThrow(() -> new ValidationException(400, "El tipo de actividad con ID "
                             + dto.getTipoActividad().getOidTipoActividad() + " no existe."));
 
-                if (dto.getHoras() == null || dto.getHoras() <= 0) {
-                    throw new ValidationException(400, "La cantidad de horas no puede ser nula o negativa.");
-                }
                 if (dto.getSemanas() == null || dto.getSemanas() <= 0) {
                     throw new ValidationException(400, "La cantidad de semanas no puede ser nula o negativa.");
                 }
@@ -229,7 +216,6 @@ public class ActividadServiceImpl implements ActividadService {
                     .collect(Collectors.toMap(EavAtributo::getNombre, Function.identity()));
 
             eavAtributoService.actualizarAtributosDinamicos(actividadDTO, actividadExistente, cacheAtributos);
-            actividadExistente.setAsignacionDefault(false);
 
             Actividad actividadActualizada = actividadRepository.save(actividadExistente);
             return new ApiResponse<>(200, "Actividad actualizada correctamente.", actividadActualizada);

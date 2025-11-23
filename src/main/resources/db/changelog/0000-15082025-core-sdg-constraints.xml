@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0000-15082025-core-sdg-constraints" author="Codex">
+    <addUniqueConstraint tableName="ESTADOACTIVIDAD" columnNames="NOMBRE" constraintName="UQ_ESTADOACTIVIDAD_NOMBRE"/>
+    <addUniqueConstraint tableName="TIPOACTIVIDAD" columnNames="NOMBRE" constraintName="UQ_TIPOACTIVIDAD_NOMBRE"/>
+    <addUniqueConstraint tableName="ESTADOUSUARIO" columnNames="NOMBRE" constraintName="UQ_ESTADOUSUARIO_NOMBRE"/>
+    <addUniqueConstraint tableName="ROL" columnNames="NOMBRE" constraintName="UQ_ROL_NOMBRE"/>
+  </changeSet>
+</databaseChangeLog>

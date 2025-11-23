@@ -390,7 +390,6 @@ public class AsignacionServiceImpl implements AsignacionService {
 
             Actividad actividad = asignacion.getActividad();
             if (actividad != null) {
-                actividad.setHoras(horasPorDocente);
                 actividad.setSemanas(semanasDocencia);
                 actividad.setNombreActividad(asignacion.getActividad().getNombreActividad());
             }

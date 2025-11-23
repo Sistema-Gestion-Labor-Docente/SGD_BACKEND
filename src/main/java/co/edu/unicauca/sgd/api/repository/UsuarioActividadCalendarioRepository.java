@@ -97,20 +97,17 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
 
     @Query("""
         SELECT uac.usuario.oidUsuario AS oidUsuario,
-               COALESCE(SUM(COALESCE(uac.horasActividad, COALESCE(a.horas, 0))), 0) AS totalHoras
+               COALESCE(SUM(COALESCE(uac.horasActividad, 0)), 0) AS totalHoras
         FROM UsuarioActividadCalendario uac
-        JOIN uac.actividadCalendario ac
-        JOIN ac.actividad a
         WHERE uac.usuario.oidUsuario IN :oidUsuarios
         GROUP BY uac.usuario.oidUsuario
     """)
     List<UsuarioHorasProjection> sumarHorasPorUsuarios(@Param("oidUsuarios") List<Integer> oidUsuarios);
 
     @Query("""
-        SELECT COALESCE(SUM(COALESCE(uac.horasActividad, COALESCE(a.horas, 0))), 0)
+        SELECT COALESCE(SUM(COALESCE(uac.horasActividad, 0)), 0)
         FROM UsuarioActividadCalendario uac
         JOIN uac.actividadCalendario ac
-        JOIN ac.actividad a
         WHERE uac.usuario.oidUsuario = :oidUsuario
     """)
     Float sumarHorasPorUsuario(@Param("oidUsuario") Integer oidUsuario);

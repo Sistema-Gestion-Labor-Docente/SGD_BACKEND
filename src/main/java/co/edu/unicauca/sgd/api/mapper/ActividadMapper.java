@@ -23,12 +23,9 @@ public class ActividadMapper {
         // Mapear los campos básicos
         actividad.setOidActividad(actividadDTO.getOidActividad());
         actividad.setNombreActividad(actividadDTO.getNombreActividad());
-        actividad.setHoras(actividadDTO.getHoras());
         actividad.setSemanas(actividadDTO.getSemanas());
-        actividad.setInformeEjecutivo(actividadDTO.getInformeEjecutivo());
         actividad.setFechaCreacion(actividadDTO.getFechaCreacion());
         actividad.setFechaActualizacion(actividadDTO.getFechaActualizacion());
-        actividad.setIdLaborDocente(actividadDTO.getIdLaborDocente());
 
         // Mapear el tipo de actividad si está presente
         if (actividadDTO.getTipoActividad() != null) {
@@ -55,8 +52,6 @@ public class ActividadMapper {
      */
     public void actualizarCamposBasicos(Actividad actividadExistente, ActividadBaseDTO actividadDTO) {
         actividadExistente.setNombreActividad(actividadDTO.getNombreActividad());
-        actividadExistente.setHoras(actividadDTO.getHoras());
         actividadExistente.setSemanas(actividadDTO.getSemanas());
-        actividadExistente.setInformeEjecutivo(actividadDTO.getInformeEjecutivo());
     }
 }
