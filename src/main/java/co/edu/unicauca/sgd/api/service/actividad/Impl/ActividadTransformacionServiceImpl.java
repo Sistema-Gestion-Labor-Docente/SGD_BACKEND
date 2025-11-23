@@ -25,13 +25,12 @@ public class ActividadTransformacionServiceImpl implements ActividadTransformaci
 
     @Override
     public Map<String, Object> transformarActividad(Actividad actividad, float horasTotales) {
-        double porcentaje = calculoService.calcularPorcentaje(actividad.getHoras(), horasTotales);
+        double porcentaje = 0d;
 
 
         return Map.of(
                 "oidActividad", actividad.getOidActividad(),
                 "nombre", actividad.getNombreActividad(),
-                "horas", actividad.getHoras(),
                 "porcentaje", porcentaje);
     }
 

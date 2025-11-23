@@ -58,7 +58,6 @@ public class UsuarioActividadCalendarioMapper {
 
         actividadDto.setOidEstadoActividad(actividad.getEstadoActividad() != null ? actividad.getEstadoActividad().getOidEstadoActividad() : null);
         actividadDto.setNombreActividad(actividad.getNombreActividad());
-        actividadDto.setHoras(actividad.getHoras());
         actividadDto.setSemanas(actividad.getSemanas());
         actividadDto.setFechaCreacion(actividad.getFechaCreacion());
         actividadDto.setFechaActualizacion(actividad.getFechaActualizacion());

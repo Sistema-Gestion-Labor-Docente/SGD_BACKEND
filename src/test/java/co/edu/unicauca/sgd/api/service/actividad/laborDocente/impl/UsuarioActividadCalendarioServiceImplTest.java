@@ -352,13 +352,12 @@ class UsuarioActividadCalendarioServiceImplTest {
     }
 
     private UsuarioActividadCalendario relacionConHoras(float horas) {
-        Actividad actividad = new Actividad();
-        actividad.setHoras(horas);
         ActividadCalendario actividadCalendario = new ActividadCalendario();
-        actividadCalendario.setActividad(actividad);
+        actividadCalendario.setActividad(new Actividad());
 
         UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
         relacion.setActividadCalendario(actividadCalendario);
+        relacion.setHorasActividad(horas);
         return relacion;
     }
 

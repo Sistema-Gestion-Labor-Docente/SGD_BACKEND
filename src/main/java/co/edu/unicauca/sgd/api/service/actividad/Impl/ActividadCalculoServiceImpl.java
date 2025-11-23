@@ -18,9 +18,7 @@ public class ActividadCalculoServiceImpl implements ActividadCalculoService {
 
     @Override
     public float calcularTotalHoras(List<Actividad> actividades) {
-        return (float) actividades.stream()
-                .mapToDouble(Actividad::getHoras)
-                .sum();
+        return 0f;
     }
 
     @Override

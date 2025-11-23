@@ -27,23 +27,11 @@ public class Actividad {
     @JoinColumn(name = "OIDESTADOACTIVIDAD", nullable = false)
     private EstadoActividad estadoActividad;
 
-    @Column(name = "NOMBREACTIVIDAD", nullable = false, length = 255)
-    private String nombreActividad;
+  @Column(name = "NOMBREACTIVIDAD", nullable = false, length = 255)
+  private String nombreActividad;
 
-    @Column(name = "HORAS")
-    private Float horas;
-
-    @Column(name = "SEMANAS")
-    private Float semanas;
-
-    @Column(name = "ASIGNACIONDEFAULT")
-    private Boolean asignacionDefault = false;
-
-    @Column(name = "IDLABORDOCENTE")
-    private Integer idLaborDocente;
-
-    @Column(name = "INFORMEEJECUTIVO")
-    private Boolean informeEjecutivo;
+  @Column(name = "SEMANAS")
+  private Float semanas;
 
     @Column(name = "FECHACREACION", updatable = false, nullable = false)
     @CreationTimestamp

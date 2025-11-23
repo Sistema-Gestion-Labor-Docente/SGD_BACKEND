@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -163,6 +164,14 @@ public class CalendarioServiceImpl implements CalendarioService {
     public ApiResponse<CalendarioDTOResponse> guardar(CalendarioDTORequest request) {
         try {
             Calendario calendario = calendarioMapper.convertToEntity(request);
+
+            if (calendarioRepository.existsByAnioCalendarioAndNumeroCalendario(
+                    calendario.getAnioCalendario(), calendario.getNumeroCalendario())) {
+                throw new CalendarioOperacionNoPermitidaException(
+                        "Ya existe un calendario para el año " + calendario.getAnioCalendario()
+                        + " y número " + calendario.getNumeroCalendario() + ".");
+            }
+
             calendario.setUsuarioCreacion(
                 StringUtils.hasText(calendario.getUsuarioCreacion()) ? calendario.getUsuarioCreacion() : "Usuario"
             );
@@ -182,6 +191,11 @@ public class CalendarioServiceImpl implements CalendarioService {
             return new ApiResponse<>(201, "Calendario guardado correctamente.", dto);
         } catch (CalendarioOperacionNoPermitidaException e) {
             return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (DataIntegrityViolationException e) {
+            String msg = "Ya existe un calendario para el año " + request.getAnioCalendario()
+                    + " y número " + request.getNumeroCalendario() + ".";
+            logger.warn("Violación de integridad al guardar calendario duplicado: {}", e.getMessage());
+            return new ApiResponse<>(400, msg, null);
         } catch (Exception e) {
             CalendarioProcesoException ex =
                     new CalendarioProcesoException("Error al guardar el calendario", e);

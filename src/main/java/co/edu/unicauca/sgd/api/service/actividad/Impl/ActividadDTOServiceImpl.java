@@ -36,23 +36,15 @@ public class ActividadDTOServiceImpl implements ActividadDTOService {
         // Obtener los atributos dinámicos en formato AtributoDTO
         List<AtributoDTO> atributos = eavAtributoService.obtenerAtributosPorActividad(actividad);
 
-        // Determinar si tiene relación con LaborDocente
-        Integer idLabor = actividad.getIdLaborDocente();
-        Boolean esLabor = (idLabor != null);
-
         return new ActividadBaseDTO(
                 actividad.getOidActividad(),
                 actividad.getTipoActividad(),
                 actividad.getEstadoActividad().getOidEstadoActividad(),
                 actividad.getNombreActividad(),
-                actividad.getHoras(),
                 actividad.getSemanas(),
-                actividad.getInformeEjecutivo(),
                 actividad.getFechaCreacion(),
                 actividad.getFechaActualizacion(),
-                atributos,
-                actividad.getIdLaborDocente(),
-                esLabor);
+                atributos);
     }  
 
     @Override

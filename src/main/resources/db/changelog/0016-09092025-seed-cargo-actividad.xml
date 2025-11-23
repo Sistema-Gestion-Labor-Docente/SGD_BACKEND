@@ -188,7 +188,7 @@
             <column name="NOMBRE" value="Planeación y Evaluación Curricular e Institucional - Planta"/>
             <column name="TIPO" value="PROFESOR"/>
             <column name="MAXHORASSEMANA" value="40"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="40"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="10"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
         </insert>

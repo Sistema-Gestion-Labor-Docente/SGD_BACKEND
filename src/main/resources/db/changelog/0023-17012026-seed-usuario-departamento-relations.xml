@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <!-- Relacionar usuarios con su departamento y asignar jefes -->
+  <changeSet id="0023-17012026-seed-usuario-departamento-relations" author="Codex">
+    <!-- Crear registros en USUARIODEPARTAMENTO usando el departamento del USUARIODETALLE -->
+    <sql>
+      INSERT INTO USUARIODEPARTAMENTO (OIDUSUARIO, OIDDEPARTAMENTO, FECHACREACION)
+      SELECT
+        u.OIDUSUARIO,
+        d.OIDDEPARTAMENTO,
+        NOW()
+      FROM USUARIO u
+      JOIN USUARIODETALLE ud ON ud.OIDUSUARIODETALLE = u.OIDUSUARIODETALLE
+      JOIN DEPARTAMENTO d ON d.NOMBRE = ud.DEPARTAMENTO
+      ON CONFLICT (OIDUSUARIO) DO NOTHING;
+    </sql>
+
+    <!-- Asignar como jefe de departamento al usuario con rol 'JEFE DE DEPARTAMENTO' -->
+    <sql>
+      UPDATE DEPARTAMENTO d
+      SET JEFE_OIDUSUARIO = u.OIDUSUARIO
+      FROM USUARIO u
+      JOIN USUARIODETALLE ud ON ud.OIDUSUARIODETALLE = u.OIDUSUARIODETALLE
+      JOIN ROLUSUARIO ru ON ru.OIDUSUARIO = u.OIDUSUARIO
+      JOIN ROL r ON r.OIDROL = ru.OIDROL
+      WHERE
+        UPPER(r.NOMBRE) = 'JEFE DE DEPARTAMENTO'
+        AND d.NOMBRE = ud.DEPARTAMENTO;
+    </sql>
+  </changeSet>
+</databaseChangeLog>
+

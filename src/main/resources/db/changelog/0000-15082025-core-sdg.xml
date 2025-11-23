@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <!-- Core estructuras SDG previas a calendarios y materias -->
+  <changeSet id="0000-15082025-core-sdg" author="Codex">
+    <preConditions onFail="MARK_RAN" onError="MARK_RAN">
+      <not>
+        <tableExists tableName="ESTADOACTIVIDAD"/>
+      </not>
+    </preConditions>
+
+    <!-- Secuencias -->
+    <createSequence sequenceName="SEQ_OIDESTADOACTIVIDAD" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDTIPOACTIVIDAD" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDEAVATRIBUTO" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDACTIVIDAD" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDACTIVIDADBOOLEAN" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDACTIVIDADDATE" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDACTIVIDADDECIMAL" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDACTIVIDADINT" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDACTIVIDADVARCHAR" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDESTADOUSUARIO" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDUSUARIODETALLE" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDUSUARIO" startValue="1" incrementBy="1"/>
+    <createSequence sequenceName="SEQ_OIDROL" startValue="1" incrementBy="1"/>
+
+    <!-- Catálogos -->
+    <createTable tableName="ESTADOACTIVIDAD">
+      <column name="OIDESTADOACTIVIDAD" type="INT" defaultValueComputed="nextval('SEQ_OIDESTADOACTIVIDAD')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NOMBRE" type="VARCHAR(255)"/>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <createTable tableName="TIPOACTIVIDAD">
+      <column name="OIDTIPOACTIVIDAD" type="INT" defaultValueComputed="nextval('SEQ_OIDTIPOACTIVIDAD')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NOMBRE" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="DESCRIPCION" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+    <createTable tableName="ESTADOUSUARIO">
+      <column name="OIDESTADOUSUARIO" type="INT" defaultValueComputed="nextval('SEQ_OIDESTADOUSUARIO')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NOMBRE" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <!-- Usuarios y roles -->
+    <createTable tableName="USUARIODETALLE">
+      <column name="OIDUSUARIODETALLE" type="INT" defaultValueComputed="nextval('SEQ_OIDUSUARIODETALLE')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="FACULTAD" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="DEPARTAMENTO" type="VARCHAR(255)"/>
+      <column name="PROGRAMA" type="VARCHAR(255)"/>
+      <column name="CATEGORIA" type="VARCHAR(255)"/>
+      <column name="CONTRATACION" type="VARCHAR(255)"/>
+      <column name="DEDICACION" type="VARCHAR(255)"/>
+      <column name="ESTUDIOS" type="VARCHAR(255)"/>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <createTable tableName="USUARIO">
+      <column name="OIDUSUARIO" type="INT" defaultValueComputed="nextval('SEQ_OIDUSUARIO')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="OIDUSUARIODETALLE" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDESTADOUSUARIO" type="INT"/>
+      <column name="IDENTIFICACION" type="VARCHAR(12)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="NOMBRES" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="APELLIDOS" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="USERNAME" type="VARCHAR(255)"/>
+      <column name="CORREO" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()"/>
+      <column name="ULTIMOINGRESO" type="TIMESTAMP"/>
+    </createTable>
+
+    <createTable tableName="ROL">
+      <column name="OIDROL" type="INT" defaultValueComputed="nextval('SEQ_OIDROL')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NOMBRE" type="VARCHAR(255)"/>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <createTable tableName="ROLUSUARIO">
+      <column name="OIDUSUARIO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDROL" type="INT">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+    <addPrimaryKey tableName="ROLUSUARIO" columnNames="OIDUSUARIO, OIDROL" constraintName="PK_ROLUSUARIO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="USUARIO"
+        baseColumnNames="OIDUSUARIODETALLE"
+        referencedTableName="USUARIODETALLE"
+        referencedColumnNames="OIDUSUARIODETALLE"
+        constraintName="FK_USUARIO_DETALLE"/>
+
+    <addForeignKeyConstraint
+        baseTableName="USUARIO"
+        baseColumnNames="OIDESTADOUSUARIO"
+        referencedTableName="ESTADOUSUARIO"
+        referencedColumnNames="OIDESTADOUSUARIO"
+        constraintName="FK_USUARIO_ESTADO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ROLUSUARIO"
+        baseColumnNames="OIDROL"
+        referencedTableName="ROL"
+        referencedColumnNames="OIDROL"
+        constraintName="FK_ROLUSUARIO_ROL"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ROLUSUARIO"
+        baseColumnNames="OIDUSUARIO"
+        referencedTableName="USUARIO"
+        referencedColumnNames="OIDUSUARIO"
+        constraintName="FK_ROLUSUARIO_USUARIO"/>
+
+    <!-- Atributos EAV -->
+    <createTable tableName="EAVATRIBUTO">
+      <column name="OIDEAVATRIBUTO" type="INT" defaultValueComputed="nextval('SEQ_OIDEAVATRIBUTO')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="NOMBRE" type="VARCHAR(255)">
+        <constraints nullable="false" unique="true"/>
+      </column>
+      <column name="TIPODATO" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <sql>
+      ALTER TABLE EAVATRIBUTO
+      ADD CONSTRAINT CKC_TIPODATO_EAVATRIB CHECK (TIPODATO IN ('VARCHAR','INT','FLOAT','DATE','BOOLEAN'));
+    </sql>
+
+    <!-- Actividad base -->
+    <createTable tableName="ACTIVIDAD">
+      <column name="OIDACTIVIDAD" type="INT" defaultValueComputed="nextval('SEQ_OIDACTIVIDAD')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="OIDTIPOACTIVIDAD" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDESTADOACTIVIDAD" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="NOMBREACTIVIDAD" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="SEMANAS" type="FLOAT"/>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDAD"
+        baseColumnNames="OIDESTADOACTIVIDAD"
+        referencedTableName="ESTADOACTIVIDAD"
+        referencedColumnNames="OIDESTADOACTIVIDAD"
+        constraintName="FK_ACTIVIDAD_ESTADO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDAD"
+        baseColumnNames="OIDTIPOACTIVIDAD"
+        referencedTableName="TIPOACTIVIDAD"
+        referencedColumnNames="OIDTIPOACTIVIDAD"
+        constraintName="FK_ACTIVIDAD_TIPO"/>
+
+    <!-- Actividad valores EAV -->
+    <createTable tableName="ACTIVIDADBOOLEAN">
+      <column name="OIDACTIVIDADBOOLEAN" type="INT" defaultValueComputed="nextval('SEQ_OIDACTIVIDADBOOLEAN')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="OIDACTIVIDAD" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDEAVATRIBUTO" type="INT"/>
+      <column name="VALOR" type="BOOL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <createTable tableName="ACTIVIDADDATE">
+      <column name="OIDACTIVIDADDATE" type="INT" defaultValueComputed="nextval('SEQ_OIDACTIVIDADDATE')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="OIDEAVATRIBUTO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDACTIVIDAD" type="INT"/>
+      <column name="VALOR" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <createTable tableName="ACTIVIDADDECIMAL">
+      <column name="OIDACTIVIDADDECIMAL" type="INT" defaultValueComputed="nextval('SEQ_OIDACTIVIDADDECIMAL')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="OIDACTIVIDAD" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDEAVATRIBUTO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="VALOR" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <createTable tableName="ACTIVIDADINT">
+      <column name="OIDACTIVIDADINT" type="INT" defaultValueComputed="nextval('SEQ_OIDACTIVIDADINT')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="OIDEAVATRIBUTO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDACTIVIDAD" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="VALOR" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <createTable tableName="ACTIVIDADVARCHAR">
+      <column name="OIDACTIVIDADVARCHAR" type="INT" defaultValueComputed="nextval('SEQ_OIDACTIVIDADVARCHAR')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="OIDEAVATRIBUTO" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="OIDACTIVIDAD" type="INT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="VALOR" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <!-- FKs valores EAV -->
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADBOOLEAN"
+        baseColumnNames="OIDACTIVIDAD"
+        referencedTableName="ACTIVIDAD"
+        referencedColumnNames="OIDACTIVIDAD"
+        constraintName="FK_ACTIVIDADBOOLEAN_ACTIVIDAD"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADBOOLEAN"
+        baseColumnNames="OIDEAVATRIBUTO"
+        referencedTableName="EAVATRIBUTO"
+        referencedColumnNames="OIDEAVATRIBUTO"
+        constraintName="FK_ACTIVIDADBOOLEAN_ATRIBUTO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADDATE"
+        baseColumnNames="OIDACTIVIDAD"
+        referencedTableName="ACTIVIDAD"
+        referencedColumnNames="OIDACTIVIDAD"
+        constraintName="FK_ACTIVIDADDATE_ACTIVIDAD"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADDATE"
+        baseColumnNames="OIDEAVATRIBUTO"
+        referencedTableName="EAVATRIBUTO"
+        referencedColumnNames="OIDEAVATRIBUTO"
+        constraintName="FK_ACTIVIDADDATE_ATRIBUTO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADDECIMAL"
+        baseColumnNames="OIDACTIVIDAD"
+        referencedTableName="ACTIVIDAD"
+        referencedColumnNames="OIDACTIVIDAD"
+        constraintName="FK_ACTIVIDADDECIMAL_ACTIVIDAD"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADDECIMAL"
+        baseColumnNames="OIDEAVATRIBUTO"
+        referencedTableName="EAVATRIBUTO"
+        referencedColumnNames="OIDEAVATRIBUTO"
+        constraintName="FK_ACTIVIDADDECIMAL_ATRIBUTO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADINT"
+        baseColumnNames="OIDACTIVIDAD"
+        referencedTableName="ACTIVIDAD"
+        referencedColumnNames="OIDACTIVIDAD"
+        constraintName="FK_ACTIVIDADINT_ACTIVIDAD"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADINT"
+        baseColumnNames="OIDEAVATRIBUTO"
+        referencedTableName="EAVATRIBUTO"
+        referencedColumnNames="OIDEAVATRIBUTO"
+        constraintName="FK_ACTIVIDADINT_ATRIBUTO"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADVARCHAR"
+        baseColumnNames="OIDACTIVIDAD"
+        referencedTableName="ACTIVIDAD"
+        referencedColumnNames="OIDACTIVIDAD"
+        constraintName="FK_ACTIVIDADVARCHAR_ACTIVIDAD"/>
+
+    <addForeignKeyConstraint
+        baseTableName="ACTIVIDADVARCHAR"
+        baseColumnNames="OIDEAVATRIBUTO"
+        referencedTableName="EAVATRIBUTO"
+        referencedColumnNames="OIDEAVATRIBUTO"
+        constraintName="FK_ACTIVIDADVARCHAR_ATRIBUTO"/>
+  </changeSet>
+</databaseChangeLog>

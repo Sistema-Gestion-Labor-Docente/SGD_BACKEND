@@ -9,53 +9,17 @@
   <!-- ChangeSet: Estructura para NUEVOS ATRIBUTOS -->
   <changeSet id="0020-24092025-seed-new-eav-atributos" author="Jesus Edwin Adrada Ruiz">
 
-    <insert tableName="EAVATRIBUTO">
-        <column name="OIDEAVATRIBUTO" value="12"></column>
-        <column name="NOMBRE" value="F_INICIAL"/>
-        <column name="TIPODATO" value="DATE"/>
-        <column name="FECHACREACION" valueDate="NOW()"/>
-        <column name="FECHAACTUALIZACION" value="NOW()"/>
-    </insert>
-
-    <insert tableName="EAVATRIBUTO">
-        <column name="OIDEAVATRIBUTO" value="13"></column>
-        <column name="NOMBRE" value="F_FINAL"/>
-        <column name="TIPODATO" value="DATE"/>
-        <column name="FECHACREACION" valueDate="NOW()"/>
-        <column name="FECHAACTUALIZACION" value="NOW()"/>
-    </insert>
-
-    <insert tableName="EAVATRIBUTO">
-        <column name="OIDEAVATRIBUTO" value="14"></column>
-        <column name="NOMBRE" value="AREA"/>
-        <column name="TIPODATO" value="VARCHAR"/>
-        <column name="FECHACREACION" valueDate="NOW()"/>
-        <column name="FECHAACTUALIZACION" value="NOW()"/>
-    </insert>
-
-    <insert tableName="EAVATRIBUTO">
-        <column name="OIDEAVATRIBUTO" value="15"></column>
-        <column name="NOMBRE" value="H. APROB."/>
-        <column name="TIPODATO" value="FLOAT"/>
-        <column name="FECHACREACION" valueDate="NOW()"/>
-        <column name="FECHAACTUALIZACION" value="NOW()"/>
-    </insert>
-
-    <insert tableName="EAVATRIBUTO">
-        <column name="OIDEAVATRIBUTO" value="16"></column>
-        <column name="NOMBRE" value="H. LABOR"/>
-        <column name="TIPODATO" value="FLOAT"/>
-        <column name="FECHACREACION" valueDate="NOW()"/>
-        <column name="FECHAACTUALIZACION" value="NOW()"/>
-    </insert>
-
-    <insert tableName="EAVATRIBUTO">
-        <column name="OIDEAVATRIBUTO" value="17"></column>
-        <column name="NOMBRE" value="UNIDAD ACADÉMICA"/>
-        <column name="TIPODATO" value="VARCHAR"/>
-        <column name="FECHACREACION" valueDate="NOW()"/>
-        <column name="FECHAACTUALIZACION" value="NOW()"/>
-    </insert>
+    <sql>
+      INSERT INTO EAVATRIBUTO (OIDEAVATRIBUTO, NOMBRE, TIPODATO, FECHACREACION, FECHAACTUALIZACION)
+      VALUES
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'F_INICIAL', 'DATE', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'F_FINAL', 'DATE', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'AREA', 'VARCHAR', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'H. APROB.', 'FLOAT', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'H. LABOR', 'FLOAT', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'UNIDAD ACADÉMICA', 'VARCHAR', NOW(), NOW())
+      ON CONFLICT (NOMBRE) DO NOTHING;
+    </sql>
 
   </changeSet>
 

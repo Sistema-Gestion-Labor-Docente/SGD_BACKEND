@@ -106,7 +106,6 @@ class UsuarioActividadCalendarioRepositoryTest {
         actividad.setTipoActividad(tipoActividad);
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad("Actividad " + Math.random());
-        actividad.setHoras(horas);
         actividad.setSemanas(1f);
         entityManager.persist(actividad);
 
@@ -119,6 +118,7 @@ class UsuarioActividadCalendarioRepositoryTest {
         UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
         relacion.setUsuario(usuario);
         relacion.setActividadCalendario(actividadCalendario);
+        relacion.setHorasActividad(horas);
         relacion.setUsuarioCreacion("test");
         return entityManager.persist(relacion);
     }
