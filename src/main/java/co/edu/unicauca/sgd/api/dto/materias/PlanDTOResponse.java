@@ -19,6 +19,11 @@ public class PlanDTOResponse {
     private Integer oidPrograma;
     private String nombrePrograma;
 
+    /**
+     * Cantidad de materias asociadas a este plan.
+     */
+    private long cantidadMaterias;
+
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
     private String usuarioCreacion;

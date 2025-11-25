@@ -9,6 +9,7 @@ import co.edu.unicauca.sgd.api.repository.MateriaRepository;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.PlanRepository;
 import co.edu.unicauca.sgd.api.service.materias.MateriaService;
+import co.edu.unicauca.sgd.api.exception.materias.MateriaValidationException;
 import jakarta.transaction.Transactional;
 import org.slf4j.*;
 import org.springframework.data.domain.*;
@@ -84,6 +85,67 @@ public class MateriaServiceImpl implements MateriaService {
             return new ApiResponse<>(200, message, response);
         } catch (Exception e) {
             return new ApiResponse<>(500, "Error al listar materias: " + e.getMessage(), null);
+        }
+    }
+
+    @Override
+    public ApiResponse<Page<MateriaDTOResponse>> buscarPorIdentificadoresExcluyendoPlan(
+            String oidmateria,
+            String codigo,
+            String nombre,
+            Integer oidPlan,
+            Pageable pageable) {
+        try {
+            if (!StringUtils.hasText(oidmateria)
+                    && !StringUtils.hasText(codigo)
+                    && !StringUtils.hasText(nombre)) {
+                throw new MateriaValidationException("Debe enviar al menos uno de: oidMateria, código o nombre.");
+            }
+            if (oidPlan == null) {
+                throw new MateriaValidationException("El oidPlan es obligatorio para excluir el plan de la búsqueda.");
+            }
+
+            Specification<Materia> spec = Specification.where(null);
+
+            // Excluir el plan indicado
+            spec = spec.and((root, query, cb) ->
+                    cb.notEqual(root.join("plan").get("oidPlan"), oidPlan));
+
+            // Construir filtros OR por identificadores
+            Specification<Materia> filtros = null;
+
+            if (StringUtils.hasText(oidmateria)) {
+                Specification<Materia> porOid = (root, query, cb) ->
+                        cb.equal(cb.upper(root.get("oidMateria")), oidmateria.toUpperCase());
+                filtros = (filtros == null) ? porOid : filtros.or(porOid);
+            }
+            if (StringUtils.hasText(codigo)) {
+                Specification<Materia> porCodigo = (root, query, cb) ->
+                        cb.like(cb.upper(root.get("codigo")), "%" + codigo.toUpperCase() + "%");
+                filtros = (filtros == null) ? porCodigo : filtros.or(porCodigo);
+            }
+            if (StringUtils.hasText(nombre)) {
+                Specification<Materia> porNombre = (root, query, cb) ->
+                        cb.like(cb.upper(root.get("nombre")), "%" + nombre.toUpperCase() + "%");
+                filtros = (filtros == null) ? porNombre : filtros.or(porNombre);
+            }
+
+            spec = spec.and(filtros);
+
+            Page<Materia> page = materiaRepository.findAll(spec, pageable);
+            Page<MateriaDTOResponse> response = page.map(materiaMapper::toResponse);
+
+            logger.info("Materias encontradas (excluyendo plan {}): {}", oidPlan, response.getTotalElements());
+            String message = response.hasContent()
+                    ? "Materias disponibles para agregar al plan."
+                    : "No se encontraron materias disponibles para agregar al plan.";
+            return new ApiResponse<>(200, message, response);
+        } catch (MateriaValidationException e) {
+            logger.warn("Error de validación en búsqueda de materias: {}", e.getMessage());
+            return new ApiResponse<>(e.getStatus().value(), e.getMessage(), null);
+        } catch (Exception e) {
+            logger.error("Error al buscar materias para agregar al plan: {}", e.getMessage(), e);
+            return new ApiResponse<>(500, "Error al buscar materias para agregar al plan: " + e.getMessage(), null);
         }
     }
 

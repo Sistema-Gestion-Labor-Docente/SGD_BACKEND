@@ -65,4 +65,6 @@ public interface MateriaRepository extends JpaRepository<Materia, Integer>, JpaS
 
     boolean existsByCorrequisitoAndIdMateriaNot(Materia correquisito, Integer idMateria);
 
+    long countByPlanOidPlan(Integer oidPlan);
+
 }

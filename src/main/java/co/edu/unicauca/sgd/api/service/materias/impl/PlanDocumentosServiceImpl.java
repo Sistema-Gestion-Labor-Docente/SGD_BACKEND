@@ -26,6 +26,8 @@ import org.springframework.stereotype.Service;
 import co.edu.unicauca.sgd.api.domain.Departamento;
 import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Plan;
+import co.edu.unicauca.sgd.api.exception.materias.PlanDocumentoValidationException;
+import co.edu.unicauca.sgd.api.exception.materias.PlanNotFoundException;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.MateriaRepository;
 import co.edu.unicauca.sgd.api.repository.PlanRepository;
@@ -88,7 +90,7 @@ public class PlanDocumentosServiceImpl implements PlanDocumentosService {
     @Override
     public void cargarMateriasDesdeExcel(InputStream excelStream, Integer oidPlan) throws IOException {
         Plan plan = planRepository.findById(oidPlan)
-                .orElseThrow(() -> new IllegalArgumentException("No existe plan con OID " + oidPlan));
+                .orElseThrow(() -> new PlanNotFoundException("No existe plan con OID " + oidPlan));
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(excelStream)) {
             validarOidPlanOculto(workbook, oidPlan);
@@ -269,11 +271,11 @@ public class PlanDocumentosServiceImpl implements PlanDocumentosService {
     private void validarOidPlanOculto(XSSFWorkbook workbook, Integer oidPlan) {
         XSSFSheet oidSheet = workbook.getSheet("OIDPLAN_OCULTO");
         if (oidSheet == null || oidSheet.getRow(0) == null || oidSheet.getRow(0).getCell(0) == null) {
-            throw new IllegalArgumentException("No se encontró el OID del plan oculto en el archivo.");
+            throw new PlanDocumentoValidationException("No se encontró el OID del plan oculto en el archivo.");
         }
         int oidPlanOculto = (int) oidSheet.getRow(0).getCell(0).getNumericCellValue();
         if (!oidPlan.equals(oidPlanOculto)) {
-            throw new IllegalArgumentException("El OID del plan proporcionado (" + oidPlan + ") no coincide con el del archivo (" + oidPlanOculto + ").");
+            throw new PlanDocumentoValidationException("El OID del plan proporcionado (" + oidPlan + ") no coincide con el del archivo (" + oidPlanOculto + ").");
         }
     }
 

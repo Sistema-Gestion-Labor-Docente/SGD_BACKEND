@@ -39,9 +39,11 @@
       <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
     </createTable>
 
-    <addUniqueConstraint tableName="MATERIA" columnNames="OIDMATERIA" constraintName="UQ_MATERIA_OID"/>
-    <addUniqueConstraint tableName="MATERIA" columnNames="CODIGO"     constraintName="UQ_MATERIA_CODIGO"/>
-    <addUniqueConstraint tableName="MATERIA" columnNames="NOMBRE"     constraintName="UQ_MATERIA_NOMBRE"/>
+    <!-- Unicidad por plan: el mismo OID/CODIGO/NOMBRE puede repetirse en distintos planes,
+         pero debe ser único dentro de cada plan. -->
+    <addUniqueConstraint tableName="MATERIA" columnNames="OIDPLAN,OIDMATERIA" constraintName="UQ_MATERIA_OID"/>
+    <addUniqueConstraint tableName="MATERIA" columnNames="OIDPLAN,CODIGO"     constraintName="UQ_MATERIA_CODIGO"/>
+    <addUniqueConstraint tableName="MATERIA" columnNames="OIDPLAN,NOMBRE"     constraintName="UQ_MATERIA_NOMBRE"/>
 
     <!-- Checks vía SQL -->
     <sql>
