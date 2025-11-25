@@ -1,12 +1,12 @@
 package co.edu.unicauca.sgd.api.controller;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
 
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import co.edu.unicauca.sgd.api.exception.materias.PlanDocumentoValidationException;
 import co.edu.unicauca.sgd.api.service.materias.PlanDocumentosService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,19 +34,25 @@ public class PlanDocumentosController {
 
     @GetMapping("/")
     public ResponseEntity<byte[]> descargarFormatoAdicion(@RequestParam Integer oidPlan) {
+        if (oidPlan == null || oidPlan <= 0) {
+            throw new PlanDocumentoValidationException("El oidPlan es obligatorio y debe ser mayor que cero.");
+        }
+
         try {
             ByteArrayOutputStream bos = planDocumentosService.generarFormatoAdicion(oidPlan);
             byte[] contenido = bos.toByteArray();
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDisposition(ContentDisposition.attachment().filename("Formato_Adicion_" + oidPlan + ".xlsx").build());
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename("Formato_Adicion_" + oidPlan + ".xlsx").build());
 
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(contenido);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        } catch (IOException e) {
+            // Se deja que GlobalExceptionHandler maneje el error general como 500.
+            throw new RuntimeException("Error generando el formato de adición.", e);
         }
     }
 
@@ -57,17 +64,23 @@ public class PlanDocumentosController {
             @RequestParam("file") MultipartFile file,
             Principal principal // <-- asume Spring Security, sino pásalo de otra forma
     ) {
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("El archivo está vacío.");
+        if (oidPlan == null || oidPlan <= 0) {
+            throw new PlanDocumentoValidationException("El oidPlan es obligatorio y debe ser mayor que cero.");
         }
+        if (file == null || file.isEmpty()) {
+            throw new PlanDocumentoValidationException("El archivo es obligatorio y no puede estar vacío.");
+        }
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.equalsIgnoreCase("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                && !contentType.equalsIgnoreCase("application/octet-stream")) {
+            throw new PlanDocumentoValidationException("El archivo debe ser un Excel en formato .xlsx.");
+        }
+
         try (InputStream excel = file.getInputStream()) {
             planDocumentosService.cargarMateriasDesdeExcel(excel, oidPlan);
             return ResponseEntity.ok("Materias cargadas correctamente.");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error procesando el archivo: " + e.getMessage());
+        } catch (IOException e) {
+            throw new RuntimeException("Error procesando el archivo de materias.", e);
         }
     }
 

@@ -27,4 +27,14 @@ public interface MateriaService {
         Integer oidPlan,
         Pageable pageable);
 
+    /**
+     * Busca materias por OID, código y/o nombre excluyendo un plan específico.
+     */
+    ApiResponse<Page<MateriaDTOResponse>> buscarPorIdentificadoresExcluyendoPlan(
+        String oidmateria,
+        String codigo,
+        String nombre,
+        Integer oidPlan,
+        Pageable pageable);
+
 }

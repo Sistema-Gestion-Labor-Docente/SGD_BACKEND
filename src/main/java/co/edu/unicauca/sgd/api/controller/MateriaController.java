@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.materias.MateriaDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.MateriaDTOResponse;
+import co.edu.unicauca.sgd.api.exception.materias.MateriaValidationException;
 import co.edu.unicauca.sgd.api.service.materias.MateriaService;
 
 @RestController
@@ -90,6 +91,28 @@ public class MateriaController {
             Pageable pageable) {
         ApiResponse<Page<MateriaDTOResponse>> response =
                 materiaService.obtenerMateriasSinCorrequisitoNiReferencias(oidDepartamento, oidPlan, pageable);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
+    }
+
+    @GetMapping("/buscar-disponibles")
+    @Operation(
+            summary = "Buscar materias para agregar a un plan",
+            description = "Busca materias por OID, código y/o nombre excluyendo el plan indicado.")
+    public ResponseEntity<ApiResponse<Page<MateriaDTOResponse>>> buscarDisponiblesParaPlan(
+            @RequestParam(required = false) String oidmateria,
+            @RequestParam(required = false) String codigo,
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = true) Integer oidPlan,
+            Pageable pageable) {
+
+        if ((oidmateria == null || oidmateria.isBlank())
+                && (codigo == null || codigo.isBlank())
+                && (nombre == null || nombre.isBlank())) {
+            throw new MateriaValidationException("Debe enviar al menos uno de: oidMateria, código o nombre.");
+        }
+
+        ApiResponse<Page<MateriaDTOResponse>> response =
+                materiaService.buscarPorIdentificadoresExcluyendoPlan(oidmateria, codigo, nombre, oidPlan, pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 }

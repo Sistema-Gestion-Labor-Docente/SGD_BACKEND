@@ -14,5 +14,10 @@ public class PlanDTORequest {
     private LocalDate fechaAprobacion;
     private String acuerdo;
     private Integer oidPrograma;
+    /**
+     * Identificador del plan base desde el cual se copiarán las materias.
+     * Es opcional; si es null no se realiza clonación.
+     */
+    private Integer oidPlanBase;
 
 }
