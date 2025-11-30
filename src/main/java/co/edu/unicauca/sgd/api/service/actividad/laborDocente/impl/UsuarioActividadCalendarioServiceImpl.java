@@ -42,6 +42,7 @@ import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.HorasLaborDocenteDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioCreacionResultadoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
@@ -308,7 +309,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
         List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
                 .findByActividadCalendario_OidActividadCalendario(actividadCalendario.getOidActividadCalendario());
-        return mapper.toResponse(
+        UsuarioActividadCalendarioDTOResponse dtoResponse = mapper.toResponse(
                 actividad,
                 relaciones,
                 calendario,
@@ -316,6 +317,8 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                         .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
                         .collect(Collectors.toList()) : List.of()
         );
+        dtoResponse.setHorasLaborDocente(construirResumenHorasActividad(actividad, relaciones));
+        return dtoResponse;
     }
 
     private ApiResponse<UsuarioActividadCalendarioDTOResponse> ejecutarActualizacionActividad(
@@ -475,6 +478,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                         .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
                         .collect(Collectors.toList()) : List.of()
         );
+        dto.setHorasLaborDocente(construirResumenHorasActividad(actividad, relaciones));
 
         return new ApiResponse<>(200, "Actividad actualizada con relaciones", dto);
     }
@@ -746,6 +750,45 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         return cargoActividad != null && "PROGRAMADEPARTAMENTO".equalsIgnoreCase(cargoActividad.getTipo());
     }
 
+    private HorasLaborDocenteDTO construirResumenHorasActividad(Actividad actividad, List<UsuarioActividadCalendario> relaciones) {
+        HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
+        if (actividad == null) {
+            dto.setHorasAsignadasPorTipoActividad(Map.of());
+            dto.setHorasDisponiblesPorTipoActividad(Map.of());
+            dto.setTotalHorasAsignadas(0f);
+            dto.setTotalHorasDisponibles(0f);
+            return dto;
+        }
+
+        String nombreTipo = actividad.getTipoActividad() != null ? actividad.getTipoActividad().getNombre() : "DESCONOCIDO";
+        Integer oidTipoActividad = actividad.getTipoActividad() != null ? actividad.getTipoActividad().getOidTipoActividad() : null;
+
+        float totalAsignadas = 0f;
+        if (relaciones != null && !relaciones.isEmpty()) {
+            for (UsuarioActividadCalendario relacion : relaciones) {
+                if (relacion == null) {
+                    continue;
+                }
+                Float horas = relacion.getHorasActividad();
+                if (horas != null) {
+                    totalAsignadas += horas;
+                }
+            }
+        }
+
+        Float maximo = oidTipoActividad != null ? obtenerMaximoHorasPorTipoActividad(oidTipoActividad) : null;
+        float disponible = maximo != null ? maximo - totalAsignadas : 0f;
+        if (disponible < 0f) {
+            disponible = 0f;
+        }
+
+        dto.setHorasAsignadasPorTipoActividad(Map.of(nombreTipo, totalAsignadas));
+        dto.setHorasDisponiblesPorTipoActividad(Map.of(nombreTipo, disponible));
+        dto.setTotalHorasAsignadas(totalAsignadas);
+        dto.setTotalHorasDisponibles(disponible);
+        return dto;
+    }
+
     @Override
     public ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> listarActividadesConRelaciones(
             Integer oidCalendario,
@@ -823,9 +866,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
             // Mapear usando el mapper existente
             UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(actividad, relaciones, calendario, atributos);
-
-            // Si necesitas colocar cargo desde actividadCalendario (si no viene por mapper)
-            // se puede rellenar aquí igual que antes (cargoActividadRepository.findById(...))
+            dto.setHorasLaborDocente(construirResumenHorasActividad(actividad, relaciones));
 
             dtos.add(dto);
         }
@@ -847,6 +888,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             Calendario calendario = relaciones.isEmpty() ? null : relaciones.get(0).getActividadCalendario().getCalendario();
             List<AtributoDTO> atributos = eavAtributoService.obtenerAtributosPorActividad(actividad);
             UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(actividad, relaciones, calendario, atributos);
+            dto.setHorasLaborDocente(construirResumenHorasActividad(actividad, relaciones));
             return new ApiResponse<>(200, "Actividad encontrada", dto);
         } catch (UsuarioActividadCalendarioException | RecursoNoEncontradoException e) {
             throw e;
