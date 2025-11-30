@@ -293,6 +293,8 @@ class UsuarioDepartamentoServiceImplTest {
         assertEquals(200, response.getCodigo());
         assertEquals(1, response.getData().size());
         assertEquals(12f, response.getData().get(0).getTotalHorasActividades());
+        // Total disponible debe basarse en HORAS_MAX_SEMANA (40) menos las horas asignadas (12)
+        assertEquals(28f, response.getData().get(0).getHorasLaborDocente().getTotalHorasDisponibles());
         verify(repository).findProfesoresConTipoActividad("DOCENCIA", 3);
         verify(mapper).toResponse(profesor);
     }

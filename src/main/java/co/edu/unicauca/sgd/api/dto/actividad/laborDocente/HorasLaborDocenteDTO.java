@@ -10,6 +10,11 @@ import lombok.NoArgsConstructor;
 public class HorasLaborDocenteDTO {
 
     /**
+     * Límite máximo de horas de labor docente por semana utilizado para calcular disponibilidad total.
+     */
+    public static final float HORAS_MAX_SEMANA = 40f;
+
+    /**
      * Horas asignadas agrupadas por tipo de actividad.
      * La llave suele ser el nombre del tipo de actividad.
      */
@@ -30,4 +35,3 @@ public class HorasLaborDocenteDTO {
      */
     private Float totalHorasDisponibles;
 }
-

@@ -2,6 +2,8 @@ package co.edu.unicauca.sgd.api.service.actividad.laborDocente.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -237,6 +239,58 @@ class UsuarioActividadCalendarioServiceImplTest {
         assertEquals(0f, data.getHorasDisponiblesUsuarioMenorCupo());
         assertEquals(12f, data.getHorasMaximasCargo());
         assertEquals(5f, data.getSemanasMaximas());
+    }
+
+    @Test
+    void listarActividadesConRelaciones_calculaHorasLaborDocenteConLimiteDefault() {
+        Pageable pageable = Pageable.unpaged();
+
+        // Page con un solo id de actividad
+        Page<Integer> idsPage = new PageImpl<>(List.of(1), pageable, 1);
+        when(usuarioActividadCalendarioRepository.findDistinctActividadIdsByFilters(
+                1, 2, null, null, null, pageable)).thenReturn(idsPage);
+
+        // Actividad sin configuración de max horas (obtenerMaximoHorasPorTipoActividad devolverá null)
+        TipoActividad tipoActividad = new TipoActividad();
+        tipoActividad.setOidTipoActividad(10);
+        tipoActividad.setNombre("DOCENCIA DIRECTA");
+
+        Actividad actividad = new Actividad();
+        actividad.setOidActividad(1);
+        actividad.setTipoActividad(tipoActividad);
+
+        when(actividadRepository.findAllById(List.of(1))).thenReturn(List.of(actividad));
+
+        // Una relación con 10 horas asignadas
+        Calendario calendario = new Calendario();
+        ActividadCalendario actividadCalendario = new ActividadCalendario();
+        actividadCalendario.setActividad(actividad);
+        actividadCalendario.setCalendario(calendario);
+
+        UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
+        relacion.setActividadCalendario(actividadCalendario);
+        relacion.setHorasActividad(10f);
+
+        when(usuarioActividadCalendarioRepository
+                .findByActividadCalendario_Actividad_OidActividadIn(List.of(1)))
+                .thenReturn(List.of(relacion));
+
+        // Sin atributos adicionales
+        when(eavAtributoService.obtenerAtributosPorActividad(actividad)).thenReturn(List.of());
+
+        UsuarioActividadCalendarioDTOResponse dto = new UsuarioActividadCalendarioDTOResponse();
+        when(mapper.toResponse(actividad, List.of(relacion), calendario, List.of())).thenReturn(dto);
+
+        ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> response =
+                service.listarActividadesConRelaciones(1, 2, null, null, null, pageable);
+
+        assertEquals(200, response.getCodigo());
+        UsuarioActividadCalendarioDTOResponse resultDto = response.getData().getContent().get(0);
+        assertSame(dto, resultDto);
+        assertNotNull(resultDto.getHorasLaborDocente());
+        assertEquals(10f, resultDto.getHorasLaborDocente().getTotalHorasAsignadas());
+        // Sin maximo configurado, debe usar 40 horas por semana como limite
+        assertEquals(30f, resultDto.getHorasLaborDocente().getTotalHorasDisponibles());
     }
 
     @Test

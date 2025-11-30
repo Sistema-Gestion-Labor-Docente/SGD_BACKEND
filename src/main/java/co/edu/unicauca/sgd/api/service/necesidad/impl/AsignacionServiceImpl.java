@@ -2,7 +2,9 @@ package co.edu.unicauca.sgd.api.service.necesidad.impl;
 
 import java.text.Normalizer;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -15,14 +17,17 @@ import org.springframework.util.StringUtils;
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.Asignacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.EavAtributo;
+import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.domain.Seleccionado;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
-import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.AtributoDTO;
+import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
 import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
@@ -39,9 +44,11 @@ import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
 import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
 import co.edu.unicauca.sgd.api.repository.EstadoActividadRepository;
+import co.edu.unicauca.sgd.api.repository.EavAtributoRepository;
 import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
 import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
+import co.edu.unicauca.sgd.api.service.EavAtributoService;
 import co.edu.unicauca.sgd.api.service.necesidad.AsignacionService;
 
 @Service
@@ -64,6 +71,8 @@ public class AsignacionServiceImpl implements AsignacionService {
     private final TipoActividadRepository tipoActividadRepository;
     private final EstadoActividadRepository estadoActividadRepository;
     private final ActividadRepository actividadRepository;
+    private final EavAtributoService eavAtributoService;
+    private final EavAtributoRepository eavAtributoRepository;
     private final AsignacionMapper asignacionMapper;
 
     public AsignacionServiceImpl(AsignacionRepository asignacionRepository,
@@ -72,6 +81,8 @@ public class AsignacionServiceImpl implements AsignacionService {
                                  TipoActividadRepository tipoActividadRepository,
                                  EstadoActividadRepository estadoActividadRepository,
                                  ActividadRepository actividadRepository,
+                                 EavAtributoService eavAtributoService,
+                                 EavAtributoRepository eavAtributoRepository,
                                  AsignacionMapper asignacionMapper) {
         this.asignacionRepository = asignacionRepository;
         this.necesidadRepository = necesidadRepository;
@@ -79,6 +90,8 @@ public class AsignacionServiceImpl implements AsignacionService {
         this.tipoActividadRepository = tipoActividadRepository;
         this.estadoActividadRepository = estadoActividadRepository;
         this.actividadRepository = actividadRepository;
+        this.eavAtributoService = eavAtributoService;
+        this.eavAtributoRepository = eavAtributoRepository;
         this.asignacionMapper = asignacionMapper;
     }
 
@@ -243,11 +256,53 @@ public class AsignacionServiceImpl implements AsignacionService {
         actividad.setEstadoActividad(estadoActividad);
         actividad.setNombreActividad(request.getNombreActividad());
 
-        actividadRepository.save(actividad);
+        actividad = actividadRepository.save(actividad);
 
         asignacion.setActividad(actividad);
         asignacion.setNecesidad(necesidad);
         asignacion.setSeleccionado(seleccionado);
+
+        sincronizarAtributosActividadDocencia(actividad, necesidad);
+    }
+
+    private void sincronizarAtributosActividadDocencia(Actividad actividad, Necesidad necesidad) {
+        if (actividad == null || necesidad == null) {
+            return;
+        }
+
+        Materia materia = necesidad.getMateria();
+        if (materia == null || materia.getPlan() == null || materia.getPlan().getPrograma() == null) {
+            return;
+        }
+
+        String codigo = materia.getCodigo();
+        String grupo = necesidad.getGrupo();
+        String nombreMateria = materia.getNombre();
+        String nombrePrograma = materia.getPlan().getPrograma().getNombre();
+        Integer semestre = materia.getSemestre();
+
+        Map<String, EavAtributo> cacheAtributos = eavAtributoRepository.findAll().stream()
+                .collect(Collectors.toMap(EavAtributo::getNombre, a -> a));
+
+        ActividadBaseDTO actividadDTO = new ActividadBaseDTO();
+        actividadDTO.setOidActividad(actividad.getOidActividad());
+        actividadDTO.setTipoActividad(actividad.getTipoActividad());
+        actividadDTO.setOidEstadoActividad(
+                actividad.getEstadoActividad() != null ? actividad.getEstadoActividad().getOidEstadoActividad() : null);
+        actividadDTO.setNombreActividad(actividad.getNombreActividad());
+        actividadDTO.setSemanas(actividad.getSemanas());
+
+        List<AtributoDTO> atributos = List.of(
+                new AtributoDTO("4", codigo != null ? codigo : ""),
+                new AtributoDTO("5", grupo != null ? grupo : ""),
+                new AtributoDTO("6", nombreMateria != null ? nombreMateria : ""),
+                new AtributoDTO("8", nombrePrograma != null ? nombrePrograma : ""),
+                new AtributoDTO("9", semestre != null ? semestre.toString() : "")
+        );
+
+        actividadDTO.setAtributos(atributos);
+
+        eavAtributoService.actualizarAtributosDinamicos(actividadDTO, actividad, cacheAtributos);
     }
 
     private void validarRequisitosCalendarioPorContratacion(Seleccionado seleccionado, Calendario calendario) {
