@@ -45,7 +45,6 @@ class PlanServiceImplTest {
     void obtenerTodos_sinDatos_devuelveMensajeAdecuado() {
         PageRequest pageable = PageRequest.of(0, 5);
         when(planRepository.findAll(ArgumentMatchers.<Specification<Plan>>any(), eq(pageable))).thenReturn(Page.empty(pageable));
-        when(materiaRepository.countByPlanOidPlan(ArgumentMatchers.any())).thenReturn(0L);
 
         ApiResponse<Page<PlanDTOResponse>> response = service.obtenerTodos(null, null, null, pageable);
 

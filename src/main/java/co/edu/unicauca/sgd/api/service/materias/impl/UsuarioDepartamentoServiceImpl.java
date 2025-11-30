@@ -3,9 +3,12 @@ package co.edu.unicauca.sgd.api.service.materias.impl;
 import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -21,6 +24,7 @@ import org.springframework.util.StringUtils;
 import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.UsuarioDepartamentoDTORequest;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.HorasLaborDocenteDTO;
 import co.edu.unicauca.sgd.api.dto.materias.UsuarioDepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoAlreadyExistsException;
@@ -29,9 +33,10 @@ import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoInternalException;
 import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoNotFoundException;
 import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoValidationException;
 import co.edu.unicauca.sgd.api.mapper.UsuarioDepartamentoMapper;
+import co.edu.unicauca.sgd.api.repository.CargoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
-import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasProjection;
+import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasPorTipoActividadProjection;
 import co.edu.unicauca.sgd.api.service.materias.UsuarioDepartamentoService;
 import jakarta.transaction.Transactional;
 
@@ -57,13 +62,17 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
 
     private final UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository;
 
+    private final CargoActividadRepository cargoActividadRepository;
+
     public UsuarioDepartamentoServiceImpl(
             @Autowired UsuarioDepartamentoRepository repository,
             @Autowired UsuarioDepartamentoMapper mapper,
-            @Autowired UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository) {
+            @Autowired UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository,
+            @Autowired CargoActividadRepository cargoActividadRepository) {
         this.repository = repository;
         this.mapper = mapper;
         this.usuarioActividadCalendarioRepository = usuarioActividadCalendarioRepository;
+        this.cargoActividadRepository = cargoActividadRepository;
     }
 
     @Override
@@ -126,24 +135,26 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
 
             Page<UsuarioDepartamento> page = repository.findAll(spec, pageable);
 
-            Map<Integer, Float> horasPorUsuario = new HashMap<>();
             List<UsuarioDepartamento> contenido = page.getContent();
+            Map<Integer, HorasLaborDocenteDTO> horasLaborPorUsuario = Map.of();
             if (!contenido.isEmpty()) {
                 List<Integer> oidsUsuarios = contenido.stream()
                         .map(UsuarioDepartamento::getOidUsuario)
                         .collect(Collectors.toList());
-                List<UsuarioHorasProjection> proyecciones = usuarioActividadCalendarioRepository
-                        .sumarHorasPorUsuarios(oidsUsuarios);
-                for (UsuarioHorasProjection proyeccion : proyecciones) {
-                    horasPorUsuario.put(proyeccion.getOidUsuario(), proyeccion.getTotalHoras());
-                }
+                List<UsuarioHorasPorTipoActividadProjection> proyecciones =
+                        usuarioActividadCalendarioRepository.sumarHorasPorUsuariosYTipoActividad(oidsUsuarios);
+                horasLaborPorUsuario = construirHorasLaborPorUsuario(proyecciones);
             }
 
-            Map<Integer, Float> horasMapFinal = horasPorUsuario;
+            Map<Integer, HorasLaborDocenteDTO> horasFinal = horasLaborPorUsuario;
             Page<UsuarioDepartamentoDTOResponse> response = page.map(entidad -> {
                 UsuarioDepartamentoDTOResponse dto = mapper.toResponse(entidad);
-                Float totalHoras = horasMapFinal.getOrDefault(entidad.getOidUsuario(), 0f);
-                dto.setTotalHorasActividades(totalHoras);
+                HorasLaborDocenteDTO resumen = horasFinal.get(entidad.getOidUsuario());
+                if (resumen == null) {
+                    resumen = crearResumenHorasVacio();
+                }
+                dto.setHorasLaborDocente(resumen);
+                dto.setTotalHorasActividades(resumen.getTotalHorasAsignadas());
                 return dto;
             });
 
@@ -165,8 +176,15 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
             UsuarioDepartamento entity = repository.findById(oidUsuario)
                 .orElseThrow(() -> new UsuarioDepartamentoNotFoundException("No existe asignacion para el usuario: " + oidUsuario));
             UsuarioDepartamentoDTOResponse dto = mapper.toResponse(entity);
-            Float totalHoras = usuarioActividadCalendarioRepository.sumarHorasPorUsuario(oidUsuario);
-            dto.setTotalHorasActividades(totalHoras != null ? totalHoras : 0f);
+            List<UsuarioHorasPorTipoActividadProjection> proyecciones =
+                    usuarioActividadCalendarioRepository.sumarHorasPorUsuariosYTipoActividad(List.of(oidUsuario));
+            Map<Integer, HorasLaborDocenteDTO> horasPorUsuario = construirHorasLaborPorUsuario(proyecciones);
+            HorasLaborDocenteDTO resumen = horasPorUsuario.get(oidUsuario);
+            if (resumen == null) {
+                resumen = crearResumenHorasVacio();
+            }
+            dto.setHorasLaborDocente(resumen);
+            dto.setTotalHorasActividades(resumen.getTotalHorasAsignadas());
             return new ApiResponse<>(200, "Asignacion encontrada correctamente.", dto);
         } catch (UsuarioDepartamentoException e) {
             throw e;
@@ -287,32 +305,28 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
                 .collect(Collectors.toList());
 
         if (!dtoList.isEmpty()) {
-            Map<Integer, Float> horasPorUsuario = obtenerHorasPorUsuario(profesores);
+            List<Integer> oids = profesores.stream()
+                    .map(UsuarioDepartamento::getOidUsuario)
+                    .collect(Collectors.toList());
+            List<UsuarioHorasPorTipoActividadProjection> proyecciones =
+                    usuarioActividadCalendarioRepository.sumarHorasPorUsuariosYTipoActividad(oids);
+            Map<Integer, HorasLaborDocenteDTO> horasPorUsuario = construirHorasLaborPorUsuario(proyecciones);
+
             dtoList.forEach(dto -> {
                 Integer oidUsuario = dto.getUsuario() != null ? dto.getUsuario().getOidUsuario() : null;
                 if (oidUsuario != null) {
-                    dto.setTotalHorasActividades(horasPorUsuario.getOrDefault(oidUsuario, 0f));
+                    HorasLaborDocenteDTO resumen = horasPorUsuario.get(oidUsuario);
+                    if (resumen == null) {
+                        resumen = crearResumenHorasVacio();
+                    }
+                    dto.setHorasLaborDocente(resumen);
+                    dto.setTotalHorasActividades(resumen.getTotalHorasAsignadas());
                 }
             });
         }
 
         String mensaje = dtoList.isEmpty() ? mensajeVacio : mensajeExitoso;
         return new ApiResponse<>(200, mensaje, dtoList);
-    }
-
-    private Map<Integer, Float> obtenerHorasPorUsuario(List<UsuarioDepartamento> profesores) {
-        List<Integer> oids = profesores.stream()
-                .map(UsuarioDepartamento::getOidUsuario)
-                .collect(Collectors.toList());
-
-        Map<Integer, Float> horasPorUsuario = new HashMap<>();
-        if (!oids.isEmpty()) {
-            List<UsuarioHorasProjection> proyecciones = usuarioActividadCalendarioRepository.sumarHorasPorUsuarios(oids);
-            for (UsuarioHorasProjection proyeccion : proyecciones) {
-                horasPorUsuario.put(proyeccion.getOidUsuario(), proyeccion.getTotalHoras());
-            }
-        }
-        return horasPorUsuario;
     }
 
     private String sanitizeIdentificacion(String identificacion) {
@@ -365,5 +379,112 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
         }
         String upper = value.trim().toUpperCase(Locale.ROOT);
         return Normalizer.normalize(upper, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+    }
+
+    private Map<Integer, HorasLaborDocenteDTO> construirHorasLaborPorUsuario(
+            List<UsuarioHorasPorTipoActividadProjection> proyecciones) {
+        if (proyecciones == null || proyecciones.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, List<UsuarioHorasPorTipoActividadProjection>> porUsuario = proyecciones.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(UsuarioHorasPorTipoActividadProjection::getOidUsuario));
+
+        Set<Integer> tiposIds = proyecciones.stream()
+                .map(UsuarioHorasPorTipoActividadProjection::getOidTipoActividad)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        Map<Integer, Float> maxPorTipo = calcularMaximoHorasPorTipoActividad(tiposIds);
+
+        Map<Integer, HorasLaborDocenteDTO> resultado = new HashMap<>();
+
+        for (Map.Entry<Integer, List<UsuarioHorasPorTipoActividadProjection>> entry : porUsuario.entrySet()) {
+            Integer oidUsuario = entry.getKey();
+            List<UsuarioHorasPorTipoActividadProjection> lista = entry.getValue();
+
+            Map<String, Float> asignadasPorGrupo = new HashMap<>();
+            Map<String, Float> maxPorGrupo = new HashMap<>();
+
+            for (UsuarioHorasPorTipoActividadProjection p : lista) {
+                if (p == null) {
+                    continue;
+                }
+                String nombreTipo = p.getNombreTipoActividad();
+                String grupo = agruparTipoActividad(nombreTipo);
+                float asignadas = p.getTotalHoras() != null ? p.getTotalHoras() : 0f;
+                float maxTipo = maxPorTipo.getOrDefault(p.getOidTipoActividad(), 0f);
+
+                asignadasPorGrupo.merge(grupo, asignadas, Float::sum);
+                maxPorGrupo.merge(grupo, maxTipo, Float::sum);
+            }
+
+            Map<String, Float> disponiblesPorGrupo = new HashMap<>();
+            float totalAsignadas = 0f;
+            float totalDisponibles = 0f;
+
+            for (String grupo : asignadasPorGrupo.keySet()) {
+                float asignadas = asignadasPorGrupo.getOrDefault(grupo, 0f);
+                float max = maxPorGrupo.getOrDefault(grupo, 0f);
+                float disponibles = max - asignadas;
+                if (disponibles < 0f) {
+                    disponibles = 0f;
+                }
+                disponiblesPorGrupo.put(grupo, disponibles);
+                totalAsignadas += asignadas;
+                totalDisponibles += disponibles;
+            }
+
+            HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
+            dto.setHorasAsignadasPorTipoActividad(asignadasPorGrupo);
+            dto.setHorasDisponiblesPorTipoActividad(disponiblesPorGrupo);
+            dto.setTotalHorasAsignadas(totalAsignadas);
+            dto.setTotalHorasDisponibles(totalDisponibles);
+
+            resultado.put(oidUsuario, dto);
+        }
+
+        return resultado;
+    }
+
+    private Map<Integer, Float> calcularMaximoHorasPorTipoActividad(Set<Integer> tiposIds) {
+        if (tiposIds == null || tiposIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Integer, Float> resultado = new HashMap<>();
+        for (Integer oidTipo : tiposIds) {
+            if (oidTipo == null) {
+                continue;
+            }
+            Float maximo = cargoActividadRepository.findByTipoActividad_OidTipoActividad(oidTipo).stream()
+                    .map(c -> c.getMaxHorasSemana() != null ? c.getMaxHorasSemana() : 0f)
+                    .max(Float::compare)
+                    .orElse(0f);
+            resultado.put(oidTipo, maximo);
+        }
+        return resultado;
+    }
+
+    private String agruparTipoActividad(String nombreTipo) {
+        if (nombreTipo == null) {
+            return "DESCONOCIDO";
+        }
+        String normalizado = normalizeValue(nombreTipo);
+        boolean esDocencia = normalizado.contains("DOCENCIA");
+        boolean esPreparacion = normalizado.contains("PREPARACION");
+        if (esDocencia || esPreparacion) {
+            return "DOCENCIA";
+        }
+        return nombreTipo;
+    }
+
+    private HorasLaborDocenteDTO crearResumenHorasVacio() {
+        HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
+        dto.setHorasAsignadasPorTipoActividad(Map.of());
+        dto.setHorasDisponiblesPorTipoActividad(Map.of());
+        dto.setTotalHorasAsignadas(0f);
+        dto.setTotalHorasDisponibles(0f);
+        return dto;
     }
 }

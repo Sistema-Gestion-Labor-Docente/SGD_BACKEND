@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
 import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasProjection;
+import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasPorTipoActividadProjection;
 
 @Repository
 public interface UsuarioActividadCalendarioRepository extends JpaRepository<UsuarioActividadCalendario, Integer>, JpaSpecificationExecutor<UsuarioActividadCalendario> {
@@ -103,6 +104,19 @@ public interface UsuarioActividadCalendarioRepository extends JpaRepository<Usua
         GROUP BY uac.usuario.oidUsuario
     """)
     List<UsuarioHorasProjection> sumarHorasPorUsuarios(@Param("oidUsuarios") List<Integer> oidUsuarios);
+
+    @Query("""
+        SELECT uac.usuario.oidUsuario AS oidUsuario,
+               act.tipoActividad.oidTipoActividad AS oidTipoActividad,
+               act.tipoActividad.nombre AS nombreTipoActividad,
+               COALESCE(SUM(COALESCE(uac.horasActividad, 0)), 0) AS totalHoras
+        FROM UsuarioActividadCalendario uac
+        JOIN uac.actividadCalendario ac
+        JOIN ac.actividad act
+        WHERE uac.usuario.oidUsuario IN :oidUsuarios
+        GROUP BY uac.usuario.oidUsuario, act.tipoActividad.oidTipoActividad, act.tipoActividad.nombre
+    """)
+    List<UsuarioHorasPorTipoActividadProjection> sumarHorasPorUsuariosYTipoActividad(@Param("oidUsuarios") List<Integer> oidUsuarios);
 
     @Query("""
         SELECT COALESCE(SUM(COALESCE(uac.horasActividad, 0)), 0)

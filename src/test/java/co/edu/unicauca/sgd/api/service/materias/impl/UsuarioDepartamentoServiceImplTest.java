@@ -33,6 +33,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import co.edu.unicauca.sgd.api.domain.Departamento;
 import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
+import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.UsuarioDepartamentoDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.UsuarioDepartamentoDTOResponse;
@@ -41,9 +42,10 @@ import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoInternalException;
 import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoNotFoundException;
 import co.edu.unicauca.sgd.api.exception.UsuarioDepartamentoValidationException;
 import co.edu.unicauca.sgd.api.mapper.UsuarioDepartamentoMapper;
+import co.edu.unicauca.sgd.api.repository.CargoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
-import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasProjection;
+import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasPorTipoActividadProjection;
 import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,11 +60,14 @@ class UsuarioDepartamentoServiceImplTest {
     @Mock
     private UsuarioActividadCalendarioRepository usuarioActividadCalendarioRepository;
 
+    @Mock
+    private CargoActividadRepository cargoActividadRepository;
+
     private UsuarioDepartamentoServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new UsuarioDepartamentoServiceImpl(repository, mapper, usuarioActividadCalendarioRepository);
+        service = new UsuarioDepartamentoServiceImpl(repository, mapper, usuarioActividadCalendarioRepository, cargoActividadRepository);
     }
 
     @Test
@@ -74,7 +79,7 @@ class UsuarioDepartamentoServiceImplTest {
 
         when(repository.findAll(ArgumentMatchers.<Specification<UsuarioDepartamento>>any(), eq(pageable))).thenReturn(page);
         when(mapper.toResponse(entity)).thenReturn(dto);
-        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuarios(anyList())).thenReturn(Collections.emptyList());
+        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuariosYTipoActividad(anyList())).thenReturn(Collections.emptyList());
 
         ApiResponse<Page<UsuarioDepartamentoDTOResponse>> response =
                 service.obtenerTodos(10, 20, null, null, null, null, null, pageable);
@@ -99,7 +104,7 @@ class UsuarioDepartamentoServiceImplTest {
         assertEquals(200, response.getCodigo());
         assertEquals("No se encontraron asignaciones usuario-departamento.", response.getMensaje());
         assertEquals(0, response.getData().getTotalElements());
-        verify(usuarioActividadCalendarioRepository, never()).sumarHorasPorUsuarios(anyList());
+        verify(usuarioActividadCalendarioRepository, never()).sumarHorasPorUsuariosYTipoActividad(anyList());
     }
 
     @Test
@@ -128,7 +133,10 @@ class UsuarioDepartamentoServiceImplTest {
 
         when(repository.findById(1)).thenReturn(Optional.of(entity));
         when(mapper.toResponse(entity)).thenReturn(dto);
-        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuario(1)).thenReturn(5f);
+        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuariosYTipoActividad(anyList()))
+                .thenReturn(List.of(buildHorasPorTipoProjection(1, 10, "DOCENCIA", 5f)));
+        when(cargoActividadRepository.findByTipoActividad_OidTipoActividad(10))
+                .thenReturn(Collections.emptyList());
 
         ApiResponse<UsuarioDepartamentoDTOResponse> response = service.buscarPorUsuario(1);
 
@@ -275,8 +283,10 @@ class UsuarioDepartamentoServiceImplTest {
 
         when(repository.findProfesoresConTipoActividad("DOCENCIA", 3)).thenReturn(List.of(profesor));
         when(mapper.toResponse(profesor)).thenReturn(dto);
-        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuarios(anyList()))
-                .thenReturn(List.of(buildHorasProjection(1, 12f)));
+        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuariosYTipoActividad(anyList()))
+                .thenReturn(List.of(buildHorasPorTipoProjection(1, 20, "DOCENCIA", 12f)));
+        when(cargoActividadRepository.findByTipoActividad_OidTipoActividad(20))
+                .thenReturn(Collections.emptyList());
 
         ApiResponse<List<UsuarioDepartamentoDTOResponse>> response = service.obtenerProfesoresPorTipoActividad("DOCENCIA", 3);
 
@@ -297,8 +307,10 @@ class UsuarioDepartamentoServiceImplTest {
 
         when(repository.findProfesoresConTipoActividadDiferente("DOCENCIA", 4)).thenReturn(List.of(profesor));
         when(mapper.toResponse(profesor)).thenReturn(dto);
-        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuarios(anyList()))
-                .thenReturn(List.of(buildHorasProjection(2, 5f)));
+        when(usuarioActividadCalendarioRepository.sumarHorasPorUsuariosYTipoActividad(anyList()))
+                .thenReturn(List.of(buildHorasPorTipoProjection(2, 30, "INVESTIGACION", 5f)));
+        when(cargoActividadRepository.findByTipoActividad_OidTipoActividad(30))
+                .thenReturn(Collections.emptyList());
 
         ApiResponse<List<UsuarioDepartamentoDTOResponse>> response = service.obtenerProfesoresPorTipoActividad("NO_DOCENCIA", 4);
 
@@ -337,11 +349,25 @@ class UsuarioDepartamentoServiceImplTest {
         return entity;
     }
 
-    private UsuarioHorasProjection buildHorasProjection(Integer oidUsuario, Float horas) {
-        return new UsuarioHorasProjection() {
+    private UsuarioHorasPorTipoActividadProjection buildHorasPorTipoProjection(
+            Integer oidUsuario,
+            Integer oidTipoActividad,
+            String nombreTipoActividad,
+            Float horas) {
+        return new UsuarioHorasPorTipoActividadProjection() {
             @Override
             public Integer getOidUsuario() {
                 return oidUsuario;
+            }
+
+            @Override
+            public Integer getOidTipoActividad() {
+                return oidTipoActividad;
+            }
+
+            @Override
+            public String getNombreTipoActividad() {
+                return nombreTipoActividad;
             }
 
             @Override
