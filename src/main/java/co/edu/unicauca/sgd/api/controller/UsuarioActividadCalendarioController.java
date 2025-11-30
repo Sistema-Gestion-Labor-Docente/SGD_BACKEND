@@ -24,6 +24,7 @@ import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalend
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
 import co.edu.unicauca.sgd.api.service.actividad.laborDocente.UsuarioActividadCalendarioService;
 import io.swagger.v3.oas.annotations.Operation;
+import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
@@ -33,6 +34,7 @@ import jakarta.validation.Valid;
 public class UsuarioActividadCalendarioController {
 
     private final UsuarioActividadCalendarioService usuarioActividadCalendarioService;
+    private static final int OID_TIPO_ACTIVIDAD_DOCENCIA = 9;
 
     public UsuarioActividadCalendarioController(UsuarioActividadCalendarioService usuarioActividadCalendarioService) {
         this.usuarioActividadCalendarioService = usuarioActividadCalendarioService;
@@ -64,6 +66,7 @@ public class UsuarioActividadCalendarioController {
     @PostMapping
     @Operation(summary = "Crear actividad con usuarios y calendario", description = "Crea una nueva actividad y relaciones usuario/calendario")
     public ResponseEntity<ApiResponse<UsuarioActividadCalendarioDTOResponse>> save(@Valid @RequestBody UsuarioActividadCalendarioDTORequest dto) {
+        validarTipoActividadNoDocencia(dto.getOidTipoActividad());
         ApiResponse<UsuarioActividadCalendarioDTOResponse> response =
                 usuarioActividadCalendarioService.crearActividadConRelaciones(dto);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
@@ -73,6 +76,13 @@ public class UsuarioActividadCalendarioController {
     @Operation(summary = "Crear múltiples actividades", description = "Crea varias actividades y devuelve cuáles se registraron exitosamente.")
     public ResponseEntity<ApiResponse<List<UsuarioActividadCalendarioCreacionResultadoDTO>>> saveBatch(
             @RequestBody List<@Valid UsuarioActividadCalendarioDTORequest> dtos) {
+        if (dtos != null) {
+            for (UsuarioActividadCalendarioDTORequest dto : dtos) {
+                if (dto != null) {
+                    validarTipoActividadNoDocencia(dto.getOidTipoActividad());
+                }
+            }
+        }
         ApiResponse<List<UsuarioActividadCalendarioCreacionResultadoDTO>> response =
                 usuarioActividadCalendarioService.crearActividadesConRelaciones(dtos);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
@@ -81,6 +91,7 @@ public class UsuarioActividadCalendarioController {
     @PutMapping("/{oidActividad}")
     @Operation(summary = "Actualizar actividad y relaciones", description = "Actualiza la actividad y todas sus relaciones usuario/calendario")
     public ResponseEntity<ApiResponse<UsuarioActividadCalendarioDTOResponse>> update(@PathVariable Integer oidActividad, @Valid @RequestBody UsuarioActividadCalendarioDTORequest dto) {
+        validarTipoActividadNoDocencia(dto.getOidTipoActividad());
         ApiResponse<UsuarioActividadCalendarioDTOResponse> response =
                 usuarioActividadCalendarioService.actualizarActividadConRelaciones(oidActividad, dto);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
@@ -152,6 +163,13 @@ public class UsuarioActividadCalendarioController {
                 usuarioActividadCalendarioService.listarPorTipoDocencia(
                         oidCalendario, oidDepartamento, oidUsuario, tipoContratacion, semestre, pageable);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
+    }
+
+    private void validarTipoActividadNoDocencia(Integer oidTipoActividad) {
+        if (oidTipoActividad != null && oidTipoActividad == OID_TIPO_ACTIVIDAD_DOCENCIA) {
+            throw new ValidacionNegocioException(
+                    "Las actividades de docencia (tipo 9) deben gestionarse a través de las necesidades y asignaciones y no pueden crearse o modificarse por este flujo.");
+        }
     }
 
 }

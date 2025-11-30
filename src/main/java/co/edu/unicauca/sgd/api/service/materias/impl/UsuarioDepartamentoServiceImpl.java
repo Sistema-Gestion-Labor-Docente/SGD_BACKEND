@@ -422,7 +422,6 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
 
             Map<String, Float> disponiblesPorGrupo = new HashMap<>();
             float totalAsignadas = 0f;
-            float totalDisponibles = 0f;
 
             for (String grupo : asignadasPorGrupo.keySet()) {
                 float asignadas = asignadasPorGrupo.getOrDefault(grupo, 0f);
@@ -433,13 +432,16 @@ public class UsuarioDepartamentoServiceImpl implements UsuarioDepartamentoServic
                 }
                 disponiblesPorGrupo.put(grupo, disponibles);
                 totalAsignadas += asignadas;
-                totalDisponibles += disponibles;
             }
 
             HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
             dto.setHorasAsignadasPorTipoActividad(asignadasPorGrupo);
             dto.setHorasDisponiblesPorTipoActividad(disponiblesPorGrupo);
             dto.setTotalHorasAsignadas(totalAsignadas);
+            float totalDisponibles = HorasLaborDocenteDTO.HORAS_MAX_SEMANA - totalAsignadas;
+            if (totalDisponibles < 0f) {
+                totalDisponibles = 0f;
+            }
             dto.setTotalHorasDisponibles(totalDisponibles);
 
             resultado.put(oidUsuario, dto);

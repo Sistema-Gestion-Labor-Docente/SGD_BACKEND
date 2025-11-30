@@ -3,10 +3,12 @@ package co.edu.unicauca.sgd.api.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -28,6 +30,7 @@ import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalend
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.ValidacionHorasCargoDTOResponse;
+import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
 import co.edu.unicauca.sgd.api.service.actividad.laborDocente.UsuarioActividadCalendarioService;
 
 @ExtendWith(MockitoExtension.class)
@@ -89,6 +92,15 @@ class UsuarioActividadCalendarioControllerTest {
     }
 
     @Test
+    void save_cuandoTipoActividadEsDocencia_lanzaValidacionNegocioException() {
+        UsuarioActividadCalendarioDTORequest dto = new UsuarioActividadCalendarioDTORequest();
+        dto.setOidTipoActividad(9);
+
+        assertThrows(ValidacionNegocioException.class, () -> controller.save(dto));
+        verifyNoInteractions(service);
+    }
+
+    @Test
     void saveBatch_invocaServicioYRetornaRespuesta() {
         List<UsuarioActividadCalendarioDTORequest> dtos = List.of(new UsuarioActividadCalendarioDTORequest());
         List<UsuarioActividadCalendarioCreacionResultadoDTO> resultados = List.of(
@@ -106,6 +118,16 @@ class UsuarioActividadCalendarioControllerTest {
     }
 
     @Test
+    void saveBatch_cuandoAlgunaActividadEsDocencia_lanzaValidacionNegocioException() {
+        UsuarioActividadCalendarioDTORequest dtoDocencia = new UsuarioActividadCalendarioDTORequest();
+        dtoDocencia.setOidTipoActividad(9);
+        List<UsuarioActividadCalendarioDTORequest> dtos = List.of(dtoDocencia);
+
+        assertThrows(ValidacionNegocioException.class, () -> controller.saveBatch(dtos));
+        verifyNoInteractions(service);
+    }
+
+    @Test
     void update_invocaServicioYReenviaRespuesta() {
         UsuarioActividadCalendarioDTORequest dto = new UsuarioActividadCalendarioDTORequest();
         ApiResponse<UsuarioActividadCalendarioDTOResponse> serviceResponse =
@@ -117,6 +139,15 @@ class UsuarioActividadCalendarioControllerTest {
         assertEquals(200, response.getStatusCodeValue());
         assertSame(serviceResponse, response.getBody());
         verify(service).actualizarActividadConRelaciones(9, dto);
+    }
+
+    @Test
+    void update_cuandoTipoActividadEsDocencia_lanzaValidacionNegocioException() {
+        UsuarioActividadCalendarioDTORequest dto = new UsuarioActividadCalendarioDTORequest();
+        dto.setOidTipoActividad(9);
+
+        assertThrows(ValidacionNegocioException.class, () -> controller.update(9, dto));
+        verifyNoInteractions(service);
     }
 
     @Test

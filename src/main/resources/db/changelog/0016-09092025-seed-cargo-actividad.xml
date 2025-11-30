@@ -13,7 +13,7 @@
             <column name="TIPO" value="PROFESOR"/>
             <column name="MAXHORASSEMANA" value="10"/>
             <column name="MAXACTIVIDADES" valueNumeric="5"/>
-            <column name="OIDTIPOACTIVIDAD" valueNumeric="9"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="1"/>
             <column name="FECHACREACION" valueDate="NOW()"/>
             <column name="USUARIOCREACION" value="seeder"/>
         </insert>

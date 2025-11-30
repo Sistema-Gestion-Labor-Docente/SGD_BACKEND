@@ -777,7 +777,8 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         }
 
         Float maximo = oidTipoActividad != null ? obtenerMaximoHorasPorTipoActividad(oidTipoActividad) : null;
-        float disponible = maximo != null ? maximo - totalAsignadas : 0f;
+        float limite = maximo != null ? maximo : HORAS_DEFAULT_CONTRATACION;
+        float disponible = limite - totalAsignadas;
         if (disponible < 0f) {
             disponible = 0f;
         }

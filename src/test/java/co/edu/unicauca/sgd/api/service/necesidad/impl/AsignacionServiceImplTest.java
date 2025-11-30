@@ -32,6 +32,8 @@ import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.Departamento;
 import co.edu.unicauca.sgd.api.domain.EstadoActividad;
 import co.edu.unicauca.sgd.api.domain.Materia;
+import co.edu.unicauca.sgd.api.domain.Plan;
+import co.edu.unicauca.sgd.api.domain.Programa;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.domain.Seleccionado;
 import co.edu.unicauca.sgd.api.domain.TipoActividad;
@@ -49,9 +51,11 @@ import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
 import co.edu.unicauca.sgd.api.repository.ActividadRepository;
 import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
 import co.edu.unicauca.sgd.api.repository.EstadoActividadRepository;
+import co.edu.unicauca.sgd.api.repository.EavAtributoRepository;
 import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
 import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
+import co.edu.unicauca.sgd.api.service.EavAtributoService;
 
 @ExtendWith(MockitoExtension.class)
 class AsignacionServiceImplTest {
@@ -68,6 +72,10 @@ class AsignacionServiceImplTest {
     private EstadoActividadRepository estadoActividadRepository;
     @Mock
     private ActividadRepository actividadRepository;
+    @Mock
+    private EavAtributoService eavAtributoService;
+    @Mock
+    private EavAtributoRepository eavAtributoRepository;
     @Mock
     private AsignacionMapper asignacionMapper;
 
@@ -89,6 +97,12 @@ class AsignacionServiceImplTest {
         Departamento departamento = new Departamento();
         departamento.setOidDepartamento(20);
         materia.setDepartamento(departamento);
+
+        Plan plan = new Plan();
+        Programa programa = new Programa();
+        programa.setNombre("Programa de Prueba");
+        plan.setPrograma(programa);
+        materia.setPlan(plan);
 
         necesidad = new Necesidad();
         necesidad.setOidNecesidad(1);
@@ -158,6 +172,8 @@ class AsignacionServiceImplTest {
         TipoActividad tipoActividad = new TipoActividad();
         EstadoActividad estadoActividad = new EstadoActividad();
 
+        when(eavAtributoRepository.findAll()).thenReturn(Collections.emptyList());
+
         when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
         when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
         when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
@@ -194,6 +210,7 @@ class AsignacionServiceImplTest {
         assertThat(asignacionGuardada.getHorasDocencia()).isEqualTo(horasEsperadas);
         verify(asignacionRepository).saveAll(ArgumentMatchers.<Iterable<Asignacion>>any());
         verify(actividadRepository).save(notNull(Actividad.class));
+        verify(eavAtributoService).actualizarAtributosDinamicos(any(), any(), any());
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.ASIGNADA);
         verify(necesidadRepository).save(necesidad);
     }
