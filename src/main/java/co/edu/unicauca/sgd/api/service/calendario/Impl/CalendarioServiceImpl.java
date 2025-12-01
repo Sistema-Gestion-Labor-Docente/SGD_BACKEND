@@ -3,20 +3,25 @@ package co.edu.unicauca.sgd.api.service.calendario.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.Normalizer;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import co.edu.unicauca.sgd.api.client.ClienteNotificacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.Departamento;
+import co.edu.unicauca.sgd.api.domain.Fecha;
 import co.edu.unicauca.sgd.api.domain.Seleccionado;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
@@ -83,6 +88,11 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private final CalendarioPdfService calendarioPdfService;
 
+    private final ClienteNotificacion clienteNotificacion;
+
+    @Value("${spring.notification.habilitada:false}")
+    private boolean notificacionHabilitada;
+
     public CalendarioServiceImpl(
             CalendarioRepository calendarioRepository,
             CalendarioMapper calendarioMapper,
@@ -92,7 +102,8 @@ public class CalendarioServiceImpl implements CalendarioService {
             DepartamentoRepository departamentoRepository,
             UsuarioDepartamentoRepository usuarioDepartamentoRepository,
             FechaMapper fechaMapper,
-            CalendarioPdfService calendarioPdfService) {
+            CalendarioPdfService calendarioPdfService,
+            ClienteNotificacion clienteNotificacion) {
         this.calendarioRepository = calendarioRepository;
         this.calendarioMapper = calendarioMapper;
         this.fechaService = fechaService;
@@ -102,6 +113,7 @@ public class CalendarioServiceImpl implements CalendarioService {
         this.usuarioDepartamentoRepository = usuarioDepartamentoRepository;
         this.fechaMapper = fechaMapper;
         this.calendarioPdfService = calendarioPdfService;
+        this.clienteNotificacion = clienteNotificacion;
     }
 
     private List<FechaDTOResponse> obtenerFechasDto(Integer oidCalendario) {
@@ -210,6 +222,8 @@ public class CalendarioServiceImpl implements CalendarioService {
             Calendario existente = calendarioRepository.findById(oid)
                     .orElseThrow(() -> new CalendarioNoEncontradoException(oid));
 
+            String estadoAnterior = existente.getEstado() != null ? existente.getEstado().toUpperCase() : null;
+
             if (request.getAnioCalendario() != null && !request.getAnioCalendario().equals(existente.getAnioCalendario())) {
                 throw new CalendarioOperacionNoPermitidaException("El anio (anio) no es editable.");
             }
@@ -224,6 +238,14 @@ public class CalendarioServiceImpl implements CalendarioService {
             CalendarioDTOResponse dto = calendarioMapper.toResponse(actualizado, obtenerFechasDto(actualizado.getOidcalendario()));
 
             logger.info("Calendario actualizado con ID: {}", oid);
+
+            // Notificar cuando el calendario pasa de PENDIENTE a APROBADO
+            String estadoNuevo = actualizado.getEstado() != null ? actualizado.getEstado().toUpperCase() : null;
+            if (notificacionHabilitada
+                    && "PENDIENTE".equals(estadoAnterior)
+                    && "APROBADO".equals(estadoNuevo)) {
+                notificarActivacionCalendario(actualizado, "El calendario ha sido aprobado");
+            }
             return new ApiResponse<>(200, "Calendario actualizado correctamente.", dto);
         } catch (CalendarioOperacionNoPermitidaException e) {
             return new ApiResponse<>(400, e.getMessage(), null);
@@ -252,6 +274,92 @@ public class CalendarioServiceImpl implements CalendarioService {
             CalendarioProcesoException ex =
                     new CalendarioProcesoException("Error al eliminar el calendario", e);
             return new ApiResponse<>(500, ex.getMessage(), null);
+        }
+    }
+
+    /**
+     * Tarea programada que revisa diariamente las fechas de cada calendario
+     * y realiza transiciones automaticas de estado:
+     * <ul>
+     *   <li>Si el calendario esta APROBADO y la fecha actual esta entre
+     *       la fecha de inicio (OIDNOMBREFECHA = 1) y la ultima fecha registrada
+     *       (inclusive), pasa a ACTIVO.</li>
+     *   <li>Si el calendario esta ACTIVO y la fecha actual es posterior
+     *       a la ultima fecha registrada, pasa a DESHABILITADO.</li>
+     * </ul>
+     * Estados como PENDIENTE u otros se gestionan por otros flujos y no se modifican aqui.
+     */
+    @Scheduled(cron = "0 0 0 * * ?")
+    @Transactional
+    public void actualizarEstadosCalendariosPorFechas() {
+        LocalDateTime ahora = LocalDateTime.now();
+
+        List<Calendario> calendarios = calendarioRepository.findAll();
+        for (Calendario calendario : calendarios) {
+            try {
+                String estadoActual = calendario.getEstado() != null ? calendario.getEstado().toUpperCase() : "";
+
+                // Solo gestionamos automatico para estados APROBADO o ACTIVO
+                if (!"APROBADO".equals(estadoActual) && !"ACTIVO".equals(estadoActual)) {
+                    continue;
+                }
+
+                Integer oidCalendario = calendario.getOidcalendario();
+
+                // Fecha de inicio: "Inicio del periodo" (OIDNOMBREFECHA = 1)
+                LocalDateTime fechaInicio = fechaRepository
+                        .findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(oidCalendario, 1)
+                        .map(Fecha::getFechaInicial)
+                        .orElse(null);
+
+                List<Fecha> fechas = fechaRepository.findByCalendario_Oidcalendario(oidCalendario);
+                if (fechas == null || fechas.isEmpty() || fechaInicio == null) {
+                    continue;
+                }
+
+                // Última fecha agregada: se toma el máximo entre FECHAFIN y FECHAINICIAL
+                LocalDateTime ultimaFecha = fechas.stream()
+                        .map(f -> f.getFechaFin() != null ? f.getFechaFin() : f.getFechaInicial())
+                        .filter(d -> d != null)
+                        .max(LocalDateTime::compareTo)
+                        .orElse(null);
+
+                if (ultimaFecha == null) {
+                    continue;
+                }
+
+                String nuevoEstado = null;
+
+                boolean dentroDeRango = (ahora.isAfter(fechaInicio) || ahora.isEqual(fechaInicio))
+                        && (ahora.isBefore(ultimaFecha) || ahora.isEqual(ultimaFecha));
+
+                // APROBADO -> ACTIVO cuando ya esta dentro del rango de fechas
+                if ("APROBADO".equals(estadoActual) && dentroDeRango) {
+                    nuevoEstado = "ACTIVO";
+                }
+
+                // ACTIVO -> DESHABILITADO cuando ya paso la ultima fecha
+                if ("ACTIVO".equals(estadoActual) && ahora.isAfter(ultimaFecha)) {
+                    nuevoEstado = "DESHABILITADO";
+                }
+
+                if (nuevoEstado != null && !nuevoEstado.equalsIgnoreCase(estadoActual)) {
+                    calendario.setEstado(nuevoEstado);
+                    calendario.setUsuarioActualizacion("SYSTEM_SCHEDULER");
+                    Calendario actualizado = calendarioRepository.save(calendario);
+
+                    logger.info("Estado de calendario {} actualizado de {} a {}",
+                            oidCalendario, estadoActual, nuevoEstado);
+
+                    // Notificar cuando se activa un calendario
+                    if (notificacionHabilitada && "APROBADO".equals(estadoActual) && "ACTIVO".equals(nuevoEstado)) {
+                        notificarActivacionCalendario(actualizado, "Nuevo calendario académico activo");
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Error actualizando estado para calendario {}: {}",
+                        calendario.getOidcalendario(), e.getMessage());
+            }
         }
     }
 
@@ -419,6 +527,49 @@ public class CalendarioServiceImpl implements CalendarioService {
                 .replaceAll("\\p{M}", "")
                 .replaceAll("[\\s_]+", "")
                 .toUpperCase();
+    }
+
+    /**
+     * Envía notificaciones por correo a secretarios, jefes, coordinadores y profesores
+     * cuando un calendario es aprobado o pasa a estado ACTIVO.
+     */
+    private void notificarActivacionCalendario(Calendario calendario, String evento) {
+        try {
+            // Reutilizamos la lógica de seleccionados: contiene los docentes asociados al calendario
+            List<Seleccionado> seleccionados = seleccionadoRepository.findAll().stream()
+                    .filter(s -> s.getCalendario() != null
+                            && calendario.getOidcalendario().equals(s.getCalendario().getOidcalendario())
+                            && s.getUsuario() != null
+                            && StringUtils.hasText(s.getUsuario().getCorreo()))
+                    .toList();
+
+            if (seleccionados.isEmpty()) {
+                logger.warn("No hay seleccionados para enviar notificación del calendario {}", calendario.getOidcalendario());
+                return;
+            }
+
+            List<String> correos = seleccionados.stream()
+                    .map(s -> s.getUsuario().getCorreo())
+                    .distinct()
+                    .toList();
+
+            String asunto = String.format("Calendario %s %s - %s",
+                    calendario.getAnioCalendario(),
+                    calendario.getNumeroCalendario(),
+                    evento);
+
+            String mensaje = String.format(
+                    "Se informa que el calendario académico %s - %s ha cambiado de estado a '%s'.",
+                    calendario.getAnioCalendario(),
+                    calendario.getNumeroCalendario(),
+                    calendario.getEstado()
+            );
+
+            clienteNotificacion.enviarNotificacion(correos, asunto, mensaje);
+        } catch (Exception e) {
+            logger.error("Error al enviar notificaciones para el calendario {}: {}",
+                    calendario.getOidcalendario(), e.getMessage());
+        }
     }
 }
 

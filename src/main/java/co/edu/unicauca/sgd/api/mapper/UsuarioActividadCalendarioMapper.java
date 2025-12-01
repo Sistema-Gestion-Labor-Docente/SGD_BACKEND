@@ -20,6 +20,7 @@ import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.CargoActividadDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioUsuarioDTO;
 import co.edu.unicauca.sgd.api.dto.materias.DepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 
@@ -43,15 +44,33 @@ public class UsuarioActividadCalendarioMapper {
         actividadDto.setOidActividad(actividad.getOidActividad());
         actividadDto.setTipoActividad(actividad.getTipoActividad());
 
-        // CargoActividad: tomar de la primera relación si existe
-        if (!relaciones.isEmpty() && relaciones.get(0).getCargoActividad() != null) {
-            CargoActividad ca = relaciones.get(0).getCargoActividad();
-            CargoActividadDTOResponse cargoDto = new CargoActividadDTOResponse();
-            cargoDto.setOidCargoActividad(ca.getOidCargoActividad());
-            cargoDto.setNombre(ca.getNombre());
-            cargoDto.setMaxHorasSemana(ca.getMaxHorasSemana());
-            cargoDto.setMaxActividades(ca.getMaxActividades());
-            actividadDto.setCargoActividad(cargoDto);
+        // CargoActividad: si todas las relaciones comparten el mismo cargo, lo exponemos a nivel de actividad.
+        if (!relaciones.isEmpty()) {
+            CargoActividad cargoComun = null;
+            boolean mismoCargo = true;
+            for (UsuarioActividadCalendario rel : relaciones) {
+                CargoActividad cargo = rel.getCargoActividad();
+                if (cargo == null) {
+                    mismoCargo = false;
+                    break;
+                }
+                if (cargoComun == null) {
+                    cargoComun = cargo;
+                } else if (!cargoComun.getOidCargoActividad().equals(cargo.getOidCargoActividad())) {
+                    mismoCargo = false;
+                    break;
+                }
+            }
+            if (mismoCargo && cargoComun != null) {
+                CargoActividadDTOResponse cargoDto = new CargoActividadDTOResponse();
+                cargoDto.setOidCargoActividad(cargoComun.getOidCargoActividad());
+                cargoDto.setNombre(cargoComun.getNombre());
+                cargoDto.setMaxHorasSemana(cargoComun.getMaxHorasSemana());
+                cargoDto.setMaxActividades(cargoComun.getMaxActividades());
+                actividadDto.setCargoActividad(cargoDto);
+            } else {
+                actividadDto.setCargoActividad(null);
+            }
         } else {
             actividadDto.setCargoActividad(null);
         }
@@ -107,6 +126,21 @@ public class UsuarioActividadCalendarioMapper {
             .collect(Collectors.toList());
 
         dto.setUsuarios(usuarios);
+
+        // Detalle usuario-actividad-calendario: cargo y horas por usuario
+        List<UsuarioActividadCalendarioUsuarioDTO> usuariosActividad = relaciones.stream()
+            .map(rel -> {
+                UsuarioActividadCalendarioUsuarioDTO u = new UsuarioActividadCalendarioUsuarioDTO();
+                Usuario usuario = rel.getUsuario();
+                u.setOidUsuario(usuario != null ? usuario.getOidUsuario() : null);
+                CargoActividad cargo = rel.getCargoActividad();
+                u.setOidCargoActividad(cargo != null ? cargo.getOidCargoActividad() : null);
+                u.setHoras(rel.getHorasActividad());
+                return u;
+            })
+            .collect(Collectors.toList());
+
+        dto.setUsuariosActividad(usuariosActividad);
 
         return dto;
     }

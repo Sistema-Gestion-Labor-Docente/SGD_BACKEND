@@ -11,6 +11,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,8 +25,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import co.edu.unicauca.sgd.api.client.ClienteNotificacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.Fecha;
+import co.edu.unicauca.sgd.api.domain.Seleccionado;
+import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
@@ -56,6 +63,8 @@ class CalendarioServiceImplTest {
     private UsuarioDepartamentoRepository usuarioDepartamentoRepository;
     @Mock
     private CalendarioPdfService calendarioPdfService;
+    @Mock
+    private ClienteNotificacion clienteNotificacion;
 
     private final CalendarioMapper calendarioMapper = new CalendarioMapper();
     private final FechaMapper fechaMapper = new FechaMapper();
@@ -73,7 +82,8 @@ class CalendarioServiceImplTest {
                 departamentoRepository,
                 usuarioDepartamentoRepository,
                 fechaMapper,
-                calendarioPdfService);
+                calendarioPdfService,
+                clienteNotificacion);
 
         lenient().when(fechaRepository.findByCalendario_OidcalendarioOrderByFechaInicialAsc(any()))
                 .thenReturn(List.of());
@@ -239,5 +249,119 @@ class CalendarioServiceImplTest {
         ApiResponse<Void> response = calendarioService.eliminar(12);
 
         assertEquals(404, response.getCodigo());
+    }
+
+    @Test
+    void actualizar_pendienteAAprobado_enviaNotificacion() {
+        Calendario existente = new Calendario();
+        existente.setOidcalendario(1);
+        existente.setAnioCalendario("2024");
+        existente.setNumeroCalendario(1);
+        existente.setEstado("PENDIENTE");
+
+        CalendarioDTORequest request = new CalendarioDTORequest();
+        request.setAnioCalendario("2024");
+        request.setNumeroCalendario(1);
+        request.setEstado("APROBADO");
+
+        when(calendarioRepository.findById(1)).thenReturn(Optional.of(existente));
+        when(calendarioRepository.save(existente)).thenAnswer(invocation -> {
+            Calendario saved = invocation.getArgument(0);
+            saved.setEstado("APROBADO");
+            return saved;
+        });
+
+        Usuario usuario = new Usuario();
+        usuario.setCorreo("docente@unicauca.edu.co");
+        Seleccionado seleccionado = new Seleccionado();
+        seleccionado.setCalendario(existente);
+        seleccionado.setUsuario(usuario);
+        when(seleccionadoRepository.findAll()).thenReturn(List.of(seleccionado));
+
+        // habilitar notificaciones
+        ReflectionTestUtils.setField(calendarioService, "notificacionHabilitada", true);
+
+        calendarioService.actualizar(1, request);
+
+        verify(clienteNotificacion, atLeastOnce()).enviarNotificacion(
+                any(), any(String.class), any(String.class));
+    }
+
+    @Test
+    void cron_aprobadoDentroDeRango_cambiaAActivoYNotifica() {
+        Calendario calendario = new Calendario();
+        calendario.setOidcalendario(2);
+        calendario.setAnioCalendario("2024");
+        calendario.setNumeroCalendario(1);
+        calendario.setEstado("APROBADO");
+
+        when(calendarioRepository.findAll()).thenReturn(List.of(calendario));
+        when(calendarioRepository.save(calendario)).thenReturn(calendario);
+
+        LocalDateTime ahora = LocalDateTime.now();
+
+        Fecha fechaInicio = new Fecha();
+        fechaInicio.setFechaInicial(ahora.minusDays(1));
+
+        when(fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(2, 1))
+                .thenReturn(Optional.of(fechaInicio));
+
+        Fecha fechaFin = new Fecha();
+        fechaFin.setFechaInicial(ahora.plusDays(1));
+
+        when(fechaRepository.findByCalendario_Oidcalendario(2))
+                .thenReturn(List.of(fechaInicio, fechaFin));
+
+        Usuario usuario = new Usuario();
+        usuario.setCorreo("profesor@unicauca.edu.co");
+        Seleccionado seleccionado = new Seleccionado();
+        seleccionado.setCalendario(calendario);
+        seleccionado.setUsuario(usuario);
+
+        when(seleccionadoRepository.findAll()).thenReturn(List.of(seleccionado));
+
+        ReflectionTestUtils.setField(calendarioService, "notificacionHabilitada", true);
+
+        calendarioService.actualizarEstadosCalendariosPorFechas();
+
+        verify(calendarioRepository, atLeastOnce()).save(calendario);
+        assertEquals("ACTIVO", calendario.getEstado());
+        verify(clienteNotificacion, atLeastOnce()).enviarNotificacion(
+                any(), any(String.class), any(String.class));
+    }
+
+    @Test
+    void cron_activoFueraDeRango_cambiaADeshabilitadoSinNotificar() {
+        Calendario calendario = new Calendario();
+        calendario.setOidcalendario(3);
+        calendario.setAnioCalendario("2024");
+        calendario.setNumeroCalendario(1);
+        calendario.setEstado("ACTIVO");
+
+        when(calendarioRepository.findAll()).thenReturn(List.of(calendario));
+
+        LocalDateTime ahora = LocalDateTime.now();
+
+        Fecha fechaInicio = new Fecha();
+        fechaInicio.setFechaInicial(ahora.minusDays(10));
+
+        when(fechaRepository.findByCalendario_OidcalendarioAndNombreFecha_OidNombreFecha(3, 1))
+                .thenReturn(Optional.of(fechaInicio));
+
+        Fecha fechaFin = new Fecha();
+        fechaFin.setFechaInicial(ahora.minusDays(1));
+
+        when(fechaRepository.findByCalendario_Oidcalendario(3))
+                .thenReturn(List.of(fechaInicio, fechaFin));
+
+        ReflectionTestUtils.setField(calendarioService, "notificacionHabilitada", true);
+
+        calendarioService.actualizarEstadosCalendariosPorFechas();
+
+        verify(calendarioRepository, atLeastOnce()).save(calendario);
+        assertEquals("DESHABILITADO", calendario.getEstado());
+
+        // no debe notificar en transicion ACTIVO -> DESHABILITADO
+        verifyNoInteractions(clienteNotificacion);
     }
 }
