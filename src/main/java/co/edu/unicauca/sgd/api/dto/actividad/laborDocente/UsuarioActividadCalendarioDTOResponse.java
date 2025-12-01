@@ -19,6 +19,12 @@ public class UsuarioActividadCalendarioDTOResponse {
     private List<UsuarioDTO> usuarios;
 
     /**
+     * Detalle de la relación usuario-actividad-calendario:
+     * incluye el cargo y las horas asignadas por usuario.
+     */
+    private List<UsuarioActividadCalendarioUsuarioDTO> usuariosActividad;
+
+    /**
      * Resumen de horas de labor docente asociado a la actividad.
      */
     private HorasLaborDocenteDTO horasLaborDocente;

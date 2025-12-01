@@ -19,7 +19,23 @@
         </insert>
         <!-- INVESTIGACIÓN - PROYECTOS DE INVESTIGACIÓN -->
         <insert tableName="CARGOACTIVIDAD">
-            <column name="NOMBRE" value="Proyectos de investigación"/>
+            <column name="NOMBRE" value="Investigador en proyectos de investigación"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="20"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="2"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Director de proyectos de investigación"/>
+            <column name="TIPO" value="PROFESOR"/>
+            <column name="MAXHORASSEMANA" value="20"/>
+            <column name="OIDTIPOACTIVIDAD" valueNumeric="2"/>
+            <column name="FECHACREACION" valueDate="NOW()"/>
+            <column name="USUARIOCREACION" value="seeder"/>
+        </insert>
+        <insert tableName="CARGOACTIVIDAD">
+            <column name="NOMBRE" value="Participante en proyectos de investigación"/>
             <column name="TIPO" value="PROFESOR"/>
             <column name="MAXHORASSEMANA" value="20"/>
             <column name="OIDTIPOACTIVIDAD" valueNumeric="2"/>
