@@ -48,6 +48,7 @@ import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
 import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.exception.RecursoNoEncontradoException;
 import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
+import co.edu.unicauca.sgd.api.exception.AsignacionHorasExcedidasException;
 import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
 import co.edu.unicauca.sgd.api.mapper.MateriaMapper;
 import co.edu.unicauca.sgd.api.mapper.NecesidadMapper;
@@ -403,6 +404,73 @@ class UsuarioActividadCalendarioServiceImplTest {
                 () -> service.crearActividadConRelaciones(request));
         assertTrue(exception.getMessage().contains("10"),
                 "Para medio tiempo el límite debería ser la mitad del configurado en el calendario.");
+    }
+
+    @Test
+    void crearActividadConRelaciones_cargosInvestigacionCompartenLimiteHoras() {
+        // Cargos de proyectos de investigación (grupo 2, 3, 4)
+        Integer oidCargoInvestigador = 2;
+        Integer oidCargoDirector = 3;
+
+        UsuarioActividadCalendarioDTORequest request = new UsuarioActividadCalendarioDTORequest();
+        request.setOidTipoActividad(2);
+        request.setOidEstadoActividad(5);
+        request.setNombreActividad("Proyecto de investigación");
+        request.setOidCalendario(7);
+        // Nuevo intento de asignar 10 horas como investigador
+        request.setUsuarios(List.of(usuarioRequest(50, 10f, oidCargoInvestigador)));
+
+        TipoActividad tipoActividad = new TipoActividad();
+        tipoActividad.setOidTipoActividad(2);
+        EstadoActividad estadoActividad = new EstadoActividad();
+        estadoActividad.setOidEstadoActividad(5);
+        Calendario calendario = new Calendario();
+        calendario.setOidcalendario(7);
+        calendario.setHorasPlanta(40f);
+
+        UsuarioDetalle detalle = new UsuarioDetalle();
+        detalle.setContratacion("PLANTA");
+        Usuario usuario = new Usuario();
+        usuario.setOidUsuario(50);
+        usuario.setUsuarioDetalle(detalle);
+        usuario.setIdentificacion("5000");
+        usuario.setNombres("Investigador");
+        usuario.setApellidos("Proyecto");
+
+        CargoActividad cargoInvestigador = new CargoActividad();
+        cargoInvestigador.setOidCargoActividad(oidCargoInvestigador);
+        cargoInvestigador.setNombre("Investigador en proyectos de investigación");
+        cargoInvestigador.setMaxHorasSemana(20f);
+        cargoInvestigador.setTipoActividad(tipoActividad);
+
+        CargoActividad cargoDirector = new CargoActividad();
+        cargoDirector.setOidCargoActividad(oidCargoDirector);
+        cargoDirector.setNombre("Director de proyectos de investigación");
+        cargoDirector.setMaxHorasSemana(20f);
+        cargoDirector.setTipoActividad(tipoActividad);
+
+        when(tipoActividadRepository.findById(2)).thenReturn(Optional.of(tipoActividad));
+        when(estadoActividadRepository.findById(5)).thenReturn(Optional.of(estadoActividad));
+        when(calendarioRepository.findById(7)).thenReturn(Optional.of(calendario));
+        when(usuarioRepository.findById(50)).thenReturn(Optional.of(usuario));
+        // Sin horas previas por tipo de contratacion
+        when(usuarioActividadCalendarioRepository.findByUsuario_OidUsuario(50)).thenReturn(List.of());
+        // Cargar cargos solicitados en la petición (solo 2)
+        when(cargoActividadRepository.findAllById(Set.of(oidCargoInvestigador)))
+                .thenReturn(List.of(cargoInvestigador));
+
+        // Horas ya asignadas como director (cargo 3) = 15
+        UsuarioActividadCalendario relacionExistente = relacionConHoras(15f);
+        when(usuarioActividadCalendarioRepository
+                .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(50, oidCargoInvestigador))
+                .thenReturn(List.of());
+        when(usuarioActividadCalendarioRepository
+                .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(50, oidCargoDirector))
+                .thenReturn(List.of(relacionExistente));
+
+        // Debe fallar porque 15 (director) + 10 (nuevo investigador) > 20 de límite compartido
+        assertThrows(AsignacionHorasExcedidasException.class,
+                () -> service.crearActividadConRelaciones(request));
     }
 
     private UsuarioActividadCalendario relacionConHoras(float horas) {

@@ -90,6 +90,12 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     private final UsuarioDepartamentoRepository usuarioDepartamentoRepository;
     private final UsuarioActividadCalendarioMapper mapper;
     private final CargoActividadRepository cargoActividadRepository;
+
+    /**
+     * Cargos que corresponden a roles dentro de proyectos de investigación
+     * y que comparten el mismo límite de horas de manera conjunta.
+     */
+    private static final Set<Integer> CARGOS_PROYECTO_INVESTIGACION = Set.of(2, 3, 4);
     private final EstadoActividadRepository estadoActividadRepository;
     private final EavAtributoService eavAtributoService;
     private final EavAtributoRepository eavAtributoRepository;
@@ -569,13 +575,26 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                 continue;
             }
 
-            float horasAsignadas = cargoUsuario != null
-                    ? calcularHorasPorUsuarioYCargo(oidUsuario, cargoUsuario.getOidCargoActividad(), oidActividadActual)
-                    : calcularHorasPorUsuarioYTipoActividad(oidUsuario, tipoActividad.getOidTipoActividad(), oidActividadActual);
+            boolean esCargoProyectoInvestigacion = esCargoProyectoInvestigacion(cargoUsuario);
 
-            float limite = cargoUsuario != null
-                    ? (cargoUsuario.getMaxHorasSemana() == null ? Float.MAX_VALUE : cargoUsuario.getMaxHorasSemana())
-                    : (limiteHorasPorTipo == null ? Float.MAX_VALUE : limiteHorasPorTipo);
+            float horasAsignadas;
+            if (cargoUsuario != null) {
+                if (esCargoProyectoInvestigacion) {
+                    horasAsignadas = calcularHorasPorUsuarioYGrupoCargos(oidUsuario, CARGOS_PROYECTO_INVESTIGACION, oidActividadActual);
+                } else {
+                    horasAsignadas = calcularHorasPorUsuarioYCargo(oidUsuario, cargoUsuario.getOidCargoActividad(), oidActividadActual);
+                }
+            } else {
+                horasAsignadas = calcularHorasPorUsuarioYTipoActividad(oidUsuario, tipoActividad.getOidTipoActividad(), oidActividadActual);
+            }
+
+            float limite;
+            if (cargoUsuario != null) {
+                Float maxHoras = cargoUsuario.getMaxHorasSemana();
+                limite = (maxHoras == null ? Float.MAX_VALUE : maxHoras);
+            } else {
+                limite = (limiteHorasPorTipo == null ? Float.MAX_VALUE : limiteHorasPorTipo);
+            }
 
             if (limite != Float.MAX_VALUE && (horasAsignadas + horasSolicitadas) - limite > EPSILON) {
                 throw new AsignacionHorasExcedidasException(oidUsuario, limite, horasAsignadas, horasSolicitadas);
@@ -590,6 +609,22 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
                 .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(oidUsuario, oidCargoActividad);
         return sumarHorasRelacionadas(relaciones, oidActividadActual);
+    }
+
+    private float calcularHorasPorUsuarioYGrupoCargos(Integer oidUsuario, Set<Integer> cargos, Integer oidActividadActual) {
+        if (oidUsuario == null || cargos == null || cargos.isEmpty()) {
+            return 0f;
+        }
+        double total = 0d;
+        for (Integer oidCargo : cargos) {
+            if (oidCargo == null) {
+                continue;
+            }
+            List<UsuarioActividadCalendario> relaciones = usuarioActividadCalendarioRepository
+                    .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(oidUsuario, oidCargo);
+            total += sumarHorasRelacionadas(relaciones, oidActividadActual);
+        }
+        return (float) total;
     }
 
     private float calcularHorasPorUsuarioYTipoActividad(Integer oidUsuario, Integer oidTipoActividad, Integer oidActividadActual) {
@@ -748,6 +783,12 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
     private boolean esCargoTipoProgramaDepartamento(CargoActividad cargoActividad) {
         return cargoActividad != null && "PROGRAMADEPARTAMENTO".equalsIgnoreCase(cargoActividad.getTipo());
+    }
+
+    private boolean esCargoProyectoInvestigacion(CargoActividad cargoActividad) {
+        return cargoActividad != null
+                && cargoActividad.getOidCargoActividad() != null
+                && CARGOS_PROYECTO_INVESTIGACION.contains(cargoActividad.getOidCargoActividad());
     }
 
     private HorasLaborDocenteDTO construirResumenHorasActividad(Actividad actividad, List<UsuarioActividadCalendario> relaciones) {
