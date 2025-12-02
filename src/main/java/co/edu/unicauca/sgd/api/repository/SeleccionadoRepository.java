@@ -17,6 +17,8 @@ public interface SeleccionadoRepository extends JpaRepository<Seleccionado, Inte
 
     boolean existsByCalendarioOidcalendarioAndUsuarioOidUsuario(Integer oidCalendario, Integer oidUsuario);
 
+    void deleteByCalendarioOidcalendario(Integer oidCalendario);
+
     @Query("SELECT s " +
        "FROM Seleccionado s, UsuarioDepartamento ud " +
        "WHERE ud.usuario = s.usuario " +                       // usa la relación entidad->entidad
