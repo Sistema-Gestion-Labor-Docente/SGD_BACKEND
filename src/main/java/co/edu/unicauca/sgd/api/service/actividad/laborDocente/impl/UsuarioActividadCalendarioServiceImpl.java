@@ -39,6 +39,7 @@ import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
 import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
@@ -323,7 +324,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                         .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
                         .collect(Collectors.toList()) : List.of()
         );
-        dtoResponse.setHorasLaborDocente(construirResumenHorasActividad(actividad, relaciones));
+        asignarHorasLaborPorUsuario(actividad, relaciones, dtoResponse);
         return dtoResponse;
     }
 
@@ -484,7 +485,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                         .map(a -> new AtributoDTO(a.getNombre(), a.getValor()))
                         .collect(Collectors.toList()) : List.of()
         );
-        dto.setHorasLaborDocente(construirResumenHorasActividad(actividad, relaciones));
+        asignarHorasLaborPorUsuario(actividad, relaciones, dto);
 
         return new ApiResponse<>(200, "Actividad actualizada con relaciones", dto);
     }
@@ -791,9 +792,36 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
                 && CARGOS_PROYECTO_INVESTIGACION.contains(cargoActividad.getOidCargoActividad());
     }
 
-    private HorasLaborDocenteDTO construirResumenHorasActividad(Actividad actividad, List<UsuarioActividadCalendario> relaciones) {
+    private void asignarHorasLaborPorUsuario(Actividad actividad,
+                                             List<UsuarioActividadCalendario> relaciones,
+                                             UsuarioActividadCalendarioDTOResponse dto) {
+        if (dto == null || dto.getUsuarios() == null || dto.getUsuarios().isEmpty()
+                || relaciones == null || relaciones.isEmpty()) {
+            return;
+        }
+        Map<Integer, UsuarioDTO> usuariosPorId = dto.getUsuarios().stream()
+                .filter(u -> u.getOidUsuario() != null)
+                .collect(Collectors.toMap(UsuarioDTO::getOidUsuario, Function.identity(), (existente, reemplazo) -> existente));
+
+        for (UsuarioActividadCalendario relacion : relaciones) {
+            if (relacion == null || relacion.getUsuario() == null) {
+                continue;
+            }
+            Integer oidUsuario = relacion.getUsuario().getOidUsuario();
+            if (oidUsuario == null) {
+                continue;
+            }
+            UsuarioDTO usuarioDto = usuariosPorId.get(oidUsuario);
+            if (usuarioDto == null) {
+                continue;
+            }
+            usuarioDto.setHorasLaborDocente(construirResumenHorasPorUsuario(actividad, relacion));
+        }
+    }
+
+    private HorasLaborDocenteDTO construirResumenHorasPorUsuario(Actividad actividad, UsuarioActividadCalendario relacion) {
         HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
-        if (actividad == null) {
+        if (relacion == null) {
             dto.setHorasAsignadasPorTipoActividad(Map.of());
             dto.setHorasDisponiblesPorTipoActividad(Map.of());
             dto.setTotalHorasAsignadas(0f);
@@ -801,33 +829,39 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             return dto;
         }
 
-        String nombreTipo = actividad.getTipoActividad() != null ? actividad.getTipoActividad().getNombre() : "DESCONOCIDO";
-        Integer oidTipoActividad = actividad.getTipoActividad() != null ? actividad.getTipoActividad().getOidTipoActividad() : null;
+        String nombreTipo = actividad != null && actividad.getTipoActividad() != null
+                ? actividad.getTipoActividad().getNombre()
+                : "DESCONOCIDO";
+        Integer oidTipoActividad = actividad != null && actividad.getTipoActividad() != null
+                ? actividad.getTipoActividad().getOidTipoActividad()
+                : null;
 
-        float totalAsignadas = 0f;
-        if (relaciones != null && !relaciones.isEmpty()) {
-            for (UsuarioActividadCalendario relacion : relaciones) {
-                if (relacion == null) {
-                    continue;
-                }
-                Float horas = relacion.getHorasActividad();
-                if (horas != null) {
-                    totalAsignadas += horas;
-                }
+        float horasAsignadas = relacion.getHorasActividad() != null ? relacion.getHorasActividad() : 0f;
+
+        float limite = HorasLaborDocenteDTO.HORAS_MAX_SEMANA;
+        CargoActividad cargo = relacion.getCargoActividad();
+        if (cargo != null && cargo.getMaxHorasSemana() != null) {
+            limite = cargo.getMaxHorasSemana();
+        } else if (oidTipoActividad != null) {
+            Float maximo = obtenerMaximoHorasPorTipoActividad(oidTipoActividad);
+            if (maximo != null) {
+                limite = maximo;
             }
         }
 
-        Float maximo = oidTipoActividad != null ? obtenerMaximoHorasPorTipoActividad(oidTipoActividad) : null;
-        float limite = maximo != null ? maximo : HORAS_DEFAULT_CONTRATACION;
-        float disponible = limite - totalAsignadas;
+        float disponible = limite - horasAsignadas;
         if (disponible < 0f) {
             disponible = 0f;
         }
 
-        dto.setHorasAsignadasPorTipoActividad(Map.of(nombreTipo, totalAsignadas));
+        dto.setHorasAsignadasPorTipoActividad(Map.of(nombreTipo, horasAsignadas));
         dto.setHorasDisponiblesPorTipoActividad(Map.of(nombreTipo, disponible));
-        dto.setTotalHorasAsignadas(totalAsignadas);
-        dto.setTotalHorasDisponibles(disponible);
+        dto.setTotalHorasAsignadas(horasAsignadas);
+        float totalDisponibles = HORAS_DEFAULT_CONTRATACION - horasAsignadas;
+        if (totalDisponibles < 0f) {
+            totalDisponibles = 0f;
+        }
+        dto.setTotalHorasDisponibles(totalDisponibles);
         return dto;
     }
 
@@ -908,7 +942,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
 
             // Mapear usando el mapper existente
             UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(actividad, relaciones, calendario, atributos);
-            dto.setHorasLaborDocente(construirResumenHorasActividad(actividad, relaciones));
+            asignarHorasLaborPorUsuario(actividad, relaciones, dto);
 
             dtos.add(dto);
         }
@@ -930,7 +964,7 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
             Calendario calendario = relaciones.isEmpty() ? null : relaciones.get(0).getActividadCalendario().getCalendario();
             List<AtributoDTO> atributos = eavAtributoService.obtenerAtributosPorActividad(actividad);
             UsuarioActividadCalendarioDTOResponse dto = mapper.toResponse(actividad, relaciones, calendario, atributos);
-            dto.setHorasLaborDocente(construirResumenHorasActividad(actividad, relaciones));
+            asignarHorasLaborPorUsuario(actividad, relaciones, dto);
             return new ApiResponse<>(200, "Actividad encontrada", dto);
         } catch (UsuarioActividadCalendarioException | RecursoNoEncontradoException e) {
             throw e;

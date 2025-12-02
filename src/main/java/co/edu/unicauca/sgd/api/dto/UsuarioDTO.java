@@ -2,6 +2,7 @@ package co.edu.unicauca.sgd.api.dto;
 
 import java.util.List;
 
+import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.HorasLaborDocenteDTO;
 import co.edu.unicauca.sgd.api.dto.materias.DepartamentoDTOResponse;
 import co.edu.unicauca.sgd.api.dto.materias.ProgramaDTOResponse;
 import lombok.AllArgsConstructor;
@@ -21,7 +22,13 @@ public class UsuarioDTO {
     private UsuarioDetalleDTO usuarioDetalle;
 
     private ProgramaDTOResponse programaCoordinador;
-    private DepartamentoDTOResponse departamentoJefatura; 
+    private DepartamentoDTOResponse departamentoJefatura;
+
+    /**
+     * Resumen de horas de labor docente asociado al usuario.
+     * Puede ser nulo en contextos donde no aplique.
+     */
+    private HorasLaborDocenteDTO horasLaborDocente;
 
     // Construnctor usado en ActividadDTOServiceImpl
     public UsuarioDTO(Integer oidUsuario, String identificacion, String nombres, String apellidos, List<RolDTO> roles) {

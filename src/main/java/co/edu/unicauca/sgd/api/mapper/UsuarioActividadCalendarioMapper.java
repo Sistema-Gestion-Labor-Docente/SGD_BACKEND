@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 import co.edu.unicauca.sgd.api.domain.Actividad;
 import co.edu.unicauca.sgd.api.domain.ActividadCalendario;
 import co.edu.unicauca.sgd.api.domain.Calendario;
-import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
+import co.edu.unicauca.sgd.api.domain.CargoActividad;
 import co.edu.unicauca.sgd.api.domain.UsuarioActividadCalendario;
 import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.dto.AtributoDTO;
@@ -17,7 +17,6 @@ import co.edu.unicauca.sgd.api.dto.RolDTO;
 import co.edu.unicauca.sgd.api.dto.UsuarioDTO;
 import co.edu.unicauca.sgd.api.dto.UsuarioDetalleDTO;
 import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
-import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.CargoActividadDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.DocenciaDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.UsuarioActividadCalendarioUsuarioDTO;
@@ -43,37 +42,6 @@ public class UsuarioActividadCalendarioMapper {
         ActividadBaseDTO actividadDto = new ActividadBaseDTO();
         actividadDto.setOidActividad(actividad.getOidActividad());
         actividadDto.setTipoActividad(actividad.getTipoActividad());
-
-        // CargoActividad: si todas las relaciones comparten el mismo cargo, lo exponemos a nivel de actividad.
-        if (!relaciones.isEmpty()) {
-            CargoActividad cargoComun = null;
-            boolean mismoCargo = true;
-            for (UsuarioActividadCalendario rel : relaciones) {
-                CargoActividad cargo = rel.getCargoActividad();
-                if (cargo == null) {
-                    mismoCargo = false;
-                    break;
-                }
-                if (cargoComun == null) {
-                    cargoComun = cargo;
-                } else if (!cargoComun.getOidCargoActividad().equals(cargo.getOidCargoActividad())) {
-                    mismoCargo = false;
-                    break;
-                }
-            }
-            if (mismoCargo && cargoComun != null) {
-                CargoActividadDTOResponse cargoDto = new CargoActividadDTOResponse();
-                cargoDto.setOidCargoActividad(cargoComun.getOidCargoActividad());
-                cargoDto.setNombre(cargoComun.getNombre());
-                cargoDto.setMaxHorasSemana(cargoComun.getMaxHorasSemana());
-                cargoDto.setMaxActividades(cargoComun.getMaxActividades());
-                actividadDto.setCargoActividad(cargoDto);
-            } else {
-                actividadDto.setCargoActividad(null);
-            }
-        } else {
-            actividadDto.setCargoActividad(null);
-        }
 
         actividadDto.setOidEstadoActividad(actividad.getEstadoActividad() != null ? actividad.getEstadoActividad().getOidEstadoActividad() : null);
         actividadDto.setNombreActividad(actividad.getNombreActividad());

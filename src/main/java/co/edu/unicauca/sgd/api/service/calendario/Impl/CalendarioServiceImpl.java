@@ -265,6 +265,8 @@ public class CalendarioServiceImpl implements CalendarioService {
             if (!calendarioRepository.existsById(oid)) {
                 throw new CalendarioNoEncontradoException(oid);
             }
+            // Eliminar relaciones dependientes antes de borrar el calendario
+            seleccionadoRepository.deleteByCalendarioOidcalendario(oid);
             calendarioRepository.deleteById(oid);
             logger.info("Calendario eliminado con ID: {}", oid);
             return new ApiResponse<>(204, "Calendario eliminado correctamente.", null);

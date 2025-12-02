@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -268,8 +269,11 @@ class UsuarioActividadCalendarioServiceImplTest {
         actividadCalendario.setActividad(actividad);
         actividadCalendario.setCalendario(calendario);
 
+        Usuario usuarioRelacion = new Usuario();
+        usuarioRelacion.setOidUsuario(99);
         UsuarioActividadCalendario relacion = new UsuarioActividadCalendario();
         relacion.setActividadCalendario(actividadCalendario);
+        relacion.setUsuario(usuarioRelacion);
         relacion.setHorasActividad(10f);
 
         when(usuarioActividadCalendarioRepository
@@ -280,6 +284,9 @@ class UsuarioActividadCalendarioServiceImplTest {
         when(eavAtributoService.obtenerAtributosPorActividad(actividad)).thenReturn(List.of());
 
         UsuarioActividadCalendarioDTOResponse dto = new UsuarioActividadCalendarioDTOResponse();
+        co.edu.unicauca.sgd.api.dto.UsuarioDTO usuarioDto = new co.edu.unicauca.sgd.api.dto.UsuarioDTO();
+        usuarioDto.setOidUsuario(99);
+        dto.setUsuarios(List.of(usuarioDto));
         when(mapper.toResponse(actividad, List.of(relacion), calendario, List.of())).thenReturn(dto);
 
         ApiResponse<Page<UsuarioActividadCalendarioDTOResponse>> response =
@@ -288,10 +295,11 @@ class UsuarioActividadCalendarioServiceImplTest {
         assertEquals(200, response.getCodigo());
         UsuarioActividadCalendarioDTOResponse resultDto = response.getData().getContent().get(0);
         assertSame(dto, resultDto);
-        assertNotNull(resultDto.getHorasLaborDocente());
-        assertEquals(10f, resultDto.getHorasLaborDocente().getTotalHorasAsignadas());
+        assertNotNull(resultDto.getUsuarios());
+        assertNotNull(resultDto.getUsuarios().get(0).getHorasLaborDocente());
+        assertEquals(10f, resultDto.getUsuarios().get(0).getHorasLaborDocente().getTotalHorasAsignadas());
         // Sin maximo configurado, debe usar 40 horas por semana como limite
-        assertEquals(30f, resultDto.getHorasLaborDocente().getTotalHorasDisponibles());
+        assertEquals(30f, resultDto.getUsuarios().get(0).getHorasLaborDocente().getTotalHorasDisponibles());
     }
 
     @Test
@@ -449,24 +457,27 @@ class UsuarioActividadCalendarioServiceImplTest {
         cargoDirector.setMaxHorasSemana(20f);
         cargoDirector.setTipoActividad(tipoActividad);
 
-        when(tipoActividadRepository.findById(2)).thenReturn(Optional.of(tipoActividad));
-        when(estadoActividadRepository.findById(5)).thenReturn(Optional.of(estadoActividad));
-        when(calendarioRepository.findById(7)).thenReturn(Optional.of(calendario));
-        when(usuarioRepository.findById(50)).thenReturn(Optional.of(usuario));
+        lenient().when(tipoActividadRepository.findById(2)).thenReturn(Optional.of(tipoActividad));
+        lenient().when(estadoActividadRepository.findById(5)).thenReturn(Optional.of(estadoActividad));
+        lenient().when(calendarioRepository.findById(7)).thenReturn(Optional.of(calendario));
+        lenient().when(usuarioRepository.findById(50)).thenReturn(Optional.of(usuario));
         // Sin horas previas por tipo de contratacion
-        when(usuarioActividadCalendarioRepository.findByUsuario_OidUsuario(50)).thenReturn(List.of());
+        lenient().when(usuarioActividadCalendarioRepository.findByUsuario_OidUsuario(50)).thenReturn(List.of());
         // Cargar cargos solicitados en la petición (solo 2)
-        when(cargoActividadRepository.findAllById(Set.of(oidCargoInvestigador)))
+        lenient().when(cargoActividadRepository.findAllById(Set.of(oidCargoInvestigador)))
                 .thenReturn(List.of(cargoInvestigador));
 
         // Horas ya asignadas como director (cargo 3) = 15
         UsuarioActividadCalendario relacionExistente = relacionConHoras(15f);
-        when(usuarioActividadCalendarioRepository
+        lenient().when(usuarioActividadCalendarioRepository
                 .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(50, oidCargoInvestigador))
                 .thenReturn(List.of());
-        when(usuarioActividadCalendarioRepository
+        lenient().when(usuarioActividadCalendarioRepository
                 .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(50, oidCargoDirector))
                 .thenReturn(List.of(relacionExistente));
+        lenient().when(usuarioActividadCalendarioRepository
+                .findByUsuario_OidUsuarioAndCargoActividad_OidCargoActividad(50, 4))
+                .thenReturn(List.of());
 
         // Debe fallar porque 15 (director) + 10 (nuevo investigador) > 20 de límite compartido
         assertThrows(AsignacionHorasExcedidasException.class,
