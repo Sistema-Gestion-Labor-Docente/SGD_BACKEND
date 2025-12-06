@@ -62,4 +62,12 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer>, JpaS
         Optional<Usuario> findFirstActiveByFacultadAndRolId(
                         @Param("facultad") String facultad,
                         @Param("oidRol") Integer oidRol);
+
+        @Query("SELECT u " +
+                        "FROM Usuario u " +
+                        "JOIN u.roles r " +
+                        "JOIN u.estadoUsuario e " +
+                        "WHERE UPPER(r.nombre) = UPPER(:nombreRol) " +
+                        "AND e.nombre = 'ACTIVO'")
+        Optional<Usuario> findFirstActiveByRolNombre(@Param("nombreRol") String nombreRol);
 }

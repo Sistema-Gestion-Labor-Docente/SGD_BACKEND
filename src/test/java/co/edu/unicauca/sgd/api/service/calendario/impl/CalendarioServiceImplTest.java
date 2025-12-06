@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -38,9 +39,11 @@ import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
 import co.edu.unicauca.sgd.api.exception.calendario.CalendarioOperacionNoPermitidaException;
 import co.edu.unicauca.sgd.api.mapper.CalendarioMapper;
 import co.edu.unicauca.sgd.api.mapper.FechaMapper;
+import co.edu.unicauca.sgd.api.repository.ActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
+import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 import co.edu.unicauca.sgd.api.service.calendario.CalendarioPdfService;
@@ -62,6 +65,10 @@ class CalendarioServiceImplTest {
     @Mock
     private UsuarioDepartamentoRepository usuarioDepartamentoRepository;
     @Mock
+    private ActividadCalendarioRepository actividadCalendarioRepository;
+    @Mock
+    private NecesidadRepository necesidadRepository;
+    @Mock
     private CalendarioPdfService calendarioPdfService;
     @Mock
     private ClienteNotificacion clienteNotificacion;
@@ -81,6 +88,8 @@ class CalendarioServiceImplTest {
                 seleccionadoRepository,
                 departamentoRepository,
                 usuarioDepartamentoRepository,
+                actividadCalendarioRepository,
+                necesidadRepository,
                 fechaMapper,
                 calendarioPdfService,
                 clienteNotificacion);
@@ -89,6 +98,8 @@ class CalendarioServiceImplTest {
                 .thenReturn(List.of());
         lenient().when(departamentoRepository.findAll()).thenReturn(List.of());
         lenient().when(fechaService.guardar(any())).thenReturn(new ApiResponse<>(200, "ok", null));
+        lenient().when(actividadCalendarioRepository.countByCalendario_Oidcalendario(any())).thenReturn(0L);
+        lenient().when(necesidadRepository.countByCalendario_Oidcalendario(any())).thenReturn(0L);
     }
 
     @Test
@@ -249,6 +260,29 @@ class CalendarioServiceImplTest {
         ApiResponse<Void> response = calendarioService.eliminar(12);
 
         assertEquals(404, response.getCodigo());
+    }
+
+    @Test
+    void eliminar_conActividadesRegistradas_retorna400() {
+        when(calendarioRepository.existsById(15)).thenReturn(true);
+        when(actividadCalendarioRepository.countByCalendario_Oidcalendario(15)).thenReturn(2L);
+
+        ApiResponse<Void> response = calendarioService.eliminar(15);
+
+        assertEquals(400, response.getCodigo());
+        verify(calendarioRepository, never()).deleteById(15);
+    }
+
+    @Test
+    void eliminar_conNecesidadesRegistradas_retorna400() {
+        when(calendarioRepository.existsById(18)).thenReturn(true);
+        when(actividadCalendarioRepository.countByCalendario_Oidcalendario(18)).thenReturn(0L);
+        when(necesidadRepository.countByCalendario_Oidcalendario(18)).thenReturn(5L);
+
+        ApiResponse<Void> response = calendarioService.eliminar(18);
+
+        assertEquals(400, response.getCodigo());
+        verify(calendarioRepository, never()).deleteById(18);
     }
 
     @Test

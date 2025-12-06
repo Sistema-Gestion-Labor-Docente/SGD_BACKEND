@@ -75,6 +75,7 @@ import co.edu.unicauca.sgd.api.repository.TipoActividadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
+import co.edu.unicauca.sgd.api.repository.projection.UsuarioHorasPorTipoActividadProjection;
 import co.edu.unicauca.sgd.api.service.EavAtributoService;
 import co.edu.unicauca.sgd.api.service.actividad.laborDocente.UsuarioActividadCalendarioService;
 import jakarta.transaction.Transactional;
@@ -795,74 +796,32 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
     private void asignarHorasLaborPorUsuario(Actividad actividad,
                                              List<UsuarioActividadCalendario> relaciones,
                                              UsuarioActividadCalendarioDTOResponse dto) {
-        if (dto == null || dto.getUsuarios() == null || dto.getUsuarios().isEmpty()
-                || relaciones == null || relaciones.isEmpty()) {
+        if (dto == null || dto.getUsuarios() == null || dto.getUsuarios().isEmpty()) {
             return;
         }
-        Map<Integer, UsuarioDTO> usuariosPorId = dto.getUsuarios().stream()
-                .filter(u -> u.getOidUsuario() != null)
-                .collect(Collectors.toMap(UsuarioDTO::getOidUsuario, Function.identity(), (existente, reemplazo) -> existente));
+        List<Integer> oidsUsuarios = dto.getUsuarios().stream()
+                .map(UsuarioDTO::getOidUsuario)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (oidsUsuarios.isEmpty()) {
+            return;
+        }
 
-        for (UsuarioActividadCalendario relacion : relaciones) {
-            if (relacion == null || relacion.getUsuario() == null) {
-                continue;
-            }
-            Integer oidUsuario = relacion.getUsuario().getOidUsuario();
+        Map<Integer, HorasLaborDocenteDTO> horasPorUsuario = obtenerResumenHorasLaborUsuarios(oidsUsuarios);
+        Map<Integer, HorasLaborDocenteDTO> resumenLocal = construirResumenHorasLocal(actividad, relaciones);
+
+        dto.getUsuarios().forEach(usuarioDto -> {
+            Integer oidUsuario = usuarioDto.getOidUsuario();
             if (oidUsuario == null) {
-                continue;
+                return;
             }
-            UsuarioDTO usuarioDto = usuariosPorId.get(oidUsuario);
-            if (usuarioDto == null) {
-                continue;
+            HorasLaborDocenteDTO resumen = horasPorUsuario.get(oidUsuario);
+            if (resumen == null) {
+                resumen = resumenLocal.getOrDefault(oidUsuario, crearResumenHorasVacio());
             }
-            usuarioDto.setHorasLaborDocente(construirResumenHorasPorUsuario(actividad, relacion));
-        }
-    }
-
-    private HorasLaborDocenteDTO construirResumenHorasPorUsuario(Actividad actividad, UsuarioActividadCalendario relacion) {
-        HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
-        if (relacion == null) {
-            dto.setHorasAsignadasPorTipoActividad(Map.of());
-            dto.setHorasDisponiblesPorTipoActividad(Map.of());
-            dto.setTotalHorasAsignadas(0f);
-            dto.setTotalHorasDisponibles(0f);
-            return dto;
-        }
-
-        String nombreTipo = actividad != null && actividad.getTipoActividad() != null
-                ? actividad.getTipoActividad().getNombre()
-                : "DESCONOCIDO";
-        Integer oidTipoActividad = actividad != null && actividad.getTipoActividad() != null
-                ? actividad.getTipoActividad().getOidTipoActividad()
-                : null;
-
-        float horasAsignadas = relacion.getHorasActividad() != null ? relacion.getHorasActividad() : 0f;
-
-        float limite = HorasLaborDocenteDTO.HORAS_MAX_SEMANA;
-        CargoActividad cargo = relacion.getCargoActividad();
-        if (cargo != null && cargo.getMaxHorasSemana() != null) {
-            limite = cargo.getMaxHorasSemana();
-        } else if (oidTipoActividad != null) {
-            Float maximo = obtenerMaximoHorasPorTipoActividad(oidTipoActividad);
-            if (maximo != null) {
-                limite = maximo;
-            }
-        }
-
-        float disponible = limite - horasAsignadas;
-        if (disponible < 0f) {
-            disponible = 0f;
-        }
-
-        dto.setHorasAsignadasPorTipoActividad(Map.of(nombreTipo, horasAsignadas));
-        dto.setHorasDisponiblesPorTipoActividad(Map.of(nombreTipo, disponible));
-        dto.setTotalHorasAsignadas(horasAsignadas);
-        float totalDisponibles = HORAS_DEFAULT_CONTRATACION - horasAsignadas;
-        if (totalDisponibles < 0f) {
-            totalDisponibles = 0f;
-        }
-        dto.setTotalHorasDisponibles(totalDisponibles);
-        return dto;
+            usuarioDto.setHorasLaborDocente(resumen);
+        });
     }
 
     @Override
@@ -1452,5 +1411,229 @@ public class UsuarioActividadCalendarioServiceImpl implements UsuarioActividadCa
         }
         String dedicacionNormalizada = normalizarEtiqueta(dedicacion);
         return "MEDIOTIEMPO".equals(dedicacionNormalizada);
+    }
+
+    private Map<Integer, HorasLaborDocenteDTO> obtenerResumenHorasLaborUsuarios(List<Integer> oidsUsuarios) {
+        if (oidsUsuarios == null || oidsUsuarios.isEmpty()) {
+            return Map.of();
+        }
+        List<UsuarioHorasPorTipoActividadProjection> proyecciones =
+                usuarioActividadCalendarioRepository.sumarHorasPorUsuariosYTipoActividad(oidsUsuarios);
+        return construirHorasLaborPorUsuario(proyecciones);
+    }
+
+    private Map<Integer, HorasLaborDocenteDTO> construirHorasLaborPorUsuario(
+            List<UsuarioHorasPorTipoActividadProjection> proyecciones) {
+        if (proyecciones == null || proyecciones.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, List<UsuarioHorasPorTipoActividadProjection>> porUsuario = proyecciones.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(UsuarioHorasPorTipoActividadProjection::getOidUsuario));
+
+        Set<Integer> tiposIds = proyecciones.stream()
+                .map(UsuarioHorasPorTipoActividadProjection::getOidTipoActividad)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        Map<Integer, Float> maxPorTipo = calcularMaximoHorasPorTipoActividad(tiposIds);
+
+        Map<Integer, HorasLaborDocenteDTO> resultado = new HashMap<>();
+
+        for (Map.Entry<Integer, List<UsuarioHorasPorTipoActividadProjection>> entry : porUsuario.entrySet()) {
+            Integer oidUsuario = entry.getKey();
+            List<UsuarioHorasPorTipoActividadProjection> lista = entry.getValue();
+
+            Map<String, Float> asignadasPorGrupo = new HashMap<>();
+            Map<String, Float> maxPorGrupo = new HashMap<>();
+
+            for (UsuarioHorasPorTipoActividadProjection p : lista) {
+                if (p == null) {
+                    continue;
+                }
+                String nombreTipo = p.getNombreTipoActividad();
+                String grupo = agruparTipoActividad(nombreTipo);
+                float asignadas = p.getTotalHoras() != null ? p.getTotalHoras() : 0f;
+                float maxTipo = maxPorTipo.getOrDefault(p.getOidTipoActividad(), 0f);
+
+                asignadasPorGrupo.merge(grupo, asignadas, Float::sum);
+                maxPorGrupo.merge(grupo, maxTipo, Float::sum);
+            }
+
+            Map<String, Float> disponiblesPorGrupo = new HashMap<>();
+            float totalAsignadas = 0f;
+
+            for (String grupo : asignadasPorGrupo.keySet()) {
+                float asignadas = asignadasPorGrupo.getOrDefault(grupo, 0f);
+                float max = maxPorGrupo.getOrDefault(grupo, 0f);
+                float disponibles = max - asignadas;
+                if (disponibles < 0f) {
+                    disponibles = 0f;
+                }
+                disponiblesPorGrupo.put(grupo, disponibles);
+                totalAsignadas += asignadas;
+            }
+
+            HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
+            dto.setHorasAsignadasPorTipoActividad(asignadasPorGrupo);
+            dto.setHorasDisponiblesPorTipoActividad(disponiblesPorGrupo);
+            dto.setTotalHorasAsignadas(totalAsignadas);
+            float totalDisponibles = HorasLaborDocenteDTO.HORAS_MAX_SEMANA - totalAsignadas;
+            if (totalDisponibles < 0f) {
+                totalDisponibles = 0f;
+            }
+            dto.setTotalHorasDisponibles(totalDisponibles);
+
+            resultado.put(oidUsuario, dto);
+        }
+
+        return resultado;
+    }
+
+    private Map<Integer, Float> calcularMaximoHorasPorTipoActividad(Set<Integer> tiposIds) {
+        if (tiposIds == null || tiposIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Integer, Float> resultado = new HashMap<>();
+        for (Integer oidTipo : tiposIds) {
+            if (oidTipo == null) {
+                continue;
+            }
+            Float maximo = cargoActividadRepository.findByTipoActividad_OidTipoActividad(oidTipo).stream()
+                    .map(c -> c.getMaxHorasSemana() != null ? c.getMaxHorasSemana() : 0f)
+                    .max(Float::compare)
+                    .orElse(0f);
+            resultado.put(oidTipo, maximo);
+        }
+        return resultado;
+    }
+
+    private String agruparTipoActividad(String nombreTipo) {
+        if (nombreTipo == null) {
+            return "DESCONOCIDO";
+        }
+        String normalizado = normalizarEtiqueta(nombreTipo);
+        boolean esDocencia = normalizado.contains("DOCENCIA");
+        boolean esPreparacion = normalizado.contains("PREPARACION");
+        if (esDocencia || esPreparacion) {
+            return "DOCENCIA";
+        }
+        return nombreTipo;
+    }
+
+    private HorasLaborDocenteDTO crearResumenHorasVacio() {
+        HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
+        dto.setHorasAsignadasPorTipoActividad(Map.of());
+        dto.setHorasDisponiblesPorTipoActividad(Map.of());
+        dto.setTotalHorasAsignadas(0f);
+        dto.setTotalHorasDisponibles(0f);
+        return dto;
+    }
+
+    private Map<Integer, HorasLaborDocenteDTO> construirResumenHorasLocal(
+            Actividad actividad,
+            List<UsuarioActividadCalendario> relaciones) {
+        if (relaciones == null || relaciones.isEmpty()) {
+            return Map.of();
+        }
+        Map<Integer, HorasLaborDocenteDTO> resultado = new HashMap<>();
+        for (UsuarioActividadCalendario relacion : relaciones) {
+            if (relacion == null || relacion.getUsuario() == null) {
+                continue;
+            }
+            Integer oidUsuario = relacion.getUsuario().getOidUsuario();
+            if (oidUsuario == null) {
+                continue;
+            }
+            HorasLaborDocenteDTO parcial = construirResumenHorasPorRelacion(actividad, relacion);
+            if (parcial == null) {
+                continue;
+            }
+            resultado.merge(oidUsuario, parcial, this::combinarResumenHoras);
+        }
+        return resultado;
+    }
+
+    private HorasLaborDocenteDTO combinarResumenHoras(HorasLaborDocenteDTO existente, HorasLaborDocenteDTO adicional) {
+        if (existente == null) {
+            return adicional;
+        }
+        if (adicional == null) {
+            return existente;
+        }
+        HorasLaborDocenteDTO combinado = new HorasLaborDocenteDTO();
+        Map<String, Float> asignadas = new HashMap<>();
+        if (existente.getHorasAsignadasPorTipoActividad() != null) {
+            asignadas.putAll(existente.getHorasAsignadasPorTipoActividad());
+        }
+        if (adicional.getHorasAsignadasPorTipoActividad() != null) {
+            adicional.getHorasAsignadasPorTipoActividad()
+                    .forEach((k, v) -> asignadas.merge(k, v, Float::sum));
+        }
+        combinado.setHorasAsignadasPorTipoActividad(asignadas);
+
+        Map<String, Float> disponibles = new HashMap<>();
+        for (Map.Entry<String, Float> entry : asignadas.entrySet()) {
+            float disponible = HorasLaborDocenteDTO.HORAS_MAX_SEMANA - entry.getValue();
+            if (disponible < 0f) {
+                disponible = 0f;
+            }
+            disponibles.put(entry.getKey(), disponible);
+        }
+        combinado.setHorasDisponiblesPorTipoActividad(disponibles);
+
+        float totalAsignadas =
+                (existente.getTotalHorasAsignadas() != null ? existente.getTotalHorasAsignadas() : 0f)
+                        + (adicional.getTotalHorasAsignadas() != null ? adicional.getTotalHorasAsignadas() : 0f);
+        combinado.setTotalHorasAsignadas(totalAsignadas);
+        float totalDisponibles = HorasLaborDocenteDTO.HORAS_MAX_SEMANA - totalAsignadas;
+        if (totalDisponibles < 0f) {
+            totalDisponibles = 0f;
+        }
+        combinado.setTotalHorasDisponibles(totalDisponibles);
+        return combinado;
+    }
+
+    private HorasLaborDocenteDTO construirResumenHorasPorRelacion(Actividad actividad, UsuarioActividadCalendario relacion) {
+        if (relacion == null) {
+            return null;
+        }
+        HorasLaborDocenteDTO dto = new HorasLaborDocenteDTO();
+
+        String nombreTipo = actividad != null && actividad.getTipoActividad() != null
+                ? actividad.getTipoActividad().getNombre()
+                : "DESCONOCIDO";
+        Integer oidTipoActividad = actividad != null && actividad.getTipoActividad() != null
+                ? actividad.getTipoActividad().getOidTipoActividad()
+                : null;
+
+        float horasAsignadas = relacion.getHorasActividad() != null ? relacion.getHorasActividad() : 0f;
+
+        float limite = HorasLaborDocenteDTO.HORAS_MAX_SEMANA;
+        CargoActividad cargo = relacion.getCargoActividad();
+        if (cargo != null && cargo.getMaxHorasSemana() != null) {
+            limite = cargo.getMaxHorasSemana();
+        } else if (oidTipoActividad != null) {
+            Float maximo = obtenerMaximoHorasPorTipoActividad(oidTipoActividad);
+            if (maximo != null) {
+                limite = maximo;
+            }
+        }
+
+        float disponible = limite - horasAsignadas;
+        if (disponible < 0f) {
+            disponible = 0f;
+        }
+
+        dto.setHorasAsignadasPorTipoActividad(Map.of(nombreTipo, horasAsignadas));
+        dto.setHorasDisponiblesPorTipoActividad(Map.of(nombreTipo, disponible));
+        dto.setTotalHorasAsignadas(horasAsignadas);
+        float totalDisponibles = HORAS_DEFAULT_CONTRATACION - horasAsignadas;
+        if (totalDisponibles < 0f) {
+            totalDisponibles = 0f;
+        }
+        dto.setTotalHorasDisponibles(totalDisponibles);
+        return dto;
     }
 }
