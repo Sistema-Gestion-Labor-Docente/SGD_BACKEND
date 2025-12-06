@@ -38,4 +38,6 @@ public interface NecesidadRepository extends JpaRepository<Necesidad, Integer>, 
             EstadoNecesidad estado,
             Integer oidPrograma);
 
+    long countByCalendario_Oidcalendario(Integer oidCalendario);
+
 }

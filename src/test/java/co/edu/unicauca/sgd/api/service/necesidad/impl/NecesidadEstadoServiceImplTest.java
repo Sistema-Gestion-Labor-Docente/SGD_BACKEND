@@ -2,6 +2,7 @@ package co.edu.unicauca.sgd.api.service.necesidad.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,19 +14,25 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import co.edu.unicauca.sgd.api.client.ClienteNotificacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
 import co.edu.unicauca.sgd.api.domain.Departamento;
 import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.domain.Plan;
 import co.edu.unicauca.sgd.api.domain.Programa;
+import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 
 @ExtendWith(MockitoExtension.class)
 class NecesidadEstadoServiceImplTest {
@@ -36,11 +43,24 @@ class NecesidadEstadoServiceImplTest {
     @Mock
     private CalendarioRepository calendarioRepository;
 
+    @Mock
+    private ClienteNotificacion clienteNotificacion;
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
+
     private NecesidadEstadoServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new NecesidadEstadoServiceImpl(necesidadRepository, calendarioRepository);
+        service = new NecesidadEstadoServiceImpl(necesidadRepository, calendarioRepository, clienteNotificacion, usuarioRepository);
+        lenient().when(usuarioRepository.findFirstActiveByRolNombre(ArgumentMatchers.anyString())).thenReturn(Optional.empty());
+        lenient().when(usuarioRepository.findByCorreo(ArgumentMatchers.anyString())).thenReturn(Optional.empty());
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -66,6 +86,36 @@ class NecesidadEstadoServiceImplTest {
         assertThat(response.getData()).isNotNull();
         assertThat(response.getData().get("totalNecesidades")).isEqualTo(1);
         verify(necesidadRepository).saveAll(List.of(necesidad));
+    }
+
+    @Test
+    void cambiarEstadoMasivo_enviaCorreoAlSecretarioCuandoTransicionABorrador() {
+        Calendario calendario = new Calendario();
+        calendario.setOidcalendario(2);
+        calendario.setAnioCalendario("2024");
+        calendario.setNumeroCalendario(1);
+
+        Necesidad necesidad = necesidad(30, EstadoNecesidad.BORRADOR, 4, 5);
+
+        Usuario secretario = usuario("secretaria@test.com", "Secretaria", "General");
+        Usuario actor = usuario("actor@test.com", "Actor", "Prueba");
+
+        when(calendarioRepository.findById(2)).thenReturn(Optional.of(calendario));
+        when(necesidadRepository.findAllByCalendario_OidcalendarioAndEstado(2, EstadoNecesidad.BORRADOR))
+                .thenReturn(new java.util.ArrayList<>(List.of(necesidad)));
+        when(necesidadRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(usuarioRepository.findFirstActiveByRolNombre("SECRETARIA/O FACULTAD")).thenReturn(Optional.of(secretario));
+        when(usuarioRepository.findByCorreo("actor@test.com")).thenReturn(Optional.of(actor));
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("actor@test.com", null));
+
+        service.cambiarEstadoMasivo(2, EstadoNecesidad.BORRADOR, EstadoNecesidad.EN_REVISION_SECRETARIO, 4, null);
+
+        verify(clienteNotificacion).enviarNotificacion(
+                ArgumentMatchers.eq(List.of("secretaria@test.com")),
+                ArgumentMatchers.contains("BORRADOR"),
+                ArgumentMatchers.contains("Actor"));
     }
 
     @Test
@@ -157,16 +207,26 @@ class NecesidadEstadoServiceImplTest {
         Plan plan = new Plan();
         Programa programa = new Programa();
         programa.setOidPrograma(oidPrograma);
+        programa.setNombre("Programa " + (oidPrograma != null ? oidPrograma : ""));
         plan.setPrograma(programa);
         materia.setPlan(plan);
 
         if (oidDepartamento != null) {
             Departamento departamento = new Departamento();
             departamento.setOidDepartamento(oidDepartamento);
+            departamento.setNombre("Departamento " + oidDepartamento);
             materia.setDepartamento(departamento);
         }
 
         necesidad.setMateria(materia);
         return necesidad;
+    }
+
+    private Usuario usuario(String correo, String nombres, String apellidos) {
+        Usuario usuario = new Usuario();
+        usuario.setCorreo(correo);
+        usuario.setNombres(nombres);
+        usuario.setApellidos(apellidos);
+        return usuario;
     }
 }

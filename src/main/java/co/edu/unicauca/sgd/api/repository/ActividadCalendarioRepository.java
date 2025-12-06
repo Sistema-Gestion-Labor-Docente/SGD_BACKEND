@@ -13,5 +13,6 @@ import co.edu.unicauca.sgd.api.domain.ActividadCalendario;
 public interface ActividadCalendarioRepository extends JpaRepository<ActividadCalendario, Integer>, JpaSpecificationExecutor<ActividadCalendario> {
     Optional<ActividadCalendario> findByActividad_OidActividadAndCalendario_Oidcalendario(Integer oidActividad, Integer oidCalendario);
     List<ActividadCalendario> findByActividad_OidActividad(Integer oidActividad);
+    long countByCalendario_Oidcalendario(Integer oidCalendario);
 
 }

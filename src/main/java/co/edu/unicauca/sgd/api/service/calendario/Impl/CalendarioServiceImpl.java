@@ -43,6 +43,8 @@ import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
+import co.edu.unicauca.sgd.api.repository.ActividadCalendarioRepository;
+import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.service.calendario.CalendarioPdfService;
 import co.edu.unicauca.sgd.api.service.calendario.CalendarioService;
 import co.edu.unicauca.sgd.api.service.calendario.FechaService;
@@ -86,6 +88,10 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private final UsuarioDepartamentoRepository usuarioDepartamentoRepository;
 
+    private final ActividadCalendarioRepository actividadCalendarioRepository;
+
+    private final NecesidadRepository necesidadRepository;
+
     private final CalendarioPdfService calendarioPdfService;
 
     private final ClienteNotificacion clienteNotificacion;
@@ -101,6 +107,8 @@ public class CalendarioServiceImpl implements CalendarioService {
             SeleccionadoRepository seleccionadoRepository,
             DepartamentoRepository departamentoRepository,
             UsuarioDepartamentoRepository usuarioDepartamentoRepository,
+            ActividadCalendarioRepository actividadCalendarioRepository,
+            NecesidadRepository necesidadRepository,
             FechaMapper fechaMapper,
             CalendarioPdfService calendarioPdfService,
             ClienteNotificacion clienteNotificacion) {
@@ -111,6 +119,8 @@ public class CalendarioServiceImpl implements CalendarioService {
         this.seleccionadoRepository = seleccionadoRepository;
         this.departamentoRepository = departamentoRepository;
         this.usuarioDepartamentoRepository = usuarioDepartamentoRepository;
+        this.actividadCalendarioRepository = actividadCalendarioRepository;
+        this.necesidadRepository = necesidadRepository;
         this.fechaMapper = fechaMapper;
         this.calendarioPdfService = calendarioPdfService;
         this.clienteNotificacion = clienteNotificacion;
@@ -265,6 +275,7 @@ public class CalendarioServiceImpl implements CalendarioService {
             if (!calendarioRepository.existsById(oid)) {
                 throw new CalendarioNoEncontradoException(oid);
             }
+            validarDependenciasAntesDeEliminar(oid);
             // Eliminar relaciones dependientes antes de borrar el calendario
             seleccionadoRepository.deleteByCalendarioOidcalendario(oid);
             calendarioRepository.deleteById(oid);
@@ -272,6 +283,8 @@ public class CalendarioServiceImpl implements CalendarioService {
             return new ApiResponse<>(204, "Calendario eliminado correctamente.", null);
         } catch (CalendarioNoEncontradoException e) {
             return new ApiResponse<>(404, e.getMessage(), null);
+        } catch (CalendarioOperacionNoPermitidaException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
             CalendarioProcesoException ex =
                     new CalendarioProcesoException("Error al eliminar el calendario", e);
@@ -571,6 +584,19 @@ public class CalendarioServiceImpl implements CalendarioService {
         } catch (Exception e) {
             logger.error("Error al enviar notificaciones para el calendario {}: {}",
                     calendario.getOidcalendario(), e.getMessage());
+        }
+    }
+
+    private void validarDependenciasAntesDeEliminar(Integer oidCalendario) {
+        long actividades = actividadCalendarioRepository.countByCalendario_Oidcalendario(oidCalendario);
+        if (actividades > 0) {
+            throw new CalendarioOperacionNoPermitidaException(
+                    String.format("No se puede eliminar el calendario %d porque tiene %d actividades registradas.", oidCalendario, actividades));
+        }
+        long necesidades = necesidadRepository.countByCalendario_Oidcalendario(oidCalendario);
+        if (necesidades > 0) {
+            throw new CalendarioOperacionNoPermitidaException(
+                    String.format("No se puede eliminar el calendario %d porque tiene %d necesidades registradas (con o sin asignaciones).", oidCalendario, necesidades));
         }
     }
 }
