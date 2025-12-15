@@ -65,6 +65,7 @@ public class AsignacionController {
     @PostMapping
     @Operation(summary = "Crear asignación")
     public ResponseEntity<ApiResponse<AsignacionDTOResponse>> crear(@Valid @RequestBody AsignacionDTORequest request) {
+        validarCalendarioSeleccionado(request);
         ApiResponse<AsignacionDTOResponse> response = asignacionService.crear(request);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
@@ -74,6 +75,7 @@ public class AsignacionController {
     public ResponseEntity<ApiResponse<AsignacionDTOResponse>> actualizar(
             @PathVariable Integer oid,
             @Valid @RequestBody AsignacionDTORequest request) {
+        validarCalendarioSeleccionado(request);
         ApiResponse<AsignacionDTOResponse> response = asignacionService.actualizar(oid, request);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
@@ -83,5 +85,12 @@ public class AsignacionController {
     public ResponseEntity<ApiResponse<Void>> eliminar(@PathVariable Integer oid) {
         ApiResponse<Void> response = asignacionService.eliminar(oid);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
+    }
+
+    private void validarCalendarioSeleccionado(AsignacionDTORequest request) {
+        if (request == null) {
+            return;
+        }
+        asignacionService.validarSeleccionadoCalendario(request.getOidNecesidad(), request.getOidSeleccionado());
     }
 }
