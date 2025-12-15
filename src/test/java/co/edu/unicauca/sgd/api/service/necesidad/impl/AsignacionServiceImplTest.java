@@ -1,6 +1,7 @@
 package co.edu.unicauca.sgd.api.service.necesidad.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -45,6 +46,7 @@ import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
 import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
 import co.edu.unicauca.sgd.api.exception.ValidacionNegocioException;
+import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionCalendarioInvalidoException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionLimiteDocentesException;
 import co.edu.unicauca.sgd.api.exception.asignacion.AsignacionOperacionNoPermitidaException;
 import co.edu.unicauca.sgd.api.mapper.AsignacionMapper;
@@ -451,6 +453,40 @@ class AsignacionServiceImplTest {
         verify(asignacionRepository, never()).saveAll(ArgumentMatchers.<Iterable<Asignacion>>any());
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.NO_ASIGNADA);
         verify(necesidadRepository).save(necesidad);
+    }
+
+    @Test
+    void validarSeleccionadoCalendario_DeberiaLanzarCuandoCalendariosDiferentes() {
+        Calendario otroCalendario = new Calendario();
+        otroCalendario.setOidcalendario(99);
+
+        Seleccionado otroSeleccionado = new Seleccionado();
+        otroSeleccionado.setOidSeleccionado(2);
+        otroSeleccionado.setCalendario(otroCalendario);
+
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(otroSeleccionado));
+
+        assertThrows(AsignacionCalendarioInvalidoException.class,
+                () -> asignacionService.validarSeleccionadoCalendario(1, 2));
+    }
+
+    @Test
+    void validarSeleccionadoCalendario_DeberiaLanzarCuandoFaltanIds() {
+        assertThrows(ValidacionNegocioException.class,
+                () -> asignacionService.validarSeleccionadoCalendario(null, 2));
+        assertThrows(ValidacionNegocioException.class,
+                () -> asignacionService.validarSeleccionadoCalendario(1, null));
+    }
+
+    @Test
+    void validarSeleccionadoCalendario_DeberiaPermitirCalendariosIguales() {
+        when(necesidadRepository.findById(1)).thenReturn(Optional.of(necesidad));
+        when(seleccionadoRepository.findById(2)).thenReturn(Optional.of(seleccionado));
+
+        assertDoesNotThrow(() -> asignacionService.validarSeleccionadoCalendario(1, 2));
+        verify(necesidadRepository).findById(1);
+        verify(seleccionadoRepository).findById(2);
     }
 
     private Asignacion buildAsignacion(int id, int oidSeleccionado) {

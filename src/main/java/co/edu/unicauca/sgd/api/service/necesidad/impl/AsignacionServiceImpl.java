@@ -54,7 +54,7 @@ import co.edu.unicauca.sgd.api.service.necesidad.AsignacionService;
 @Service
 public class AsignacionServiceImpl implements AsignacionService {
 
-    private static final float PREPARACION_FACTOR = 3f;
+    private static final float PREPARACION_FACTOR = 2.5f;
     private static final String DOCENCIA_DIRECTA = "DOCENCIA";
     private static final float HORAS_MAX_PLANTA_TIEMPO_COMPLETO = 14f;
     private static final float HORAS_MAX_PLANTA_MEDIO_TIEMPO = 8f;
@@ -218,6 +218,19 @@ public class AsignacionServiceImpl implements AsignacionService {
         return new ApiResponse<>(204, "Asignación eliminada correctamente.", null);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public void validarSeleccionadoCalendario(Integer oidNecesidad, Integer oidSeleccionado) {
+        if (oidNecesidad == null || oidSeleccionado == null) {
+            throw new ValidacionNegocioException("Debe proporcionar el identificador de la necesidad y del seleccionado para validar los calendarios.");
+        }
+        Necesidad necesidad = necesidadRepository.findById(oidNecesidad)
+                .orElseThrow(() -> new RecursoNoEncontradoException("La necesidad indicada no existe."));
+        Seleccionado seleccionado = seleccionadoRepository.findById(oidSeleccionado)
+                .orElseThrow(() -> new RecursoNoEncontradoException("El seleccionado indicado no existe."));
+        validarCalendarioCompartido(necesidad, seleccionado);
+    }
+
     private void prepararAsignacion(Asignacion asignacion, AsignacionDTORequest request, boolean esNuevaAsignacion) {
         Necesidad necesidad = necesidadRepository.findById(request.getOidNecesidad())
                 .orElseThrow(() -> new RecursoNoEncontradoException("La necesidad indicada no existe."));
@@ -225,9 +238,7 @@ public class AsignacionServiceImpl implements AsignacionService {
         Seleccionado seleccionado = seleccionadoRepository.findById(request.getOidSeleccionado())
                 .orElseThrow(() -> new RecursoNoEncontradoException("El seleccionado indicado no existe."));
 
-        if (!Objects.equals(necesidad.getCalendario().getOidcalendario(), seleccionado.getCalendario().getOidcalendario())) {
-            throw new AsignacionCalendarioInvalidoException();
-        }
+        validarCalendarioCompartido(necesidad, seleccionado);
 
         validarRequisitosCalendarioPorContratacion(seleccionado, necesidad.getCalendario());
 
@@ -459,6 +470,18 @@ public class AsignacionServiceImpl implements AsignacionService {
         if (necesidad.getEstado() != nuevoEstado) {
             necesidad.setEstado(nuevoEstado);
             necesidadRepository.save(necesidad);
+        }
+    }
+
+    private void validarCalendarioCompartido(Necesidad necesidad, Seleccionado seleccionado) {
+        if (necesidad == null || necesidad.getCalendario() == null) {
+            throw new ValidacionNegocioException("La necesidad indicada no tiene un calendario asociado.");
+        }
+        if (seleccionado == null || seleccionado.getCalendario() == null) {
+            throw new ValidacionNegocioException("El seleccionado indicado no tiene un calendario asociado.");
+        }
+        if (!Objects.equals(necesidad.getCalendario().getOidcalendario(), seleccionado.getCalendario().getOidcalendario())) {
+            throw new AsignacionCalendarioInvalidoException();
         }
     }
 }

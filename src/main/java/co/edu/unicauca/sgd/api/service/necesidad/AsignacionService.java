@@ -25,4 +25,6 @@ public interface AsignacionService {
     ApiResponse<AsignacionDTOResponse> actualizar(Integer oidAsignacion, AsignacionDTORequest request);
 
     ApiResponse<Void> eliminar(Integer oidAsignacion);
+
+    void validarSeleccionadoCalendario(Integer oidNecesidad, Integer oidSeleccionado);
 }
