@@ -52,17 +52,14 @@ public class ActividadServiceImpl implements ActividadService {
     @Autowired
     private ActividadMapper actividadMapper;
 
-
     @Autowired
     private EstadoActividadService estadoActividadService;
-
 
     @Autowired
     private EavAtributoService eavAtributoService;
 
     @Autowired
     private EavAtributoRepository eavAtributoRepository;
-
 
     @Autowired
     private ActividadDetalleService actividadDetalleService;
