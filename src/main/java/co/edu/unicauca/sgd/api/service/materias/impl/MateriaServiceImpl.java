@@ -216,10 +216,9 @@ public class MateriaServiceImpl implements MateriaService {
                         .orElseThrow(() -> new IllegalStateException("Plan no encontrado con ID: " + request.getOidPlan()));
                 existente.setPlan(plan);
             }
-            if (request.getIdCorrequisito() != null) {
-                Materia correquisito = resolverCorrequisito(request, existente.getIdMateria());
-                existente.setCorrequisito(correquisito);
-            }
+
+            Materia correquisito = resolverCorrequisito(request, existente.getIdMateria(), true);
+            existente.setCorrequisito(correquisito);
 
             existente.setUsuarioActualizacion("UsuarioActualizacion");
             Materia actualizado = materiaRepository.save(existente);
@@ -278,14 +277,39 @@ public class MateriaServiceImpl implements MateriaService {
     }
 
     private Materia resolverCorrequisito(MateriaDTORequest request, Integer idMateriaActual) {
+        return resolverCorrequisito(request, idMateriaActual, false);
+    }
+
+    private Materia resolverCorrequisito(
+            MateriaDTORequest request, Integer idMateriaActual, boolean desvincularSiInvalido) {
         Integer idCorrequisito = request.getIdCorrequisito();
 
         if (idCorrequisito == null) {
             return null;
         }
 
-        Materia correquisito = materiaRepository.findById(idCorrequisito)
-                .orElseThrow(() -> new IllegalStateException("Correquisito no encontrado con ID: " + idCorrequisito));
+        if (idCorrequisito <= 0) {
+            if (desvincularSiInvalido) {
+                logger.debug(
+                        "ID de correquisito inválido ({}) recibido para la materia {}. Se desvinculará cualquier relación existente.",
+                        idCorrequisito,
+                        request.getOidMateria());
+                return null;
+            }
+            throw new IllegalArgumentException("El ID del correquisito debe ser mayor que cero.");
+        }
+
+        Materia correquisito = materiaRepository.findById(idCorrequisito).orElse(null);
+        if (correquisito == null) {
+            if (desvincularSiInvalido) {
+                logger.debug(
+                        "No se encontró correquisito con ID {} durante la actualización. Se desvinculará la materia {} si estaba relacionada.",
+                        idCorrequisito,
+                        request.getOidMateria());
+                return null;
+            }
+            throw new IllegalStateException("Correquisito no encontrado con ID: " + idCorrequisito);
+        }
 
         if (idMateriaActual != null && correquisito.getIdMateria() != null
                 && correquisito.getIdMateria().equals(idMateriaActual)) {
