@@ -18,6 +18,4 @@ public class AsignacionDTORequest {
     @NotNull
     @Positive
     private Integer oidEstadoActividad;
-
-    private String nombreActividad;
 }

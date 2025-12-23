@@ -1,6 +1,7 @@
 package co.edu.unicauca.sgd.api.service.necesidad.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -41,6 +43,8 @@ import co.edu.unicauca.sgd.api.domain.TipoActividad;
 import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
+import co.edu.unicauca.sgd.api.dto.AtributoDTO;
+import co.edu.unicauca.sgd.api.dto.actividad.ActividadBaseDTO;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.AsignacionDTOResponse;
 import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
@@ -96,6 +100,9 @@ class AsignacionServiceImplTest {
 
         Materia materia = new Materia();
         materia.setHorasSemana(12);
+        materia.setCodigo("MAT-101");
+        materia.setNombre("Calculo");
+        materia.setSemestre(3);
         Departamento departamento = new Departamento();
         departamento.setOidDepartamento(20);
         materia.setDepartamento(departamento);
@@ -110,6 +117,7 @@ class AsignacionServiceImplTest {
         necesidad.setOidNecesidad(1);
         necesidad.setCalendario(calendario);
         necesidad.setMateria(materia);
+        necesidad.setGrupo("A");
         necesidad.setEstado(EstadoNecesidad.NO_ASIGNADA);
 
         UsuarioDetalle detalle = new UsuarioDetalle();
@@ -208,11 +216,22 @@ class AsignacionServiceImplTest {
         assertThat(response.getCodigo()).isEqualTo(201);
         assertThat(response.getData()).isEqualTo(dto);
 
+        ArgumentCaptor<ActividadBaseDTO> actividadCaptor = ArgumentCaptor.forClass(ActividadBaseDTO.class);
         Float horasEsperadas = 12f;
         assertThat(asignacionGuardada.getHorasDocencia()).isEqualTo(horasEsperadas);
         verify(asignacionRepository).saveAll(ArgumentMatchers.<Iterable<Asignacion>>any());
         verify(actividadRepository).save(notNull(Actividad.class));
-        verify(eavAtributoService).actualizarAtributosDinamicos(any(), any(), any());
+        verify(eavAtributoService).actualizarAtributosDinamicos(actividadCaptor.capture(), any(), any());
+        assertThat(actividadCaptor.getValue().getNombreActividad()).isEqualTo("Calculo");
+        assertThat(actividadCaptor.getValue().getAtributos())
+                .extracting(AtributoDTO::getCodigoAtributo, AtributoDTO::getValor)
+                .containsExactly(
+                        tuple("CODIGO", "MAT-101"),
+                        tuple("GRUPO", "A"),
+                        tuple("MATERIA", "Calculo"),
+                        tuple("PROGRAMA", "Programa de Prueba"),
+                        tuple("SEMESTRE", "3")
+                );
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.ASIGNADA);
         verify(necesidadRepository).save(necesidad);
     }
@@ -509,7 +528,6 @@ class AsignacionServiceImplTest {
         request.setOidNecesidad(1);
         request.setOidSeleccionado(2);
         request.setOidEstadoActividad(3);
-        request.setNombreActividad("Docencia directa");
         return request;
     }
 }
