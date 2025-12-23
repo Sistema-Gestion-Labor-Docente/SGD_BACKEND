@@ -263,9 +263,10 @@ public class AsignacionServiceImpl implements AsignacionService {
         if (actividad == null) {
             actividad = new Actividad();
         }
+        String nombreMateria = necesidad.getMateria() != null ? necesidad.getMateria().getNombre() : null;
         actividad.setTipoActividad(tipoActividad);
         actividad.setEstadoActividad(estadoActividad);
-        actividad.setNombreActividad(request.getNombreActividad());
+        actividad.setNombreActividad(nombreMateria);
 
         actividad = actividadRepository.save(actividad);
 
@@ -304,11 +305,11 @@ public class AsignacionServiceImpl implements AsignacionService {
         actividadDTO.setSemanas(actividad.getSemanas());
 
         List<AtributoDTO> atributos = List.of(
-                new AtributoDTO("4", codigo != null ? codigo : ""),
-                new AtributoDTO("5", grupo != null ? grupo : ""),
-                new AtributoDTO("6", nombreMateria != null ? nombreMateria : ""),
-                new AtributoDTO("8", nombrePrograma != null ? nombrePrograma : ""),
-                new AtributoDTO("9", semestre != null ? semestre.toString() : "")
+                new AtributoDTO("CODIGO", codigo != null ? codigo : ""),
+                new AtributoDTO("GRUPO", grupo != null ? grupo : ""),
+                new AtributoDTO("MATERIA", nombreMateria != null ? nombreMateria : ""),
+                new AtributoDTO("PROGRAMA", nombrePrograma != null ? nombrePrograma : ""),
+                new AtributoDTO("SEMESTRE", semestre != null ? semestre.toString() : "")
         );
 
         actividadDTO.setAtributos(atributos);
