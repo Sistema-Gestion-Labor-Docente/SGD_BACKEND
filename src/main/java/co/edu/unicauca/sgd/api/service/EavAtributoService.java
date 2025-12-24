@@ -137,6 +137,20 @@ public class EavAtributoService {
     }
 
     public void actualizarAtributosDinamicos(ActividadBaseDTO actividadDTO, Actividad actividad, Map<String, EavAtributo> cacheAtributos) {
+        eliminarComponentesActividad(actividad);
+
+        // Guardar los nuevos atributos
+        guardarAtributosDinamicos(actividadDTO, actividad, cacheAtributos);
+    }
+
+    public void eliminarAtributosActividad(Actividad actividad) {
+        if (actividad == null) {
+            return;
+        }
+        eliminarComponentesActividad(actividad);
+    }
+
+    private void eliminarComponentesActividad(Actividad actividad) {
         // Eliminar los atributos actuales de la actividad
         actividadVarcharRepository.deleteByActividad(actividad);
         actividadVarcharRepository.flush();
@@ -148,9 +162,6 @@ public class EavAtributoService {
         actividadBooleanRepository.flush();
         actividadDateRepository.deleteByActividad(actividad);
         actividadDateRepository.flush();
-    
-        // Guardar los nuevos atributos
-        guardarAtributosDinamicos(actividadDTO, actividad, cacheAtributos);
     }
 
     public void guardarAtributosDinamicos(ActividadBaseDTO actividadDTO,

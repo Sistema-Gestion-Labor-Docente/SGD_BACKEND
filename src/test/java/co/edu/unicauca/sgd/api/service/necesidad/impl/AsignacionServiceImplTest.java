@@ -447,6 +447,7 @@ class AsignacionServiceImplTest {
         ApiResponse<Void> response = asignacionService.eliminar(9);
 
         assertThat(response.getCodigo()).isEqualTo(204);
+        verify(eavAtributoService).eliminarAtributosActividad(actividad);
         verify(asignacionRepository).delete(asignacion);
         verify(asignacionRepository).saveAll(ArgumentMatchers.<Iterable<Asignacion>>any());
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.ASIGNADA);
@@ -468,6 +469,7 @@ class AsignacionServiceImplTest {
         ApiResponse<Void> response = asignacionService.eliminar(10);
 
         assertThat(response.getCodigo()).isEqualTo(204);
+        verify(eavAtributoService).eliminarAtributosActividad(asignacion.getActividad());
         verify(asignacionRepository).delete(asignacion);
         verify(asignacionRepository, never()).saveAll(ArgumentMatchers.<Iterable<Asignacion>>any());
         assertThat(necesidad.getEstado()).isEqualTo(EstadoNecesidad.NO_ASIGNADA);
