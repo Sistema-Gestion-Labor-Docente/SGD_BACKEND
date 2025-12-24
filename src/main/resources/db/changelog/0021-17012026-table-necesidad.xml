@@ -37,10 +37,6 @@
       <column name="USUARIOACTUALIZACION" type="VARCHAR(100)"/>
     </createTable>
 
-    <addUniqueConstraint tableName="NECESIDAD"
-                         columnNames="OIDCALENDARIO, IDMATERIA"
-                         constraintName="UQ_NEC_CAL_MAT"/>
-
     <addForeignKeyConstraint
         baseTableName="NECESIDAD" baseColumnNames="OIDCALENDARIO"
         referencedTableName="CALENDARIO" referencedColumnNames="OIDCALENDARIO"
