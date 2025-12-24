@@ -211,6 +211,7 @@ public class AsignacionServiceImpl implements AsignacionService {
                 .orElseThrow(() -> new AsignacionNoEncontradaException(oidAsignacion));
 
         Necesidad necesidad = asignacion.getNecesidad();
+        eavAtributoService.eliminarAtributosActividad(asignacion.getActividad());
         asignacionRepository.delete(asignacion);
         redistribuirHoras(necesidad);
         actualizarEstadoNecesidad(necesidad);
