@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateRequest;
+import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
@@ -72,9 +73,9 @@ public class NecesidadController {
 
     @PostMapping("/lote")
     @Operation(summary = "Crear necesidades por lote", description = "Crea múltiples necesidades para un calendario a partir de una lista de materias")
-    public ResponseEntity<ApiResponse<List<NecesidadDTOResponse>>> saveBulk(
+    public ResponseEntity<ApiResponse<NecesidadBulkCreateResponse>> saveBulk(
             @Valid @RequestBody NecesidadBulkCreateRequest request) {
-        ApiResponse<List<NecesidadDTOResponse>> response = necesidadService.guardarMasivo(request);
+        ApiResponse<NecesidadBulkCreateResponse> response = necesidadService.guardarMasivo(request);
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 

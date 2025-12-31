@@ -257,7 +257,7 @@ public class AsignacionServiceImpl implements AsignacionService {
         TipoActividad tipoActividad = tipoActividadRepository.findByNombreIgnoreCase(DOCENCIA_DIRECTA)
                 .orElseThrow(AsignacionTipoActividadNoConfiguradaException::new);
 
-        EstadoActividad estadoActividad = estadoActividadRepository.findById(request.getOidEstadoActividad())
+        EstadoActividad estadoActividad = estadoActividadRepository.findById(1)
                 .orElseThrow(() -> new RecursoNoEncontradoException("El estado de actividad indicado no existe."));
 
         Actividad actividad = asignacion.getActividad();

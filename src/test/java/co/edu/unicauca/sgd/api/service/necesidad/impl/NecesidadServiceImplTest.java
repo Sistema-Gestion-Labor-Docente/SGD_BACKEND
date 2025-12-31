@@ -26,6 +26,7 @@ import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateRequest;
+import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
@@ -145,7 +146,7 @@ class NecesidadServiceImplTest {
 
         when(calendarioRepository.findById(3)).thenReturn(Optional.of(calendario));
 
-        ApiResponse<java.util.List<NecesidadDTOResponse>> response = service.guardarMasivo(request);
+        ApiResponse<NecesidadBulkCreateResponse> response = service.guardarMasivo(request);
 
         assertThat(response.getCodigo()).isEqualTo(400);
         verify(necesidadRepository, never()).save(any(Necesidad.class));

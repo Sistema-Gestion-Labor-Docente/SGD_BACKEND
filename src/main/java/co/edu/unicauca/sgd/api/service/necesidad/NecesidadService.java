@@ -2,6 +2,7 @@ package co.edu.unicauca.sgd.api.service.necesidad;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateRequest;
+import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
@@ -25,7 +26,7 @@ public interface NecesidadService {
     ApiResponse<NecesidadDTOResponse> buscarPorId(Integer oid);
 
     ApiResponse<NecesidadDTOResponse> guardar(NecesidadDTORequest request);
-    ApiResponse<List<NecesidadDTOResponse>> guardarMasivo(NecesidadBulkCreateRequest request);
+    ApiResponse<NecesidadBulkCreateResponse> guardarMasivo(NecesidadBulkCreateRequest request);
 
     ApiResponse<NecesidadDTOResponse> actualizar(Integer oid, NecesidadDTORequest request);
 

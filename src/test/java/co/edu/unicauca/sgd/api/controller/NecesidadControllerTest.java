@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateRequest;
+import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
 import co.edu.unicauca.sgd.api.service.necesidad.NecesidadService;
@@ -82,11 +83,13 @@ class NecesidadControllerTest {
     @Test
     void saveBulk_shouldReturnServiceBody() {
         NecesidadBulkCreateRequest request = new NecesidadBulkCreateRequest();
-        ApiResponse<List<NecesidadDTOResponse>> serviceResponse =
-                new ApiResponse<>(201, "creadas", List.of(new NecesidadDTOResponse()));
+        NecesidadBulkCreateResponse payload =
+                new NecesidadBulkCreateResponse(List.of(new NecesidadDTOResponse()), List.of());
+        ApiResponse<NecesidadBulkCreateResponse> serviceResponse =
+                new ApiResponse<>(201, "creadas", payload);
         when(necesidadService.guardarMasivo(request)).thenReturn(serviceResponse);
 
-        ResponseEntity<ApiResponse<List<NecesidadDTOResponse>>> result = controller.saveBulk(request);
+        ResponseEntity<ApiResponse<NecesidadBulkCreateResponse>> result = controller.saveBulk(request);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(result.getBody()).isEqualTo(serviceResponse);

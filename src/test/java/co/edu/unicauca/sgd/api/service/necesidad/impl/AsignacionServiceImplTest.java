@@ -189,7 +189,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
-        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(estadoActividadRepository.findById(1)).thenReturn(Optional.of(estadoActividad));
         when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
@@ -259,7 +259,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
-        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(estadoActividadRepository.findById(1)).thenReturn(Optional.of(estadoActividad));
         when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
@@ -299,7 +299,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
-        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(estadoActividadRepository.findById(1)).thenReturn(Optional.of(estadoActividad));
         when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
@@ -337,7 +337,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
-        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(estadoActividadRepository.findById(1)).thenReturn(Optional.of(estadoActividad));
         when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
@@ -371,7 +371,7 @@ class AsignacionServiceImplTest {
         when(asignacionRepository.countByNecesidad_OidNecesidad(1)).thenReturn(0L, 1L);
         when(asignacionRepository.findByNecesidad_OidNecesidadAndSeleccionado_OidSeleccionado(1, 2)).thenReturn(Optional.empty());
         when(tipoActividadRepository.findByNombreIgnoreCase("DOCENCIA")).thenReturn(Optional.of(tipoActividad));
-        when(estadoActividadRepository.findById(3)).thenReturn(Optional.of(estadoActividad));
+        when(estadoActividadRepository.findById(1)).thenReturn(Optional.of(estadoActividad));
         when(actividadRepository.save(notNull(Actividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Asignacion asignacionGuardada = new Asignacion();
@@ -529,7 +529,6 @@ class AsignacionServiceImplTest {
         AsignacionDTORequest request = new AsignacionDTORequest();
         request.setOidNecesidad(1);
         request.setOidSeleccionado(2);
-        request.setOidEstadoActividad(3);
         return request;
     }
 }
