@@ -40,9 +40,10 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.BORRADOR,
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 2,
+                null,
                 null)).thenReturn(serviceResponse);
 
-        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toRevisionSecretario(1, 2);
+        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toRevisionSecretario(1, 2, null);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
@@ -51,6 +52,7 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.BORRADOR,
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 2,
+                null,
                 null);
     }
 
@@ -62,9 +64,10 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 EstadoNecesidad.BORRADOR,
                 4,
+                null,
                 null)).thenReturn(serviceResponse);
 
-        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toBorradorDesdeSecretario(3, 4);
+        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toBorradorDesdeSecretario(3, 4, null);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
@@ -73,6 +76,7 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 EstadoNecesidad.BORRADOR,
                 4,
+                null,
                 null);
     }
 
@@ -84,9 +88,10 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 EstadoNecesidad.EN_REVISION_JEFE,
                 4,
-                6)).thenReturn(serviceResponse);
+                6,
+                null)).thenReturn(serviceResponse);
 
-        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toRevisionJefe(5, 4, 6);
+        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toRevisionJefe(5, 4, 6, null);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
@@ -95,7 +100,8 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 EstadoNecesidad.EN_REVISION_JEFE,
                 4,
-                6);
+                6,
+                null);
     }
 
     @Test
@@ -106,9 +112,10 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.EN_REVISION_JEFE,
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 4,
+                null,
                 null)).thenReturn(serviceResponse);
 
-        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toRevisionSecretarioDesdeJefe(7, 4, null);
+        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toRevisionSecretarioDesdeJefe(7, 4, null, null);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
@@ -117,6 +124,7 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.EN_REVISION_JEFE,
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 4,
+                null,
                 null);
     }
 
@@ -128,9 +136,10 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.EN_REVISION_JEFE,
                 EstadoNecesidad.NO_ASIGNADA,
                 null,
-                9)).thenReturn(serviceResponse);
+                9,
+                null)).thenReturn(serviceResponse);
 
-        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toNoAsignada(8, 9);
+        ResponseEntity<ApiResponse<Map<String, Object>>> result = controller.toNoAsignada(8, 9, null);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
@@ -139,7 +148,8 @@ class NecesidadEstadoControllerTest {
                 EstadoNecesidad.EN_REVISION_JEFE,
                 EstadoNecesidad.NO_ASIGNADA,
                 null,
-                9);
+                9,
+                null);
     }
 
     @Test

@@ -30,6 +30,8 @@ public interface NecesidadRepository extends JpaRepository<Necesidad, Integer>, 
 
     List<Necesidad> findAllByCalendario_OidcalendarioAndMateria_IdMateria(Integer oidCalendario, Integer idMateria);
 
+    long countByCalendario_OidcalendarioAndMateria_IdMateria(Integer oidCalendario, Integer idMateria);
+
     // buscar por estado
     List<Necesidad> findAllByCalendario_OidcalendarioAndEstado(Integer oidCalendario, EstadoNecesidad estado);
 

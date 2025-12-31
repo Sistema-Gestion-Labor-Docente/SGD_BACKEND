@@ -21,6 +21,8 @@ import co.edu.unicauca.sgd.api.domain.Materia;
 import co.edu.unicauca.sgd.api.domain.Necesidad;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateRequest;
+import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkCreateResponse;
+import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadBulkExcesoResponse;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTORequest;
 import co.edu.unicauca.sgd.api.dto.necesidades.NecesidadDTOResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
@@ -39,6 +41,7 @@ import co.edu.unicauca.sgd.api.service.necesidad.NecesidadService;
 public class NecesidadServiceImpl implements NecesidadService {
 
     private static final Logger logger = LoggerFactory.getLogger(NecesidadServiceImpl.class);
+    private static final int MAX_GRUPOS_POR_MATERIA = 5;
 
     private final NecesidadRepository necesidadRepository;
     private final CalendarioRepository calendarioRepository;
@@ -170,6 +173,14 @@ public class NecesidadServiceImpl implements NecesidadService {
                         materia.getNombre(), grupoNormalizado));
             }
 
+            long totalGrupos = necesidadRepository.countByCalendario_OidcalendarioAndMateria_IdMateria(
+                    calendario.getOidcalendario(), materia.getIdMateria());
+            if (totalGrupos >= MAX_GRUPOS_POR_MATERIA) {
+                throw new NecesidadValidationException(String.format(
+                        "La materia %s ya alcanzó el máximo de %d grupos en el calendario %s.",
+                        materia.getNombre(), MAX_GRUPOS_POR_MATERIA, calendario.getOidcalendario()));
+            }
+
             Necesidad entidad = necesidadMapper.toEntity(request);
             if (entidad.getEstado() == null) {
                 entidad.setEstado(EstadoNecesidad.BORRADOR);
@@ -196,7 +207,7 @@ public class NecesidadServiceImpl implements NecesidadService {
 
     @Override
     @Transactional
-    public ApiResponse<List<NecesidadDTOResponse>> guardarMasivo(NecesidadBulkCreateRequest request) {
+    public ApiResponse<NecesidadBulkCreateResponse> guardarMasivo(NecesidadBulkCreateRequest request) {
         try {
             if (request == null || request.getNecesidades() == null || request.getNecesidades().isEmpty()) {
                 throw new NecesidadValidationException("Debe enviar al menos una materia para crear necesidades.");
@@ -204,6 +215,7 @@ public class NecesidadServiceImpl implements NecesidadService {
 
             Calendario calendario = validarCalendario(request.getOidCalendario());
             List<NecesidadDTOResponse> creadas = new ArrayList<>();
+            List<NecesidadBulkExcesoResponse> excedidas = new ArrayList<>();
             Set<Integer> materiasUnicas = new HashSet<>();
 
             for (NecesidadBulkCreateRequest.NecesidadBulkItemRequest item : request.getNecesidades()) {
@@ -225,9 +237,30 @@ public class NecesidadServiceImpl implements NecesidadService {
                         .map(this::normalizarGrupo)
                         .collect(Collectors.toCollection(HashSet::new));
 
+                int gruposDisponibles = MAX_GRUPOS_POR_MATERIA - gruposExistentes.size();
+                if (gruposDisponibles < 0) {
+                    gruposDisponibles = 0;
+                }
+
+                int gruposSolicitados = item.getCantidadGrupos();
+                int gruposACrear = Math.min(gruposSolicitados, gruposDisponibles);
+                int gruposExcedidos = gruposSolicitados - gruposACrear;
+                if (gruposExcedidos > 0) {
+                    excedidas.add(new NecesidadBulkExcesoResponse(
+                            materia.getIdMateria(),
+                            materia.getNombre(),
+                            gruposSolicitados,
+                            gruposDisponibles,
+                            gruposExcedidos));
+                }
+
+                if (gruposACrear == 0) {
+                    continue;
+                }
+
                 int gruposCreados = 0;
                 int indiceGrupo = 0;
-                while (gruposCreados < item.getCantidadGrupos()) {
+                while (gruposCreados < gruposACrear) {
                     String grupoGenerado = generarNombreGrupo(indiceGrupo++);
                     if (gruposExistentes.contains(grupoGenerado)) {
                         continue;
@@ -249,7 +282,11 @@ public class NecesidadServiceImpl implements NecesidadService {
             }
 
             logger.info("Necesidades creadas masivamente: {}", creadas.size());
-            return new ApiResponse<>(201, "Necesidades creadas correctamente.", creadas);
+            String mensaje = excedidas.isEmpty()
+                    ? "Necesidades creadas correctamente."
+                    : "Necesidades creadas correctamente. Se retornan las solicitudes excedentes por superar el máximo de "
+                            + MAX_GRUPOS_POR_MATERIA + " grupos por materia.";
+            return new ApiResponse<>(201, mensaje, new NecesidadBulkCreateResponse(creadas, excedidas));
         } catch (NecesidadException e) {
             logger.warn("Error al crear necesidades masivamente: {}", e.getMessage());
             return new ApiResponse<>(e.getStatus().value(), e.getMessage(), null);

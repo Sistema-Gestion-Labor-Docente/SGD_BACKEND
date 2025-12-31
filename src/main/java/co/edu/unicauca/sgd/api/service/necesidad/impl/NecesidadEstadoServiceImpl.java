@@ -67,11 +67,15 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
                                                                 EstadoNecesidad estadoOrigen,
                                                                 EstadoNecesidad estadoDestino,
                                                                 Integer oidPrograma,
-                                                                Integer oidDepartamento) {
+                                                                Integer oidDepartamento,
+                                                                List<Integer> oidNecesidades) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("calendario", oidCalendario);
         metadata.put("estadoOrigen", estadoOrigen != null ? estadoOrigen.name() : null);
         metadata.put("estadoDestino", estadoDestino != null ? estadoDestino.name() : null);
+        if (oidNecesidades != null) {
+            metadata.put("necesidadesSolicitadas", oidNecesidades);
+        }
         if (oidPrograma != null) {
             metadata.put("oidPrograma", oidPrograma);
         }
@@ -96,6 +100,32 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
 
             List<Necesidad> necesidades = obtenerNecesidadesParaTransicion(
                     oidCalendario, estadoOrigen, oidPrograma, oidDepartamento);
+
+            List<Integer> oidsFiltrados = oidNecesidades == null ? List.of() : oidNecesidades.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!oidsFiltrados.isEmpty()) {
+                Set<Integer> filtro = new HashSet<>(oidsFiltrados);
+                List<Necesidad> filtradas = necesidades.stream()
+                        .filter(necesidad -> filtro.contains(necesidad.getOidNecesidad()))
+                        .collect(Collectors.toList());
+                if (filtradas.isEmpty()) {
+                    metadata.put("totalNecesidades", 0);
+                    metadata.put("faltantes", oidsFiltrados);
+                    throw new NecesidadNotFoundException("No se encontraron necesidades para la transición solicitada.");
+                }
+                Set<Integer> encontrados = filtradas.stream()
+                        .map(Necesidad::getOidNecesidad)
+                        .collect(Collectors.toSet());
+                List<Integer> faltantes = oidsFiltrados.stream()
+                        .filter(id -> !encontrados.contains(id))
+                        .collect(Collectors.toList());
+                if (!faltantes.isEmpty()) {
+                    metadata.put("faltantes", faltantes);
+                }
+                necesidades = filtradas;
+            }
             if (necesidades.isEmpty()) {
                 metadata.put("totalNecesidades", 0);
                 throw new NecesidadNotFoundException("No se encontraron necesidades para la transición solicitada.");

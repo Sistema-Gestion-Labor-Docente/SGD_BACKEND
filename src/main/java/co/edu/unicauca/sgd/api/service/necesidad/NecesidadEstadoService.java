@@ -11,7 +11,8 @@ public interface NecesidadEstadoService {
                                                          EstadoNecesidad estadoOrigen,
                                                          EstadoNecesidad estadoDestino,
                                                          Integer oidPrograma,
-                                                         Integer oidDepartamento);
+                                                         Integer oidDepartamento,
+                                                         java.util.List<Integer> oidNecesidades);
 
     ApiResponse<Map<String, Object>> cambiarEstadoPorOids(List<Integer> oidNecesidades,
                                                           EstadoNecesidad estadoOrigen,

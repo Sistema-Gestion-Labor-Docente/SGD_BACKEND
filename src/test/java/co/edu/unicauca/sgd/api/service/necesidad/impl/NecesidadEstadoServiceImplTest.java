@@ -79,6 +79,7 @@ class NecesidadEstadoServiceImplTest {
                 EstadoNecesidad.BORRADOR,
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 2,
+                null,
                 null);
 
         assertThat(response.getCodigo()).isEqualTo(200);
@@ -110,7 +111,7 @@ class NecesidadEstadoServiceImplTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("actor@test.com", null));
 
-        service.cambiarEstadoMasivo(2, EstadoNecesidad.BORRADOR, EstadoNecesidad.EN_REVISION_SECRETARIO, 4, null);
+        service.cambiarEstadoMasivo(2, EstadoNecesidad.BORRADOR, EstadoNecesidad.EN_REVISION_SECRETARIO, 4, null, null);
 
         verify(clienteNotificacion).enviarNotificacion(
                 ArgumentMatchers.eq(List.of("secretaria@test.com")),
@@ -128,6 +129,7 @@ class NecesidadEstadoServiceImplTest {
                 1,
                 EstadoNecesidad.BORRADOR,
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
+                null,
                 null,
                 null);
 
@@ -148,6 +150,7 @@ class NecesidadEstadoServiceImplTest {
                 1,
                 EstadoNecesidad.EN_REVISION_SECRETARIO,
                 EstadoNecesidad.EN_REVISION_JEFE,
+                null,
                 null,
                 null);
 
