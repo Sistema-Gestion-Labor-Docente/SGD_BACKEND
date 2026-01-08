@@ -43,14 +43,14 @@ class NecesidadControllerTest {
         ApiResponse<Page<NecesidadDTOResponse>> serviceResponse = new ApiResponse<>(200, "ok", page);
         Pageable pageable = Pageable.unpaged();
 
-        when(necesidadService.obtenerTodos(1, null, null, 2, null, null, null, null, pageable)).thenReturn(serviceResponse);
+        when(necesidadService.obtenerTodos(1, null, null, null, null, null, null, null, pageable)).thenReturn(serviceResponse);
 
         ResponseEntity<ApiResponse<Page<NecesidadDTOResponse>>> result =
-                controller.findAll(1, null, null, 2, null, null, null, null, pageable);
+                controller.findAll(1, null, null, null, null, null, null, null, pageable);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(result.getBody()).isEqualTo(serviceResponse);
-        verify(necesidadService).obtenerTodos(1, null, null, 2, null, null, null, null, pageable);
+        verify(necesidadService).obtenerTodos(1, null, null, null, null, null, null, null, pageable);
     }
 
     @Test

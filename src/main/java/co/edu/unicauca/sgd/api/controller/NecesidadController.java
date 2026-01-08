@@ -32,12 +32,12 @@ public class NecesidadController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar necesidades", description = "Obtiene las necesidades filtrando por calendario, programa y, opcionalmente, materia, estado o departamento")
+    @Operation(summary = "Listar necesidades", description = "Obtiene las necesidades filtrando por calendario y, opcionalmente, programa, materia, estado o departamento")
     public ResponseEntity<ApiResponse<Page<NecesidadDTOResponse>>> findAll(
             @RequestParam Integer oidCalendario,
             @RequestParam(required = false) Integer idMateria,
             @RequestParam(required = false) EstadoNecesidad estado,
-            @RequestParam Integer oidPrograma,
+            @RequestParam(required = false) Integer oidPrograma,
             @RequestParam(required = false) Integer oidDepartamento,
             @RequestParam(required = false) String nombreMateria,
             @RequestParam(required = false) Integer semestreMateria,

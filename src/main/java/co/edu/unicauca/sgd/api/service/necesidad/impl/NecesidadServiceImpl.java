@@ -29,7 +29,6 @@ import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadCalendarioObligatorioException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadNotFoundException;
-import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadProgramaObligatorioException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadValidationException;
 import co.edu.unicauca.sgd.api.mapper.NecesidadMapper;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
@@ -74,7 +73,7 @@ public class NecesidadServiceImpl implements NecesidadService {
         Pageable pageableToUse = pageable != null ? pageable : Pageable.unpaged();
 
         try {
-            validarParametrosListado(oidCalendario, oidPrograma);
+            validarParametrosListado(oidCalendario);
             validarSemestre(semestreMateria);
 
             Specification<Necesidad> specification = Specification.where(null);
@@ -392,12 +391,9 @@ public class NecesidadServiceImpl implements NecesidadService {
         return builder.toString();
     }
 
-    private void validarParametrosListado(Integer oidCalendario, Integer oidPrograma) {
+    private void validarParametrosListado(Integer oidCalendario) {
         if (oidCalendario == null) {
             throw new NecesidadCalendarioObligatorioException();
-        }
-        if (oidPrograma == null) {
-            throw new NecesidadProgramaObligatorioException();
         }
     }
 
