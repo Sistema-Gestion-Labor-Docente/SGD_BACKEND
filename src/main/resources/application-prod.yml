@@ -1,0 +1,24 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  liquibase:
+    enabled: ${LIQUIBASE_ENABLED:true}
+    change-log: ${LIQUIBASE_CHANGELOG:classpath:db/changelog/db.changelog-master.xml}
+
+files:
+  basePath: ${FILES_BASE_PATH:/app/uploads}
+
+document:
+  upload-dir: ${DOCUMENT_UPLOAD_DIR:/app/uploads}
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    'co.edu.unicauca.sed.api': ${LOG_LEVEL_API:INFO}
+    liquibase: ${LOG_LEVEL_LIQUIBASE:INFO}

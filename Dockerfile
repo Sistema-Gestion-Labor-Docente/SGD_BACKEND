@@ -8,6 +8,7 @@ RUN mvn clean package -DskipTests
 # Etapa final
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
+RUN mkdir -p /app/uploads
 COPY --from=build /app/target/*.jar app.jar
 VOLUME /app/uploads
 ENTRYPOINT ["java", "-jar", "app.jar"]
