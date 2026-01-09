@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resumen Labor Docente</title>
+  <style>
+    :root {
+      --text: #111111;
+      --muted: #3f4a56;
+      --border: #2f3b45;
+      --header-bg: #d7e1ec;
+    }
+    @page {
+      size: A4;
+      margin: 24mm 16mm 20mm 16mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Arial", sans-serif;
+      color: var(--text);
+      font-size: 12px;
+    }
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .title {
+      font-weight: 700;
+      font-size: 14px;
+      margin: 0 0 4px 0;
+    }
+    .subtitle {
+      font-weight: 700;
+      font-size: 12px;
+      margin: 0 0 2px 0;
+    }
+    .summary-box {
+      margin-top: 6px;
+      float: right;
+      text-align: right;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .clear { clear: both; }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr 120px 1fr;
+      gap: 6px 16px;
+      margin: 18px 0 8px 0;
+      font-size: 12px;
+    }
+    .label { font-weight: 700; }
+    .section {
+      margin-top: 14px;
+      page-break-inside: avoid;
+    }
+    .section-header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 700;
+      margin: 8px 0 4px 0;
+    }
+    .section-summary {
+      text-align: right;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 4px 6px;
+      vertical-align: top;
+    }
+    th {
+      background: var(--header-bg);
+      text-align: center;
+      font-weight: 700;
+    }
+    .footer {
+      position: fixed;
+      bottom: 8mm;
+      left: 0;
+      right: 0;
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .pageNumber:before { content: counter(page); }
+    .totalPages:before { content: counter(pages); }
+    .signatures {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 11px;
+      page-break-inside: avoid;
+    }
+    .signature-line {
+      width: 45%;
+      display: inline-block;
+      border-top: 1px solid var(--border);
+      margin: 18px 2% 0 2%;
+      padding-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="title">UNIVERSIDAD DEL CAUCA</div>
+    <div class="subtitle">Vicerrectoria academica</div>
+    <div class="subtitle">Resumen de labor docente</div>
+  </div>
+
+  <div class="summary-box">
+    <div><strong>Periodo:</strong> {{RLD_PERIODO}}</div>
+    <div><strong>Total Horas:</strong> {{RLD_TOTAL_HORAS}}</div>
+    <div><strong>Horas Labor:</strong> {{RLD_HORAS_LABOR}}</div>
+  </div>
+  <div class="clear"></div>
+
+  <div class="info-grid">
+    <div class="label">FACULTAD</div><div>{{RLD_FACULTAD}}</div>
+    <div class="label">NOMBRES</div><div>{{RLD_NOMBRES}}</div>
+
+    <div class="label">DEPARTAMENTO</div><div>{{RLD_DEPARTAMENTO}}</div>
+    <div class="label">DEDICACION</div><div>{{RLD_DEDICACION}}</div>
+
+    <div class="label">IDENTIFICACION</div><div>{{RLD_IDENTIFICACION}}</div>
+    <div class="label">ESTUDIOS</div><div>{{RLD_ESTUDIOS}}</div>
+
+    <div class="label">CONTRATACION</div><div>{{RLD_CONTRATACION}}</div>
+    <div class="label">ESTADO</div><div>{{RLD_ESTADO}}</div>
+
+    <div class="label">CATEGORIA</div><div>{{RLD_CATEGORIA}}</div>
+    <div class="label">OBSERVACION</div><div>{{RLD_OBSERVACION}}</div>
+  </div>
+
+  {{RLD_SECCIONES}}
+
+  <div class="signatures">
+    <div class="signature-line">LABOR VISADA<br/>DECANATURA</div>
+    <div class="signature-line">LABOR VISADA<br/>JEFE DE DEPARTAMENTO</div>
+    <div class="signature-line">LABOR VISADA<br/>VICERRECTORIA</div>
+  </div>
+
+  <div class="footer">
+    <div>Fecha de {{RLD_FECHA}}</div>
+    <div>Pagina <span class="pageNumber"></span> de <span class="totalPages"></span></div>
+  </div>
+</body>
+</html>

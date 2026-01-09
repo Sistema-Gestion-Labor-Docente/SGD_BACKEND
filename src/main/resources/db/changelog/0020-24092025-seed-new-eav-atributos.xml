@@ -17,7 +17,10 @@
         (nextval('SEQ_OIDEAVATRIBUTO'), 'AREA', 'VARCHAR', NOW(), NOW()),
         (nextval('SEQ_OIDEAVATRIBUTO'), 'H. APROB.', 'FLOAT', NOW(), NOW()),
         (nextval('SEQ_OIDEAVATRIBUTO'), 'H. LABOR', 'FLOAT', NOW(), NOW()),
-        (nextval('SEQ_OIDEAVATRIBUTO'), 'UNIDAD_ACADÉMICA', 'VARCHAR', NOW(), NOW())
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'UNIDAD_ACADÉMICA', 'VARCHAR', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'IDESTUDIANTE', 'VARCHAR', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'IDSEMILLERO', 'VARCHAR', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'ROLSEMILLERO', 'VARCHAR', NOW(), NOW())
       ON CONFLICT (NOMBRE) DO NOTHING;
     </sql>
 
