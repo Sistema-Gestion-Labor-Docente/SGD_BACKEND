@@ -36,6 +36,7 @@ import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadTransicionNoPermitid
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadTransicionProgramaObligatorioException;
 import co.edu.unicauca.sgd.api.exception.necesidad.NecesidadValidationException;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
+import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
 import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.necesidad.NecesidadEstadoService;
@@ -50,15 +51,18 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
     private final CalendarioRepository calendarioRepository;
     private final ClienteNotificacion clienteNotificacion;
     private final UsuarioRepository usuarioRepository;
+    private final AsignacionRepository asignacionRepository;
 
     public NecesidadEstadoServiceImpl(NecesidadRepository necesidadRepository,
                                       CalendarioRepository calendarioRepository,
                                       ClienteNotificacion clienteNotificacion,
-                                      UsuarioRepository usuarioRepository) {
+                                      UsuarioRepository usuarioRepository,
+                                      AsignacionRepository asignacionRepository) {
         this.necesidadRepository = necesidadRepository;
         this.calendarioRepository = calendarioRepository;
         this.clienteNotificacion = clienteNotificacion;
         this.usuarioRepository = usuarioRepository;
+        this.asignacionRepository = asignacionRepository;
     }
 
     @Override
@@ -132,6 +136,8 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
             }
 
             boolean debeValidarDepartamento = EstadoNecesidad.EN_REVISION_JEFE.equals(estadoDestino);
+            boolean requiereValidarSinAsignaciones = EstadoNecesidad.NO_ASIGNADA.equals(estadoOrigen)
+                    && EstadoNecesidad.EN_REVISION_JEFE.equals(estadoDestino);
 
             Map<String, List<Integer>> inconsistencias = validarRequisitosPrevios(necesidades, debeValidarDepartamento);
             if (!inconsistencias.getOrDefault("sinGrupo", List.of()).isEmpty()
@@ -144,6 +150,15 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
                 return new ApiResponse<>(400,
                         "Cada necesidad debe tener un departamento asociado antes de pasar a EN REVISION JEFE.",
                         Map.of("inconsistencias", inconsistencias));
+            }
+            if (requiereValidarSinAsignaciones) {
+                Map<String, List<Integer>> relaciones = validarSinAsignacionesSeleccionados(necesidades);
+                if (!relaciones.getOrDefault("conAsignaciones", List.of()).isEmpty()
+                        || !relaciones.getOrDefault("conSeleccionados", List.of()).isEmpty()) {
+                    return new ApiResponse<>(400,
+                            "No se puede reabrir necesidades con asignaciones o seleccionados asociados.",
+                            Map.of("inconsistencias", relaciones));
+                }
             }
 
             necesidades.forEach(necesidad -> {
@@ -218,6 +233,8 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
             }
 
             boolean debeValidarDepartamento = EstadoNecesidad.EN_REVISION_JEFE.equals(estadoDestino);
+            boolean requiereValidarSinAsignaciones = EstadoNecesidad.NO_ASIGNADA.equals(estadoOrigen)
+                    && EstadoNecesidad.EN_REVISION_JEFE.equals(estadoDestino);
             Map<String, List<Integer>> inconsistencias = validarRequisitosPrevios(necesidades, debeValidarDepartamento);
             if (!inconsistencias.getOrDefault("sinGrupo", List.of()).isEmpty()
                     || !inconsistencias.getOrDefault("sinCupo", List.of()).isEmpty()) {
@@ -229,6 +246,15 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
                 return new ApiResponse<>(400,
                         "Cada necesidad debe tener un departamento asociado antes de pasar a EN REVISION JEFE.",
                         Map.of("inconsistencias", inconsistencias));
+            }
+            if (requiereValidarSinAsignaciones) {
+                Map<String, List<Integer>> relaciones = validarSinAsignacionesSeleccionados(necesidades);
+                if (!relaciones.getOrDefault("conAsignaciones", List.of()).isEmpty()
+                        || !relaciones.getOrDefault("conSeleccionados", List.of()).isEmpty()) {
+                    return new ApiResponse<>(400,
+                            "No se puede reabrir necesidades con asignaciones o seleccionados asociados.",
+                            Map.of("inconsistencias", relaciones));
+                }
             }
 
             necesidades.forEach(necesidad -> {
@@ -266,7 +292,8 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
                 || (EstadoNecesidad.EN_REVISION_SECRETARIO.equals(origen) && EstadoNecesidad.BORRADOR.equals(destino))
                 || (EstadoNecesidad.EN_REVISION_SECRETARIO.equals(origen) && EstadoNecesidad.EN_REVISION_JEFE.equals(destino))
                 || (EstadoNecesidad.EN_REVISION_JEFE.equals(origen) && EstadoNecesidad.EN_REVISION_SECRETARIO.equals(destino))
-                || (EstadoNecesidad.EN_REVISION_JEFE.equals(origen) && EstadoNecesidad.NO_ASIGNADA.equals(destino));
+                || (EstadoNecesidad.EN_REVISION_JEFE.equals(origen) && EstadoNecesidad.NO_ASIGNADA.equals(destino))
+                || (EstadoNecesidad.NO_ASIGNADA.equals(origen) && EstadoNecesidad.EN_REVISION_JEFE.equals(destino));
     }
 
     private boolean requierePrograma(EstadoNecesidad origen, EstadoNecesidad destino) {
@@ -275,7 +302,8 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
     }
 
     private boolean requiereDepartamento(EstadoNecesidad origen, EstadoNecesidad destino) {
-        return EstadoNecesidad.EN_REVISION_JEFE.equals(origen) && EstadoNecesidad.NO_ASIGNADA.equals(destino);
+        return (EstadoNecesidad.EN_REVISION_JEFE.equals(origen) && EstadoNecesidad.NO_ASIGNADA.equals(destino))
+                || (EstadoNecesidad.NO_ASIGNADA.equals(origen) && EstadoNecesidad.EN_REVISION_JEFE.equals(destino));
     }
 
     private List<Necesidad> obtenerNecesidadesParaTransicion(Integer oidCalendario,
@@ -337,6 +365,31 @@ public class NecesidadEstadoServiceImpl implements NecesidadEstadoService {
         } else {
             inconsistencias.put("sinDepartamento", List.of());
         }
+        return inconsistencias;
+    }
+
+    private Map<String, List<Integer>> validarSinAsignacionesSeleccionados(List<Necesidad> necesidades) {
+        List<Integer> conAsignaciones = new ArrayList<>();
+        List<Integer> conSeleccionados = new ArrayList<>();
+        for (Necesidad necesidad : necesidades) {
+            if (necesidad == null || necesidad.getOidNecesidad() == null) {
+                continue;
+            }
+            Integer oidNecesidad = necesidad.getOidNecesidad();
+            long totalAsignaciones = asignacionRepository.countByNecesidad_OidNecesidad(oidNecesidad);
+            if (totalAsignaciones > 0) {
+                conAsignaciones.add(oidNecesidad);
+                boolean tieneSeleccionados = asignacionRepository.findByNecesidad_OidNecesidad(oidNecesidad)
+                        .stream()
+                        .anyMatch(asignacion -> asignacion.getSeleccionado() != null);
+                if (tieneSeleccionados) {
+                    conSeleccionados.add(oidNecesidad);
+                }
+            }
+        }
+        Map<String, List<Integer>> inconsistencias = new HashMap<>();
+        inconsistencias.put("conAsignaciones", conAsignaciones);
+        inconsistencias.put("conSeleccionados", conSeleccionados);
         return inconsistencias;
     }
 
