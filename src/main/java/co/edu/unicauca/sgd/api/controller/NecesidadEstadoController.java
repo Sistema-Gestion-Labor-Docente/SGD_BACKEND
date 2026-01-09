@@ -110,6 +110,23 @@ public class NecesidadEstadoController {
         return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
     }
 
+    @PatchMapping("/no-asignada/en-revision-jefe")
+    @Operation(summary = "Reabrir necesidades para revisión de jefe",
+            description = "Cambia de NO ASIGNADA a EN REVISION JEFE las necesidades del calendario")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> toRevisionJefeDesdeNoAsignada(
+            @RequestParam Integer oidCalendario,
+            @RequestParam Integer oidDepartamento,
+            @RequestBody(required = false) NecesidadEstadoMasivoRequest request) {
+        ApiResponse<Map<String, Object>> response = necesidadEstadoService.cambiarEstadoMasivo(
+                oidCalendario,
+                EstadoNecesidad.NO_ASIGNADA,
+                EstadoNecesidad.EN_REVISION_JEFE,
+                null,
+                oidDepartamento,
+                request != null ? request.getOidNecesidades() : null);
+        return ResponseEntity.status(response.getCodigo() == 204 ? 200 : response.getCodigo()).body(response);
+    }
+
     @PatchMapping("/por-oid")
     @Operation(summary = "Cambiar estado por necesidades específicas",
             description = "Actualiza el estado de un conjunto de necesidades identificadas por sus OID")
