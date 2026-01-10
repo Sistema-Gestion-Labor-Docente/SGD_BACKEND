@@ -12,15 +12,16 @@
     <sql>
       INSERT INTO EAVATRIBUTO (OIDEAVATRIBUTO, NOMBRE, TIPODATO, FECHACREACION, FECHAACTUALIZACION)
       VALUES
-        (nextval('SEQ_OIDEAVATRIBUTO'), 'F_INICIAL', 'DATE', NOW(), NOW()),
-        (nextval('SEQ_OIDEAVATRIBUTO'), 'F_FINAL', 'DATE', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'FECHAINICIAL', 'DATE', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'FECHAFINAL', 'DATE', NOW(), NOW()),
         (nextval('SEQ_OIDEAVATRIBUTO'), 'AREA', 'VARCHAR', NOW(), NOW()),
-        (nextval('SEQ_OIDEAVATRIBUTO'), 'H. APROB.', 'FLOAT', NOW(), NOW()),
-        (nextval('SEQ_OIDEAVATRIBUTO'), 'H. LABOR', 'FLOAT', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'HAPROB', 'FLOAT', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'HLABOR', 'FLOAT', NOW(), NOW()),
         (nextval('SEQ_OIDEAVATRIBUTO'), 'UNIDAD_ACADÉMICA', 'VARCHAR', NOW(), NOW()),
         (nextval('SEQ_OIDEAVATRIBUTO'), 'IDESTUDIANTE', 'VARCHAR', NOW(), NOW()),
         (nextval('SEQ_OIDEAVATRIBUTO'), 'IDSEMILLERO', 'VARCHAR', NOW(), NOW()),
-        (nextval('SEQ_OIDEAVATRIBUTO'), 'ROLSEMILLERO', 'VARCHAR', NOW(), NOW())
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'ROLSEMILLERO', 'VARCHAR', NOW(), NOW()),
+        (nextval('SEQ_OIDEAVATRIBUTO'), 'ANIOCOMISION', 'VARCHAR', NOW(), NOW())
       ON CONFLICT (NOMBRE) DO NOTHING;
     </sql>
 
