@@ -13,19 +13,19 @@ import java.time.LocalDateTime;
 @Table(name = "ACTIVIDAD")
 public class Actividad {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "actividadSeq")
-    @SequenceGenerator(name = "actividadSeq", sequenceName = "SEQ_OIDACTIVIDAD", allocationSize = 1)
-    @Column(name = "OIDACTIVIDAD")
-    private Integer oidActividad;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "actividadSeq")
+  @SequenceGenerator(name = "actividadSeq", sequenceName = "SEQ_OIDACTIVIDAD", allocationSize = 1)
+  @Column(name = "OIDACTIVIDAD")
+  private Integer oidActividad;
 
-    @ManyToOne
-    @JoinColumn(name = "OIDTIPOACTIVIDAD", nullable = false)
-    private TipoActividad tipoActividad;
+  @ManyToOne
+  @JoinColumn(name = "OIDTIPOACTIVIDAD", nullable = false)
+  private TipoActividad tipoActividad;
 
-    @ManyToOne
-    @JoinColumn(name = "OIDESTADOACTIVIDAD", nullable = false)
-    private EstadoActividad estadoActividad;
+  @ManyToOne
+  @JoinColumn(name = "OIDESTADOACTIVIDAD", nullable = false)
+  private EstadoActividad estadoActividad;
 
   @Column(name = "NOMBREACTIVIDAD", nullable = false, length = 255)
   private String nombreActividad;
@@ -33,11 +33,11 @@ public class Actividad {
   @Column(name = "SEMANAS")
   private Float semanas;
 
-    @Column(name = "FECHACREACION", updatable = false, nullable = false)
-    @CreationTimestamp
-    private LocalDateTime fechaCreacion;
+  @Column(name = "FECHACREACION", updatable = false, nullable = false)
+  @CreationTimestamp
+  private LocalDateTime fechaCreacion;
 
-    @Column(name = "FECHAACTUALIZACION", nullable = false)
-    @UpdateTimestamp
-    private LocalDateTime fechaActualizacion;
+  @Column(name = "FECHAACTUALIZACION", nullable = false)
+  @UpdateTimestamp
+  private LocalDateTime fechaActualizacion;
 }
