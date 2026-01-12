@@ -264,24 +264,24 @@ public class RldPdfServiceImpl implements RldPdfService {
     private String filaTrabajosDocencia(UsuarioActividadCalendario relacion) {
         return filaActividadBasica(relacion,
                 List.of(
-                        "ACTOADMIN", "ACTO ADMIN"),
-                List.of("IDESTUDIANTE"),
-                List.of("NOMBREESTUDIANTE"),
+                        "ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN"),
+                List.of("IDESTUDIANTE", "ID ESTUDIANTE", "ID. ESTUDIANTE"),
+                List.of("NOMBREESTUDIANTE", "NOMBRE ESTUDIANTE"),
                 false);
     }
 
     private String filaCapacitacion(UsuarioActividadCalendario relacion) {
         return filaActividadBasica(relacion,
-                List.of("ACTOADMIN", "ACTO ADMIN"),
+                List.of("ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN"),
                 List.of("ACTIVIDAD"),
-                List.of("ANIOCOMISION", "ANO COMISION"),
+                List.of("ANIOCOMISION", "ANO COMISION", "AÑO COMISION"),
                 true);
     }
 
     private String filaAdministracion(UsuarioActividadCalendario relacion, UsuarioDetalle detalle) {
         Actividad actividad = obtenerActividad(relacion);
         Map<String, String> attrs = obtenerAtributos(actividad);
-        String acto = getAttr(attrs, "ACTOADMIN", "ACTO ADMIN");
+        String acto = getAttr(attrs, "ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN");
         String actividadNombre = getAttr(attrs, "ACTIVIDAD");
         String cargo = detalle != null ? valorOrDash(detalle.getCategoria()) : "-";
         String area = detalle != null ? valorOrDash(detalle.getDepartamento()) : "-";
@@ -290,7 +290,7 @@ public class RldPdfServiceImpl implements RldPdfService {
 
     private String filaOtrosServicios(UsuarioActividadCalendario relacion) {
         return filaActividadBasica(relacion,
-                List.of("ACTOADMIN", "ACTO ADMIN"),
+                List.of("ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN"),
                 List.of("ACTIVIDAD"),
                 List.of(),
                 false);
@@ -299,10 +299,10 @@ public class RldPdfServiceImpl implements RldPdfService {
     private String filaExtension(UsuarioActividadCalendario relacion) {
         Actividad actividad = obtenerActividad(relacion);
         Map<String, String> attrs = obtenerAtributos(actividad);
-        String acto = getAttr(attrs, "ACTOADMIN", "ACTO ADMIN");
+        String acto = getAttr(attrs, "ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN");
         String proyecto = getAttr(attrs, "NOMBREPROYECTO");
-        String fInicial = getAttr(attrs, "F_INICIAL");
-        String fFinal = getAttr(attrs, "F_FINAL");
+        String fInicial = getAttr(attrs, "FECHAINICIAL", "F_INICIAL");
+        String fFinal = getAttr(attrs, "FECHAFINAL", "F_FINAL");
         String observaciones = getAttr(attrs, "OBSERVACIONES");
         if ("-".equals(observaciones) && actividad != null) {
             observaciones = valorOrDash(actividad.getNombreActividad());
@@ -314,9 +314,9 @@ public class RldPdfServiceImpl implements RldPdfService {
     private String filaTrabajosInvestigacion(UsuarioActividadCalendario relacion) {
         Actividad actividad = obtenerActividad(relacion);
         Map<String, String> attrs = obtenerAtributos(actividad);
-        String acto = getAttr(attrs, "ACTOADMIN", "ACTO ADMIN");
-        String id = getAttr(attrs, "IDESTUDIANTE");
-        String nombre = getAttr(attrs, "NOMBREESTUDIANTE");
+        String acto = getAttr(attrs, "ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN");
+        String id = getAttr(attrs, "IDESTUDIANTE", "ID ESTUDIANTE", "ID. ESTUDIANTE");
+        String nombre = getAttr(attrs, "NOMBREESTUDIANTE", "NOMBRE ESTUDIANTE");
         String observaciones = getAttr(attrs, "OBSERVACIONES");
         if ("-".equals(observaciones) && actividad != null) {
             observaciones = valorOrDash(actividad.getNombreActividad());
@@ -326,7 +326,7 @@ public class RldPdfServiceImpl implements RldPdfService {
 
     private String filaAsesoria(UsuarioActividadCalendario relacion) {
         return filaActividadBasica(relacion,
-                List.of("ACTOADMIN", "ACTO ADMIN"),
+                List.of("ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN"),
                 List.of("ACTIVIDAD"),
                 List.of(),
                 false);
@@ -334,7 +334,7 @@ public class RldPdfServiceImpl implements RldPdfService {
 
     private String filaServicios(UsuarioActividadCalendario relacion) {
         return filaActividadBasica(relacion,
-                List.of("ACTOADMIN", "ACTO ADMIN"),
+                List.of("ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN"),
                 List.of("ACTIVIDAD"),
                 List.of(),
                 false);
@@ -342,11 +342,11 @@ public class RldPdfServiceImpl implements RldPdfService {
 
     private String filaSemilleros(UsuarioActividadCalendario relacion) {
         return filaActividadBasica(relacion,
-                List.of("ACTOADMIN", "ACTO ADMIN"),
-                List.of("IDSEMILLERO"),
+                List.of("ACTOADMINISTRATIVO", "ACTOADMIN", "ACTO ADMIN"),
+                List.of("IDSEMILLERO", "ID SEMILLERO"),
                 List.of("SEMILLERO"),
                 true,
-                getAttr(obtenerAtributos(obtenerActividad(relacion)), "ROLSEMILLERO", "ROL"));
+                getAttr(obtenerAtributos(obtenerActividad(relacion)), "ROLSEMILLERO", "ROL SEMILLERO", "ROL"));
     }
 
     private String filaProyectosInvestigacion(UsuarioActividadCalendario relacion) {
@@ -354,10 +354,10 @@ public class RldPdfServiceImpl implements RldPdfService {
         Map<String, String> attrs = obtenerAtributos(actividad);
         String vri = getAttr(attrs, "VRI", "CODVRI", "CODIGOVRI");
         String proyecto = getAttr(attrs, "NOMBREPROYECTO");
-        String fInicial = getAttr(attrs, "F_INICIAL");
-        String fFinal = getAttr(attrs, "F_FINAL");
-        String hAprob = getAttr(attrs, "H. APROB.", "HAPROB", "HAPROB.");
-        String hLabor = getAttr(attrs, "H. LABOR", "HLABOR", "HLABOR.");
+        String fInicial = getAttr(attrs, "FECHAINICIAL", "F_INICIAL");
+        String fFinal = getAttr(attrs, "FECHAFINAL", "F_FINAL");
+        String hAprob = getAttr(attrs, "HAPROB", "H. APROB.", "HAPROB.");
+        String hLabor = getAttr(attrs, "HLABOR", "H. LABOR", "HLABOR.");
         float semanas = actividad != null && actividad.getSemanas() != null ? actividad.getSemanas() : 0f;
         float horas = relacion.getHorasActividad() != null ? relacion.getHorasActividad() : 0f;
         float total = horas * semanas;
