@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.scheduling.annotation.Async;
 
 import co.edu.unicauca.sgd.api.dto.EmailRequest;
 
@@ -51,6 +52,7 @@ public class ClienteNotificacion {
      * @param asunto  Asunto del correo.
      * @param mensaje Cuerpo del correo, con caracteres especiales y tildes.
      */
+    @Async("notificacionExecutor")
     public void enviarNotificacion(List<String> correos, String asunto, String mensaje) {
         try {
             EmailRequest emailRequest = new EmailRequest();

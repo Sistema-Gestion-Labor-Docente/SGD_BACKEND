@@ -8,6 +8,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -42,6 +44,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException ex) {
         logger.warn("[WARN] Estado ilegal: {}", ex.getMessage());
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+        StringBuilder mensaje = new StringBuilder("Error de validacion: ");
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            mensaje.append(error.getField())
+                   .append(" ")
+                   .append(error.getDefaultMessage())
+                   .append("; ");
+        }
+        if (mensaje.length() > 2) {
+            mensaje.setLength(mensaje.length() - 2);
+        }
+        logger.warn("[WARN] Validacion de argumentos: {}", mensaje);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, mensaje.toString());
     }
 
     @ExceptionHandler(InvalidDataAccessApiUsageException.class)
