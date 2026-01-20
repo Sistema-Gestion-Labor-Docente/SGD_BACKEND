@@ -13,21 +13,42 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 
+import co.edu.unicauca.sgd.api.domain.Asignacion;
+import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.Necesidad;
+import co.edu.unicauca.sgd.api.domain.Programa;
+import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.dto.reportes.ReporteDatoGraficoRequest;
 import co.edu.unicauca.sgd.api.dto.reportes.ReporteEstadisticasPdfSeleccionRequest;
 import co.edu.unicauca.sgd.api.dto.reportes.ReporteGraficoPdfRequest;
+import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
+import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
+import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
+import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
+import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.service.reportes.EstadisticasPdfService;
 import co.edu.unicauca.sgd.api.utils.StringUtils;
 
@@ -43,7 +64,20 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
     private static final int CHART_WIDTH = 900;
     private static final int CHART_HEIGHT = 360;
 
+    private final NecesidadRepository necesidadRepository;
+    private final AsignacionRepository asignacionRepository;
+    private final CalendarioRepository calendarioRepository;
+
+    public EstadisticasPdfServiceImpl(NecesidadRepository necesidadRepository,
+            AsignacionRepository asignacionRepository,
+            CalendarioRepository calendarioRepository) {
+        this.necesidadRepository = necesidadRepository;
+        this.asignacionRepository = asignacionRepository;
+        this.calendarioRepository = calendarioRepository;
+    }
+
     @Override
+    @Transactional(readOnly = true)
     public ByteArrayOutputStream generarReportePdf(ReporteEstadisticasPdfSeleccionRequest request) throws IOException {
         if (request == null) {
             throw new IllegalArgumentException("La solicitud de reporte no puede ser nula.");
@@ -63,7 +97,7 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
         String subtitulo = "Resumen ejecutivo de indicadores";
         String meta = construirMeta(request);
         String footer = "Reporte generado automaticamente por el sistema SGD";
-        String secciones = construirSeccionesDesdeCatalogo(request.getGraficos());
+        String secciones = construirSeccionesDesdeCatalogo(request);
 
         return plantilla
                 .replace("{{REPORTE_TITULO}}", escapeText(titulo))
@@ -73,14 +107,16 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
                 .replace("{{REPORTE_FOOTER}}", escapeText(footer));
     }
 
-    private String construirSeccionesDesdeCatalogo(List<String> graficosSolicitados) {
+    private String construirSeccionesDesdeCatalogo(ReporteEstadisticasPdfSeleccionRequest request) {
+        List<String> graficosSolicitados = request.getGraficos();
         if (graficosSolicitados == null || graficosSolicitados.isEmpty()) {
             return construirSeccionVacia();
         }
+        EstadisticasContext context = cargarContexto(request);
         StringBuilder builder = new StringBuilder();
         int indice = 1;
         for (String idGrafico : graficosSolicitados) {
-            ReporteGraficoPdfRequest grafico = construirGraficoPorId(idGrafico);
+            ReporteGraficoPdfRequest grafico = construirGraficoPorId(idGrafico, context);
             builder.append(construirSeccionGrafico(grafico, indice));
             indice++;
         }
@@ -125,7 +161,7 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
         return convertirImagenBase64(chart);
     }
 
-    private ReporteGraficoPdfRequest construirGraficoPorId(String idGrafico) {
+    private ReporteGraficoPdfRequest construirGraficoPorId(String idGrafico, EstadisticasContext context) {
         if (!StringUtils.hasText(idGrafico)) {
             return crearGraficoGenerico("Grafico", "Sin descripcion disponible.", List.of());
         }
@@ -134,51 +170,33 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
             case "carga_actividades":
                 return crearGraficoGenerico(
                         "Carga de actividades por usuario",
-                        "Muestra el total de actividades por responsable para identificar sobrecargas.",
-                        List.of(
-                                crearDato("Ana", 18d),
-                                crearDato("Luis", 12d),
-                                crearDato("Maria", 22d),
-                                crearDato("Carlos", 9d)));
+                        "Muestra el total de asignaciones registradas por docente.",
+                        construirCargaActividades(context));
             case "ocupacion_cupos":
                 return crearGraficoGenerico(
                         "Ocupacion de horas vs. cupo permitido",
-                        "Compara horas asignadas frente al cupo disponible por cargo y persona.",
-                        List.of(
-                                crearDato("Planta", 78d),
-                                crearDato("Catedra", 92d),
-                                crearDato("Ocasional", 64d)));
+                        "Resume las horas asignadas por tipo de contratacion (cupo del calendario cuando aplica).",
+                        construirOcupacionCupos(context));
             case "cobertura_docente":
                 return crearGraficoGenerico(
                         "Cobertura docente por semestre",
-                        "Presenta horas planificadas y asignadas por semestre para detectar vacantes.",
-                        List.of(
-                                crearDato("2025-1", 85d),
-                                crearDato("2025-2", 73d),
-                                crearDato("2026-1", 91d)));
+                        "Porcentaje de necesidades cubiertas por semestre.",
+                        construirCoberturaDocente(context));
             case "demanda_necesidades":
                 return crearGraficoGenerico(
                         "Demanda de necesidades por programa",
-                        "Muestra las necesidades pendientes por programa y materia.",
-                        List.of(
-                                crearDato("Ingenieria", 34d),
-                                crearDato("Telematica", 21d),
-                                crearDato("Sistemas", 28d)));
+                        "Muestra la cantidad de necesidades registradas por programa.",
+                        construirDemandaNecesidades(context));
             case "flujo_necesidades":
                 return crearGraficoGenerico(
                         "Flujo de necesidades y tiempos de aprobacion",
-                        "Resume la cantidad de necesidades por estado y tiempos promedio.",
-                        List.of(
-                                crearDato("Borrador", 40d),
-                                crearDato("Revision", 22d),
-                                crearDato("No asignada", 18d)));
+                        "Resume la cantidad de necesidades por estado.",
+                        construirFlujoNecesidades(context));
             case "cobertura_necesidades_actividades":
                 return crearGraficoGenerico(
                         "Cobertura de necesidades vs. actividades",
                         "Muestra necesidades cubiertas frente a pendientes por asignar.",
-                        List.of(
-                                crearDato("Cubiertas", 62d),
-                                crearDato("Pendientes", 15d)));
+                        construirCoberturaNecesidades(context));
             default:
                 return crearGraficoGenerico(
                         "Grafico no reconocido",
@@ -378,5 +396,324 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
 
     private String formatearFecha(LocalDate fecha) {
         return fecha != null ? DATE_FORMATTER.format(fecha) : "";
+    }
+
+    private EstadisticasContext cargarContexto(ReporteEstadisticasPdfSeleccionRequest request) {
+        List<Necesidad> necesidades = necesidadRepository.findAll(construirEspecificacionNecesidades(request));
+        List<Asignacion> asignaciones = asignacionRepository.findAll(construirEspecificacionAsignaciones(request));
+        Calendario calendario = null;
+        if (request.getOidCalendario() != null) {
+            calendario = calendarioRepository.findById(request.getOidCalendario()).orElse(null);
+        }
+        Set<Integer> necesidadesCubiertas = asignaciones.stream()
+                .map(Asignacion::getNecesidad)
+                .filter(Objects::nonNull)
+                .map(Necesidad::getOidNecesidad)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        return new EstadisticasContext(necesidades, asignaciones, calendario, necesidadesCubiertas);
+    }
+
+    private Specification<Necesidad> construirEspecificacionNecesidades(ReporteEstadisticasPdfSeleccionRequest request) {
+        Specification<Necesidad> specification = Specification.where(null);
+        if (request.getOidCalendario() != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.join("calendario").get("oidcalendario"), request.getOidCalendario()));
+        }
+        if (request.getOidDepartamento() != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.join("materia").join("departamento").get("oidDepartamento"),
+                            request.getOidDepartamento()));
+        }
+        if (request.getOidPrograma() != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.join("materia").join("plan").join("programa").get("oidPrograma"),
+                            request.getOidPrograma()));
+        }
+        return specification;
+    }
+
+    private Specification<Asignacion> construirEspecificacionAsignaciones(ReporteEstadisticasPdfSeleccionRequest request) {
+        Specification<Asignacion> specification = Specification.where(null);
+        if (request.getOidCalendario() != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.join("necesidad").join("calendario").get("oidcalendario"),
+                            request.getOidCalendario()));
+        }
+        if (request.getOidDepartamento() != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.join("necesidad").join("materia").join("departamento").get("oidDepartamento"),
+                            request.getOidDepartamento()));
+        }
+        if (request.getOidPrograma() != null) {
+            specification = specification.and((root, query, cb) ->
+                    cb.equal(root.join("necesidad").join("materia").join("plan").join("programa").get("oidPrograma"),
+                            request.getOidPrograma()));
+        }
+        return specification;
+    }
+
+    private List<ReporteDatoGraficoRequest> construirCargaActividades(EstadisticasContext context) {
+        Map<Integer, Long> conteo = new HashMap<>();
+        Map<Integer, Usuario> usuarios = new HashMap<>();
+        for (Asignacion asignacion : context.asignaciones()) {
+            Usuario usuario = asignacion.getSeleccionado() != null ? asignacion.getSeleccionado().getUsuario() : null;
+            if (usuario == null || usuario.getOidUsuario() == null) {
+                continue;
+            }
+            usuarios.putIfAbsent(usuario.getOidUsuario(), usuario);
+            conteo.merge(usuario.getOidUsuario(), 1L, Long::sum);
+        }
+
+        if (conteo.isEmpty()) {
+            return List.of();
+        }
+
+        return conteo.entrySet().stream()
+                .sorted(Map.Entry.<Integer, Long>comparingByValue(Comparator.reverseOrder()))
+                .limit(10)
+                .map(entry -> crearDato(
+                        construirNombreUsuario(usuarios.get(entry.getKey()), entry.getKey()),
+                        entry.getValue().doubleValue()))
+                .collect(Collectors.toList());
+    }
+
+    private List<ReporteDatoGraficoRequest> construirOcupacionCupos(EstadisticasContext context) {
+        Map<ContratacionEnum, Double> horasAsignadas = new EnumMap<>(ContratacionEnum.class);
+        for (Asignacion asignacion : context.asignaciones()) {
+            ContratacionEnum tipo = asignacion.getSeleccionado() != null ? asignacion.getSeleccionado().getTipo() : null;
+            if (tipo == null) {
+                continue;
+            }
+            double horas = calcularHorasAsignadas(asignacion);
+            horasAsignadas.merge(tipo, horas, Double::sum);
+        }
+
+        if (horasAsignadas.isEmpty()) {
+            return List.of();
+        }
+
+        List<ReporteDatoGraficoRequest> datos = new ArrayList<>();
+        for (ContratacionEnum tipo : List.of(
+                ContratacionEnum.PLANTA,
+                ContratacionEnum.CATEDRA,
+                ContratacionEnum.OCASIONAL,
+                ContratacionEnum.BECARIOS_Y_PRACTICANTES,
+                ContratacionEnum.BECARIOS_POSTGRADO)) {
+            double horas = horasAsignadas.getOrDefault(tipo, 0d);
+            Double cupo = obtenerCupoPorTipo(tipo, context.calendario());
+            String etiqueta = nombreTipoContratacion(tipo);
+            if (cupo != null && cupo > 0) {
+                etiqueta = etiqueta + " (cupo " + formatearNumero(cupo) + ")";
+            }
+            if (horas > 0d || (cupo != null && cupo > 0)) {
+                datos.add(crearDato(etiqueta, horas));
+            }
+        }
+        return datos;
+    }
+
+    private List<ReporteDatoGraficoRequest> construirCoberturaDocente(EstadisticasContext context) {
+        Map<Integer, Integer> totalPorSemestre = new HashMap<>();
+        Map<Integer, Integer> cubiertasPorSemestre = new HashMap<>();
+        Set<Integer> cubiertas = context.necesidadesCubiertas();
+
+        for (Necesidad necesidad : context.necesidades()) {
+            if (necesidad == null || necesidad.getMateria() == null || necesidad.getMateria().getSemestre() == null) {
+                continue;
+            }
+            Integer semestre = necesidad.getMateria().getSemestre();
+            totalPorSemestre.merge(semestre, 1, Integer::sum);
+            Integer oidNecesidad = necesidad.getOidNecesidad();
+            if (oidNecesidad != null && cubiertas.contains(oidNecesidad)) {
+                cubiertasPorSemestre.merge(semestre, 1, Integer::sum);
+            }
+        }
+
+        if (totalPorSemestre.isEmpty()) {
+            return List.of();
+        }
+
+        return totalPorSemestre.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> {
+                    int total = entry.getValue();
+                    int cubiertasTotal = cubiertasPorSemestre.getOrDefault(entry.getKey(), 0);
+                    double porcentaje = total > 0 ? (cubiertasTotal * 100d) / total : 0d;
+                    return crearDato("Sem " + entry.getKey(), porcentaje);
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<ReporteDatoGraficoRequest> construirDemandaNecesidades(EstadisticasContext context) {
+        Map<String, Integer> conteo = new HashMap<>();
+        for (Necesidad necesidad : context.necesidades()) {
+            Programa programa = necesidad.getMateria() != null
+                    && necesidad.getMateria().getPlan() != null
+                            ? necesidad.getMateria().getPlan().getPrograma()
+                            : null;
+            String nombrePrograma = obtenerNombrePrograma(programa);
+            if (!StringUtils.hasText(nombrePrograma)) {
+                nombrePrograma = "Programa";
+            }
+            conteo.merge(nombrePrograma, 1, Integer::sum);
+        }
+
+        if (conteo.isEmpty()) {
+            return List.of();
+        }
+
+        return conteo.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))
+                .limit(10)
+                .map(entry -> crearDato(entry.getKey(), entry.getValue().doubleValue()))
+                .collect(Collectors.toList());
+    }
+
+    private List<ReporteDatoGraficoRequest> construirFlujoNecesidades(EstadisticasContext context) {
+        Map<EstadoNecesidad, Integer> conteo = new EnumMap<>(EstadoNecesidad.class);
+        for (Necesidad necesidad : context.necesidades()) {
+            EstadoNecesidad estado = necesidad.getEstado();
+            if (estado == null) {
+                continue;
+            }
+            conteo.merge(estado, 1, Integer::sum);
+        }
+
+        if (conteo.isEmpty()) {
+            return List.of();
+        }
+
+        List<ReporteDatoGraficoRequest> datos = new ArrayList<>();
+        for (EstadoNecesidad estado : EstadoNecesidad.values()) {
+            Integer total = conteo.get(estado);
+            if (total == null || total == 0) {
+                continue;
+            }
+            datos.add(crearDato(normalizarEtiquetaEstado(estado), total.doubleValue()));
+        }
+        return datos;
+    }
+
+    private List<ReporteDatoGraficoRequest> construirCoberturaNecesidades(EstadisticasContext context) {
+        Set<Integer> cubiertas = new HashSet<>();
+        for (Necesidad necesidad : context.necesidades()) {
+            if (necesidad != null && necesidad.getOidNecesidad() != null
+                    && context.necesidadesCubiertas().contains(necesidad.getOidNecesidad())) {
+                cubiertas.add(necesidad.getOidNecesidad());
+            }
+        }
+        int total = context.necesidades().size();
+        int cubiertasTotal = cubiertas.size();
+        int pendientes = Math.max(total - cubiertasTotal, 0);
+        if (total == 0) {
+            return List.of();
+        }
+        return List.of(
+                crearDato("Cubiertas", (double) cubiertasTotal),
+                crearDato("Pendientes", (double) pendientes));
+    }
+
+    private double calcularHorasAsignadas(Asignacion asignacion) {
+        if (asignacion == null) {
+            return 0d;
+        }
+        float horasDocencia = asignacion.getHorasDocencia() != null ? asignacion.getHorasDocencia() : 0f;
+        float semanasDocencia = asignacion.getSemanasDocencia() != null ? asignacion.getSemanasDocencia() : 0f;
+        float horasPreparacion = asignacion.getHorasPreparacion() != null ? asignacion.getHorasPreparacion() : 0f;
+        float semanasPreparacion = asignacion.getSemanasPreparacion() != null ? asignacion.getSemanasPreparacion() : 0f;
+        return (horasDocencia * semanasDocencia) + (horasPreparacion * semanasPreparacion);
+    }
+
+    private Double obtenerCupoPorTipo(ContratacionEnum tipo, Calendario calendario) {
+        if (tipo == null || calendario == null) {
+            return null;
+        }
+        return switch (tipo) {
+            case PLANTA -> calendario.getHorasPlanta() != null ? calendario.getHorasPlanta().doubleValue() : null;
+            case CATEDRA -> calendario.getHorasCatedra() != null ? calendario.getHorasCatedra().doubleValue() : null;
+            case OCASIONAL -> calendario.getHorasOcasionales() != null ? calendario.getHorasOcasionales().doubleValue() : null;
+            case BECARIOS_Y_PRACTICANTES,
+                 BECARIOS_POSTGRADO -> calendario.getHorasBecarioPracticante() != null
+                        ? calendario.getHorasBecarioPracticante().doubleValue()
+                        : null;
+        };
+    }
+
+    private String nombreTipoContratacion(ContratacionEnum tipo) {
+        if (tipo == null) {
+            return "Contratacion";
+        }
+        return switch (tipo) {
+            case PLANTA -> "Planta";
+            case CATEDRA -> "Catedra";
+            case OCASIONAL -> "Ocasional";
+            case BECARIOS_Y_PRACTICANTES -> "Becarios y practicantes";
+            case BECARIOS_POSTGRADO -> "Becarios postgrado";
+        };
+    }
+
+    private String construirNombreUsuario(Usuario usuario, Integer oidUsuario) {
+        if (usuario == null) {
+            return oidUsuario != null ? "Usuario " + oidUsuario : "Usuario";
+        }
+        String nombres = usuario.getNombres() != null ? usuario.getNombres().trim() : "";
+        String apellidos = usuario.getApellidos() != null ? usuario.getApellidos().trim() : "";
+        String correo = usuario.getCorreo() != null ? usuario.getCorreo().trim() : "";
+        StringBuilder builder = new StringBuilder();
+        if (StringUtils.hasText(nombres)) {
+            builder.append(nombres);
+        }
+        if (StringUtils.hasText(apellidos)) {
+            if (builder.length() > 0) {
+                builder.append(" ");
+            }
+            builder.append(apellidos);
+        }
+        if (builder.length() == 0 && StringUtils.hasText(correo)) {
+            builder.append(correo);
+        }
+        if (builder.length() == 0) {
+            return oidUsuario != null ? "Usuario " + oidUsuario : "Usuario";
+        }
+        return builder.toString();
+    }
+
+    private String obtenerNombrePrograma(Programa programa) {
+        if (programa == null) {
+            return "";
+        }
+        String nombreCorto = programa.getNombreCorto();
+        if (StringUtils.hasText(nombreCorto)) {
+            return nombreCorto;
+        }
+        return programa.getNombre() != null ? programa.getNombre() : "";
+    }
+
+    private String normalizarEtiquetaEstado(EstadoNecesidad estado) {
+        if (estado == null) {
+            return "";
+        }
+        String base = estado.name().replace('_', ' ').toLowerCase(Locale.ROOT);
+        String[] partes = base.split(" ");
+        StringBuilder builder = new StringBuilder();
+        for (String parte : partes) {
+            if (parte.isBlank()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(" ");
+            }
+            builder.append(Character.toUpperCase(parte.charAt(0)))
+                   .append(parte.substring(1));
+        }
+        return builder.toString();
+    }
+
+    private static record EstadisticasContext(
+            List<Necesidad> necesidades,
+            List<Asignacion> asignaciones,
+            Calendario calendario,
+            Set<Integer> necesidadesCubiertas) {
     }
 }
