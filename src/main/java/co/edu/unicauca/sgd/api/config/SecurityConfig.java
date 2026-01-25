@@ -52,7 +52,9 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
             "http://localhost:4200",
-            "https://kubetest.unicauca.edu.co"
+            "https://kubetest.unicauca.edu.co",
+            "https://sistema-gestion-docente-fiet.web.app",
+            "https://sistema-gestion-docente-fiet.firebaseapp.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
