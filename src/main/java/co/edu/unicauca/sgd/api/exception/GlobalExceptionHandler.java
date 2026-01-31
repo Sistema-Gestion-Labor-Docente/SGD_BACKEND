@@ -12,6 +12,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.apache.catalina.connector.ClientAbortException;
 
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.exception.materias.MateriasException;
@@ -138,6 +140,11 @@ public class GlobalExceptionHandler {
         logger.warn("[WARN] Seleccionado: {}", ex.getMessage());
         return ResponseEntity.status(status)
                 .body(new ApiResponse<>(status.value(), ex.getMessage(), null));
+    }
+
+    @ExceptionHandler({AsyncRequestNotUsableException.class, ClientAbortException.class})
+    public void handleClientAbort(Exception ex) {
+        logger.debug("[DEBUG] Conexion cerrada por el cliente: {}", ex.getMessage());
     }
 
     @ExceptionHandler(MateriasException.class)
