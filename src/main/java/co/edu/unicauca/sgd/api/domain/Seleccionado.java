@@ -34,6 +34,7 @@ public class Seleccionado {
     @JoinColumn(name = "OIDUSUARIO", nullable = false)
     private Usuario usuario;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "TIPO", length = 50)
     private ContratacionEnum tipo;
 
