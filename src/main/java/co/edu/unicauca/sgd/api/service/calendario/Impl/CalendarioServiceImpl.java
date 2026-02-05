@@ -570,7 +570,7 @@ public class CalendarioServiceImpl implements CalendarioService {
             }
 
             String facultad = creador.getUsuarioDetalle().getFacultad().trim();
-            List<String> rolesDestino = List.of("COORDINADOR", "JEFE DE DEPARTAMENTO");
+            List<String> rolesDestino = List.of("COORDINADOR", "JEFE DE DEPARTAMENTO", "SECRETARIA/O FACULTAD");
 
             List<String> correos = usuarioRepository.findAll().stream()
                     .filter(u -> u != null
