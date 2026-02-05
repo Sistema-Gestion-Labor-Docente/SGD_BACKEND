@@ -10,6 +10,19 @@ spring:
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:true}
     change-log: ${LIQUIBASE_CHANGELOG:classpath:db/changelog/db.changelog-master.xml}
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:10MB}
+  notification:
+    service:
+      url: ${NOTIFICATION_SERVICE_URL}
+    cron: ${NOTIFICACION_CRON:0 0 10 * * *}
+    habilitada: ${NOTIFICACION_HABILITADA:false}
+    dias:
+      min: ${NOTIFICACION_DIAS_MIN:0}
+      max: ${NOTIFICACION_DIAS_MAX:5}
 
 files:
   basePath: ${FILES_BASE_PATH:/app/uploads}
