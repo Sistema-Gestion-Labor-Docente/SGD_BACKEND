@@ -67,11 +67,22 @@ public class ClienteNotificacion {
 
             HttpEntity<EmailRequest> requestEntity = new HttpEntity<>(emailRequest, headers);
 
-            restTemplate.postForEntity(urlServicioNotificaciones, requestEntity, Void.class);
+            String endpoint = construirEndpointNotificacion(urlServicioNotificaciones);
+            restTemplate.postForEntity(endpoint, requestEntity, Void.class);
 
             logger.info("✅ Notificación enviada correctamente a: {}", correos);
         } catch (Exception e) {
             logger.error("❌ Error al enviar la notificación al microservicio de notificaciones: {}", e.getMessage(), e);
         }
+    }
+
+    private String construirEndpointNotificacion(String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return "/api/v1/enviar-email";
+        }
+        String normalizada = baseUrl.endsWith("/")
+                ? baseUrl.substring(0, baseUrl.length() - 1)
+                : baseUrl;
+        return normalizada + "/api/v1/enviar-email";
     }
 }
