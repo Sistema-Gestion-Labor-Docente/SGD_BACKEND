@@ -13,7 +13,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,9 +29,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import co.edu.unicauca.sgd.api.client.ClienteNotificacion;
 import co.edu.unicauca.sgd.api.domain.Calendario;
+import co.edu.unicauca.sgd.api.domain.EstadoUsuario;
 import co.edu.unicauca.sgd.api.domain.Fecha;
-import co.edu.unicauca.sgd.api.domain.Seleccionado;
+import co.edu.unicauca.sgd.api.domain.Rol;
 import co.edu.unicauca.sgd.api.domain.Usuario;
+import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTORequest;
 import co.edu.unicauca.sgd.api.dto.calendario.CalendarioDTOResponse;
@@ -46,6 +47,7 @@ import co.edu.unicauca.sgd.api.repository.FechaRepository;
 import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.service.calendario.CalendarioPdfService;
 import co.edu.unicauca.sgd.api.service.calendario.FechaService;
 
@@ -64,6 +66,8 @@ class CalendarioServiceImplTest {
     private DepartamentoRepository departamentoRepository;
     @Mock
     private UsuarioDepartamentoRepository usuarioDepartamentoRepository;
+    @Mock
+    private UsuarioRepository usuarioRepository;
     @Mock
     private ActividadCalendarioRepository actividadCalendarioRepository;
     @Mock
@@ -88,6 +92,7 @@ class CalendarioServiceImplTest {
                 seleccionadoRepository,
                 departamentoRepository,
                 usuarioDepartamentoRepository,
+                usuarioRepository,
                 actividadCalendarioRepository,
                 necesidadRepository,
                 fechaMapper,
@@ -292,6 +297,7 @@ class CalendarioServiceImplTest {
         existente.setAnioCalendario("2024");
         existente.setNumeroCalendario(1);
         existente.setEstado("PENDIENTE");
+        existente.setUsuarioCreacion("docente@unicauca.edu.co");
 
         CalendarioDTORequest request = new CalendarioDTORequest();
         request.setAnioCalendario("2024");
@@ -305,12 +311,20 @@ class CalendarioServiceImplTest {
             return saved;
         });
 
-        Usuario usuario = new Usuario();
-        usuario.setCorreo("docente@unicauca.edu.co");
-        Seleccionado seleccionado = new Seleccionado();
-        seleccionado.setCalendario(existente);
-        seleccionado.setUsuario(usuario);
-        when(seleccionadoRepository.findAll()).thenReturn(List.of(seleccionado));
+        Usuario creador = new Usuario();
+        creador.setCorreo("docente@unicauca.edu.co");
+        creador.setEstadoUsuario(estadoUsuarioActivo());
+        creador.setUsuarioDetalle(detalleFacultad("INGENIERIA"));
+        when(usuarioRepository.findByCorreo("docente@unicauca.edu.co"))
+                .thenReturn(Optional.of(creador));
+
+        Usuario coordinador = new Usuario();
+        coordinador.setCorreo("coord@unicauca.edu.co");
+        coordinador.setEstadoUsuario(estadoUsuarioActivo());
+        coordinador.setUsuarioDetalle(detalleFacultad("INGENIERIA"));
+        coordinador.setRoles(List.of(rol("COORDINADOR")));
+
+        when(usuarioRepository.findAll()).thenReturn(List.of(coordinador));
 
         // habilitar notificaciones
         ReflectionTestUtils.setField(calendarioService, "notificacionHabilitada", true);
@@ -328,6 +342,7 @@ class CalendarioServiceImplTest {
         calendario.setAnioCalendario("2024");
         calendario.setNumeroCalendario(1);
         calendario.setEstado("APROBADO");
+        calendario.setUsuarioCreacion("profesor@unicauca.edu.co");
 
         when(calendarioRepository.findAll()).thenReturn(List.of(calendario));
         when(calendarioRepository.save(calendario)).thenReturn(calendario);
@@ -346,13 +361,20 @@ class CalendarioServiceImplTest {
         when(fechaRepository.findByCalendario_Oidcalendario(2))
                 .thenReturn(List.of(fechaInicio, fechaFin));
 
-        Usuario usuario = new Usuario();
-        usuario.setCorreo("profesor@unicauca.edu.co");
-        Seleccionado seleccionado = new Seleccionado();
-        seleccionado.setCalendario(calendario);
-        seleccionado.setUsuario(usuario);
+        Usuario creador = new Usuario();
+        creador.setCorreo("profesor@unicauca.edu.co");
+        creador.setEstadoUsuario(estadoUsuarioActivo());
+        creador.setUsuarioDetalle(detalleFacultad("INGENIERIA"));
+        when(usuarioRepository.findByCorreo("profesor@unicauca.edu.co"))
+                .thenReturn(Optional.of(creador));
 
-        when(seleccionadoRepository.findAll()).thenReturn(List.of(seleccionado));
+        Usuario jefe = new Usuario();
+        jefe.setCorreo("jefe@unicauca.edu.co");
+        jefe.setEstadoUsuario(estadoUsuarioActivo());
+        jefe.setUsuarioDetalle(detalleFacultad("INGENIERIA"));
+        jefe.setRoles(List.of(rol("JEFE DE DEPARTAMENTO")));
+
+        when(usuarioRepository.findAll()).thenReturn(List.of(jefe));
 
         ReflectionTestUtils.setField(calendarioService, "notificacionHabilitada", true);
 
@@ -362,6 +384,24 @@ class CalendarioServiceImplTest {
         assertEquals("ACTIVO", calendario.getEstado());
         verify(clienteNotificacion, atLeastOnce()).enviarNotificacion(
                 any(), any(String.class), any(String.class));
+    }
+
+    private EstadoUsuario estadoUsuarioActivo() {
+        EstadoUsuario estado = new EstadoUsuario();
+        estado.setNombre("ACTIVO");
+        return estado;
+    }
+
+    private UsuarioDetalle detalleFacultad(String facultad) {
+        UsuarioDetalle detalle = new UsuarioDetalle();
+        detalle.setFacultad(facultad);
+        return detalle;
+    }
+
+    private Rol rol(String nombre) {
+        Rol rol = new Rol();
+        rol.setNombre(nombre);
+        return rol;
     }
 
     @Test
