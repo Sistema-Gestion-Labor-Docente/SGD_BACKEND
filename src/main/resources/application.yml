@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   jackson:
     time-zone: America/Bogota
   jpa:
@@ -10,11 +10,11 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: sgd
+        default_schema: ${DB_SCHEMA:sgd}
   datasource:
-    url: ${DESARROLLO_DATASOURCE_URL}
-    username: ${DESARROLLO_DATASOURCE_USER}
-    password: ${DESARROLLO_DATASOURCE_PASSWORD}
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:true}
@@ -22,8 +22,8 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: ${MULTIPART_MAX_FILE_SIZE}
-      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE}
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:10MB}
 
   notification:
     service:
@@ -38,9 +38,9 @@ spring:
       url: ${PERIODO_ACADEMICO_API_URL}
 
 server:
-  port: ${SERVER_PORT}
+  port: ${PORT:${SERVER_PORT:8080}}
   servlet:
-    context-path: /sed-back
+    context-path: ${SERVER_CONTEXT_PATH:/sgd-back}
 
 files:
   basePath: ${FILES_BASE_PATH}
@@ -50,15 +50,9 @@ document:
 
 logging:
   level:
-    root: ${LOG_LEVEL_ROOT}
-    'co.edu.unicauca.sed.api': ${LOG_LEVEL_API}
+    root: ${LOG_LEVEL_ROOT:INFO}
+    'co.edu.unicauca.sed.api': ${LOG_LEVEL_API:INFO}
     liquibase: ${LOG_LEVEL_LIQUIBASE:INFO}
-  file:
-    name: ${LOG_FILE_NAME}
-    max-size: ${LOG_FILE_MAX_SIZE}
-    max-history: ${LOG_FILE_MAX_HISTORY}
-  pattern:
-    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n"
 
 app:
   jwtSecret: ${JWT_SECRET}

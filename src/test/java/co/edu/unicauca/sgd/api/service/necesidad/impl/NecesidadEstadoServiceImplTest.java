@@ -32,6 +32,7 @@ import co.edu.unicauca.sgd.api.dto.ApiResponse;
 import co.edu.unicauca.sgd.api.enums.EstadoNecesidad;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
+import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,11 +50,19 @@ class NecesidadEstadoServiceImplTest {
     @Mock
     private UsuarioRepository usuarioRepository;
 
+    @Mock
+    private AsignacionRepository asignacionRepository;
+
     private NecesidadEstadoServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new NecesidadEstadoServiceImpl(necesidadRepository, calendarioRepository, clienteNotificacion, usuarioRepository);
+        service = new NecesidadEstadoServiceImpl(
+                necesidadRepository,
+                calendarioRepository,
+                clienteNotificacion,
+                usuarioRepository,
+                asignacionRepository);
         lenient().when(usuarioRepository.findFirstActiveByRolNombre(ArgumentMatchers.anyString())).thenReturn(Optional.empty());
         lenient().when(usuarioRepository.findByCorreo(ArgumentMatchers.anyString())).thenReturn(Optional.empty());
     }

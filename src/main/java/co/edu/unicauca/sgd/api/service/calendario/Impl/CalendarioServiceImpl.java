@@ -42,6 +42,7 @@ import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.FechaRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
+import co.edu.unicauca.sgd.api.repository.UsuarioRepository;
 import co.edu.unicauca.sgd.api.repository.UsuarioDepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.ActividadCalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
@@ -88,6 +89,8 @@ public class CalendarioServiceImpl implements CalendarioService {
 
     private final UsuarioDepartamentoRepository usuarioDepartamentoRepository;
 
+    private final UsuarioRepository usuarioRepository;
+
     private final ActividadCalendarioRepository actividadCalendarioRepository;
 
     private final NecesidadRepository necesidadRepository;
@@ -107,6 +110,7 @@ public class CalendarioServiceImpl implements CalendarioService {
             SeleccionadoRepository seleccionadoRepository,
             DepartamentoRepository departamentoRepository,
             UsuarioDepartamentoRepository usuarioDepartamentoRepository,
+            UsuarioRepository usuarioRepository,
             ActividadCalendarioRepository actividadCalendarioRepository,
             NecesidadRepository necesidadRepository,
             FechaMapper fechaMapper,
@@ -119,6 +123,7 @@ public class CalendarioServiceImpl implements CalendarioService {
         this.seleccionadoRepository = seleccionadoRepository;
         this.departamentoRepository = departamentoRepository;
         this.usuarioDepartamentoRepository = usuarioDepartamentoRepository;
+        this.usuarioRepository = usuarioRepository;
         this.actividadCalendarioRepository = actividadCalendarioRepository;
         this.necesidadRepository = necesidadRepository;
         this.fechaMapper = fechaMapper;
@@ -545,28 +550,49 @@ public class CalendarioServiceImpl implements CalendarioService {
     }
 
     /**
-     * Envía notificaciones por correo a secretarios, jefes, coordinadores y profesores
-     * cuando un calendario es aprobado o pasa a estado ACTIVO.
+     * Envía notificaciones por correo a coordinadores y jefes de la misma facultad
+     * del usuario que creó el calendario cuando se aprueba o pasa a estado ACTIVO.
      */
     private void notificarActivacionCalendario(Calendario calendario, String evento) {
         try {
-            // Reutilizamos la lógica de seleccionados: contiene los docentes asociados al calendario
-            List<Seleccionado> seleccionados = seleccionadoRepository.findAll().stream()
-                    .filter(s -> s.getCalendario() != null
-                            && calendario.getOidcalendario().equals(s.getCalendario().getOidcalendario())
-                            && s.getUsuario() != null
-                            && StringUtils.hasText(s.getUsuario().getCorreo()))
-                    .toList();
-
-            if (seleccionados.isEmpty()) {
-                logger.warn("No hay seleccionados para enviar notificación del calendario {}", calendario.getOidcalendario());
+            String correoCreador = calendario.getUsuarioCreacion();
+            if (!StringUtils.hasText(correoCreador)) {
+                logger.warn("No se pudo determinar el usuario creador del calendario {}", calendario.getOidcalendario());
                 return;
             }
 
-            List<String> correos = seleccionados.stream()
-                    .map(s -> s.getUsuario().getCorreo())
+            Usuario creador = usuarioRepository.findByCorreo(correoCreador).orElse(null);
+            if (creador == null || creador.getUsuarioDetalle() == null
+                    || !StringUtils.hasText(creador.getUsuarioDetalle().getFacultad())) {
+                logger.warn("No se pudo determinar la facultad del usuario creador ({}) para el calendario {}",
+                        correoCreador, calendario.getOidcalendario());
+                return;
+            }
+
+            String facultad = creador.getUsuarioDetalle().getFacultad().trim();
+            List<String> rolesDestino = List.of("COORDINADOR", "JEFE DE DEPARTAMENTO", "SECRETARIA/O FACULTAD");
+
+            List<String> correos = usuarioRepository.findAll().stream()
+                    .filter(u -> u != null
+                            && u.getUsuarioDetalle() != null
+                            && StringUtils.hasText(u.getUsuarioDetalle().getFacultad())
+                            && u.getUsuarioDetalle().getFacultad().trim().equalsIgnoreCase(facultad)
+                            && u.getEstadoUsuario() != null
+                            && "ACTIVO".equalsIgnoreCase(u.getEstadoUsuario().getNombre())
+                            && u.getRoles() != null
+                            && u.getRoles().stream()
+                                .map(r -> r.getNombre() == null ? "" : r.getNombre().trim().toUpperCase())
+                                .anyMatch(rolesDestino::contains)
+                            && StringUtils.hasText(u.getCorreo()))
+                    .map(Usuario::getCorreo)
                     .distinct()
                     .toList();
+
+            if (correos.isEmpty()) {
+                logger.warn("No hay coordinadores o jefes en la facultad '{}' para notificar el calendario {}",
+                        facultad, calendario.getOidcalendario());
+                return;
+            }
 
             String asunto = String.format("Calendario %s %s - %s",
                     calendario.getAnioCalendario(),
