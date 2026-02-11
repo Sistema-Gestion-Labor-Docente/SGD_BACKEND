@@ -42,4 +42,6 @@ public interface NecesidadRepository extends JpaRepository<Necesidad, Integer>, 
 
     long countByCalendario_Oidcalendario(Integer oidCalendario);
 
+    boolean existsByMateria_IdMateria(Integer idMateria);
+
 }

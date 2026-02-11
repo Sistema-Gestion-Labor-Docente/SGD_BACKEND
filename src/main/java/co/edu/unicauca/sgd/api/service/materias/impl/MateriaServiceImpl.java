@@ -6,6 +6,7 @@ import co.edu.unicauca.sgd.api.dto.materias.MateriaDTORequest;
 import co.edu.unicauca.sgd.api.dto.materias.MateriaDTOResponse;
 import co.edu.unicauca.sgd.api.mapper.MateriaMapper;
 import co.edu.unicauca.sgd.api.repository.MateriaRepository;
+import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.PlanRepository;
 import co.edu.unicauca.sgd.api.service.materias.MateriaService;
@@ -27,6 +28,8 @@ public class MateriaServiceImpl implements MateriaService {
     private DepartamentoRepository departamentoRepository;
     
     private PlanRepository planRepository;
+
+    private NecesidadRepository necesidadRepository;
     
     private MateriaMapper materiaMapper;
 
@@ -34,10 +37,12 @@ public class MateriaServiceImpl implements MateriaService {
             MateriaRepository materiaRepository,
             DepartamentoRepository departamentoRepository,
             PlanRepository planRepository,
+            NecesidadRepository necesidadRepository,
             MateriaMapper materiaMapper) {
         this.materiaRepository = materiaRepository;
         this.departamentoRepository = departamentoRepository;
         this.planRepository = planRepository;
+        this.necesidadRepository = necesidadRepository;
         this.materiaMapper = materiaMapper;
     }
 
@@ -237,9 +242,16 @@ public class MateriaServiceImpl implements MateriaService {
     @Override
     public ApiResponse<Void> eliminar(Integer id) {
         try {
-            if (!materiaRepository.existsById(id)) {
-                throw new IllegalStateException("Materia no encontrado con ID: " + id);
+            Materia materia = materiaRepository.findById(id)
+                    .orElseThrow(() -> new IllegalStateException("Materia no encontrado con ID: " + id));
+
+            if (materiaRepository.existsByCorrequisito(materia)) {
+                return new ApiResponse<>(409, "No se puede eliminar la materia porque es correquisito de otra.", null);
             }
+            if (necesidadRepository.existsByMateria_IdMateria(id)) {
+                return new ApiResponse<>(409, "No se puede eliminar la materia porque tiene necesidades asociadas.", null);
+            }
+
             materiaRepository.deleteById(id);
             logger.info("Materia eliminada ID: {}", id);
             return new ApiResponse<>(200, "Materia eliminada correctamente.", null);
