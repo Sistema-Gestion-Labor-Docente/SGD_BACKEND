@@ -22,6 +22,7 @@ import co.edu.unicauca.sgd.api.dto.materias.MateriaDTOResponse;
 import co.edu.unicauca.sgd.api.mapper.MateriaMapper;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.MateriaRepository;
+import co.edu.unicauca.sgd.api.repository.NecesidadRepository;
 import co.edu.unicauca.sgd.api.repository.PlanRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,13 +35,20 @@ class MateriaServiceImplTest {
     @Mock
     private PlanRepository planRepository;
     @Mock
+    private NecesidadRepository necesidadRepository;
+    @Mock
     private MateriaMapper materiaMapper;
 
     private MateriaServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new MateriaServiceImpl(materiaRepository, departamentoRepository, planRepository, materiaMapper);
+        service = new MateriaServiceImpl(
+                materiaRepository,
+                departamentoRepository,
+                planRepository,
+                necesidadRepository,
+                materiaMapper);
     }
 
     @Test
