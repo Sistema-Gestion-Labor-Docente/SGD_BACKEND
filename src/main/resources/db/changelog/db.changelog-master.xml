@@ -33,4 +33,5 @@
     <include file="db/changelog/0022-17012026-table-asignacion.xml"/>
     <include file="db/changelog/0023-17012026-seed-usuario-departamento-relations.xml"/>
     <include file="db/changelog/0024-17012026-actividad-asignaciondefault.xml"/>
+    <include file="db/changelog/0025-11022026-configuracion-general.xml"/>
 </databaseChangeLog>

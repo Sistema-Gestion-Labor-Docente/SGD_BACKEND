@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://www.liquibase.org/xml/ns/dbchangelog
+    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+  <changeSet id="0025-11022026-configuracion-general" author="Jesus Edwin Adrada Ruiz">
+    <createSequence sequenceName="SEQ_OIDCONFIGGENERAL" startValue="1" incrementBy="1"/>
+
+    <createTable tableName="CONFIGURACIONGENERAL">
+      <column name="OIDCONFIGGENERAL" type="INT" defaultValueComputed="nextval('SEQ_OIDCONFIGGENERAL')">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="CLAVE" type="VARCHAR(150)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="VALOR" type="TEXT"/>
+      <column name="HABILITADO" type="BOOLEAN" defaultValueBoolean="true">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHACREACION" type="TIMESTAMP" defaultValueComputed="now()">
+        <constraints nullable="false"/>
+      </column>
+      <column name="FECHAACTUALIZACION" type="TIMESTAMP"/>
+    </createTable>
+
+    <addUniqueConstraint
+        tableName="CONFIGURACIONGENERAL"
+        columnNames="CLAVE"
+        constraintName="UQ_CONFIGURACIONGENERAL_CLAVE"/>
+  </changeSet>
+
+  <changeSet id="0025-11022026-configuracion-general-seed" author="Jesus Edwin Adrada Ruiz" context="data">
+    <insert tableName="CONFIGURACIONGENERAL">
+      <column name="OIDCONFIGGENERAL" valueComputed="nextval('SEQ_OIDCONFIGGENERAL')"/>
+      <column name="CLAVE" value="sedUrls"/>
+      <column name="VALOR" value='{"urlBase":"https://kubetest.unicauca.edu.co/sed-front"}'/>
+      <column name="HABILITADO" valueBoolean="true"/>
+      <column name="FECHACREACION" valueComputed="now()"/>
+      <column name="FECHAACTUALIZACION" valueComputed="now()"/>
+    </insert>
+  </changeSet>
+</databaseChangeLog>
