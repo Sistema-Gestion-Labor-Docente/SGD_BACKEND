@@ -35,8 +35,8 @@
   <changeSet id="0025-11022026-configuracion-general-seed" author="Jesus Edwin Adrada Ruiz" context="data">
     <insert tableName="CONFIGURACIONGENERAL">
       <column name="OIDCONFIGGENERAL" valueComputed="nextval('SEQ_OIDCONFIGGENERAL')"/>
-      <column name="CLAVE" value="sedUrls"/>
-      <column name="VALOR" value='{"urlBase":"https://kubetest.unicauca.edu.co/sed-front"}'/>
+      <column name="CLAVE" value="sedUrlBase"/>
+      <column name="VALOR" value="https://kubetest.unicauca.edu.co/sed-front"/>
       <column name="HABILITADO" valueBoolean="true"/>
       <column name="FECHACREACION" valueComputed="now()"/>
       <column name="FECHAACTUALIZACION" valueComputed="now()"/>
