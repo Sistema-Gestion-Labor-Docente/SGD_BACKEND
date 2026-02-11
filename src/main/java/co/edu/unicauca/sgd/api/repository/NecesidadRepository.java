@@ -35,6 +35,9 @@ public interface NecesidadRepository extends JpaRepository<Necesidad, Integer>, 
     // buscar por estado
     List<Necesidad> findAllByCalendario_OidcalendarioAndEstado(Integer oidCalendario, EstadoNecesidad estado);
 
+    List<Necesidad> findAllByCalendario_OidcalendarioAndMateria_Departamento_OidDepartamento(Integer oidCalendario,
+                                                                                             Integer oidDepartamento);
+
     List<Necesidad> findAllByCalendario_OidcalendarioAndEstadoAndMateria_Plan_Programa_OidPrograma(
             Integer oidCalendario,
             EstadoNecesidad estado,
