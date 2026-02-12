@@ -31,6 +31,7 @@ import co.edu.unicauca.sgd.api.domain.Usuario;
 import co.edu.unicauca.sgd.api.domain.UsuarioDepartamento;
 import co.edu.unicauca.sgd.api.domain.UsuarioDetalle;
 import co.edu.unicauca.sgd.api.mapper.SeleccionadoMapper;
+import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
@@ -52,6 +53,8 @@ class SeleccionadoServiceImplTest {
     private DepartamentoRepository departamentoRepository;
     @Mock
     private CalendarioRepository calendarioRepository;
+    @Mock
+    private AsignacionRepository asignacionRepository;
 
     private SeleccionadoServiceImpl service;
 
@@ -63,7 +66,8 @@ class SeleccionadoServiceImplTest {
                 usuarioRepository,
                 usuarioDepartamentoRepository,
                 departamentoRepository,
-                calendarioRepository);
+                calendarioRepository,
+                asignacionRepository);
     }
 
     @Test
@@ -217,5 +221,27 @@ class SeleccionadoServiceImplTest {
         ApiResponse<Void> response = service.eliminar(30);
 
         assertThat(response.getCodigo()).isEqualTo(404);
+    }
+
+    @Test
+    void eliminar_cuandoTieneAsignacionesRetorna409() {
+        when(seleccionadoRepository.existsById(14)).thenReturn(true);
+        when(asignacionRepository.existsBySeleccionado_OidSeleccionado(14)).thenReturn(true);
+
+        ApiResponse<Void> response = service.eliminar(14);
+
+        assertThat(response.getCodigo()).isEqualTo(409);
+        verify(seleccionadoRepository, never()).deleteById(14);
+    }
+
+    @Test
+    void eliminar_cuandoNoTieneAsignacionesElimina() {
+        when(seleccionadoRepository.existsById(15)).thenReturn(true);
+        when(asignacionRepository.existsBySeleccionado_OidSeleccionado(15)).thenReturn(false);
+
+        ApiResponse<Void> response = service.eliminar(15);
+
+        assertThat(response.getCodigo()).isEqualTo(204);
+        verify(seleccionadoRepository).deleteById(15);
     }
 }

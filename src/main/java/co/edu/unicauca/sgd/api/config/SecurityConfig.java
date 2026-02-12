@@ -11,6 +11,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import co.edu.unicauca.sgd.api.logging.HttpLoggingFilter;
 import co.edu.unicauca.sgd.api.security.JwtAuthenticationFilter;
 
 import java.util.List;
@@ -23,9 +24,12 @@ public class SecurityConfig {
     private String jwtSecret;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final HttpLoggingFilter httpLoggingFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          HttpLoggingFilter httpLoggingFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.httpLoggingFilter = httpLoggingFilter;
     }
 
     @Bean
@@ -42,7 +46,8 @@ public class SecurityConfig {
                 ).permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(httpLoggingFilter, JwtAuthenticationFilter.class);
     
         return http.build();
     }

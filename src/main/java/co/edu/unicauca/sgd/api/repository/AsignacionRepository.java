@@ -18,5 +18,7 @@ public interface AsignacionRepository extends JpaRepository<Asignacion, Integer>
 
     List<Asignacion> findBySeleccionado_OidSeleccionado(Integer oidSeleccionado);
 
+    boolean existsBySeleccionado_OidSeleccionado(Integer oidSeleccionado);
+
     List<Asignacion> findAllByNecesidad_OidNecesidadIn(List<Integer> oidNecesidades);
 }

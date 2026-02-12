@@ -9,9 +9,11 @@ import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTORequest
 import co.edu.unicauca.sgd.api.dto.actividad.laborDocente.SeleccionadoDTOResponse;
 import co.edu.unicauca.sgd.api.enums.ContratacionEnum;
 import co.edu.unicauca.sgd.api.exception.seleccionado.SeleccionadoException;
+import co.edu.unicauca.sgd.api.exception.seleccionado.SeleccionadoConAsignacionesException;
 import co.edu.unicauca.sgd.api.exception.seleccionado.SeleccionadoNotFoundException;
 import co.edu.unicauca.sgd.api.exception.seleccionado.SeleccionadoValidationException;
 import co.edu.unicauca.sgd.api.mapper.SeleccionadoMapper;
+import co.edu.unicauca.sgd.api.repository.AsignacionRepository;
 import co.edu.unicauca.sgd.api.repository.CalendarioRepository;
 import co.edu.unicauca.sgd.api.repository.DepartamentoRepository;
 import co.edu.unicauca.sgd.api.repository.SeleccionadoRepository;
@@ -62,6 +64,7 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
     private final UsuarioDepartamentoRepository usuarioDepartamentoRepository;
     private final DepartamentoRepository departamentoRepository;
     private final CalendarioRepository calendarioRepository;
+    private final AsignacionRepository asignacionRepository;
 
     @Override
     public ApiResponse<Page<SeleccionadoDTOResponse>> obtenerTodos(Integer oidCalendario,
@@ -243,6 +246,9 @@ public class SeleccionadoServiceImpl implements SeleccionadoService {
         try {
             if (!seleccionadoRepository.existsById(oid)) {
                 throw new SeleccionadoNotFoundException("Seleccionado no encontrado con ID: " + oid);
+            }
+            if (asignacionRepository.existsBySeleccionado_OidSeleccionado(oid)) {
+                throw new SeleccionadoConAsignacionesException(oid);
             }
             seleccionadoRepository.deleteById(oid);
             logger.info("Seleccionado eliminado con ID: {}", oid);

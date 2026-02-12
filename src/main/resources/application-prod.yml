@@ -31,6 +31,8 @@ document:
   upload-dir: ${DOCUMENT_UPLOAD_DIR:/app/uploads}
 
 logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %msg%n"
   level:
     root: ${LOG_LEVEL_ROOT:INFO}
     'co.edu.unicauca.sed.api': ${LOG_LEVEL_API:INFO}
