@@ -11,5 +11,7 @@ public class ReporteGraficoPdfRequest {
 
     private String titulo;
     private String resumen;
+    private String descripcion;
+    private String aporte;
     private List<ReporteDatoGraficoRequest> datos;
 }

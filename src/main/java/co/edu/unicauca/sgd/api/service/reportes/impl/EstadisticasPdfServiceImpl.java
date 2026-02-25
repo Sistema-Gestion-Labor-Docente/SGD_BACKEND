@@ -138,14 +138,22 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
 
     private String construirSeccionGrafico(ReporteGraficoPdfRequest grafico, int indice) {
         String titulo = grafico != null ? valorOrDefault(grafico.getTitulo(), "Grafico " + indice) : "Grafico " + indice;
-        String resumen = grafico != null ? valorOrDefault(grafico.getResumen(), "Sin descripcion disponible.") : "Sin descripcion disponible.";
-        String resumenHtml = escapeText(resumen).replace("\n", "<br />");
+        String descripcion = grafico != null ? valorOrDefault(grafico.getDescripcion(), grafico.getResumen()) : null;
+        descripcion = valorOrDefault(descripcion, "Sin descripcion disponible.");
+        String aporte = grafico != null ? valorOrDefault(grafico.getAporte(), "Sin informacion adicional.") : "Sin informacion adicional.";
+        String descripcionHtml = escapeText(descripcion).replace("\n", "<br />");
+        String aporteHtml = escapeText(aporte).replace("\n", "<br />");
         String imagen = generarGraficoBase64(grafico != null ? grafico.getDatos() : null, titulo);
 
         return new StringBuilder()
                 .append("<div class=\"section\">")
                 .append("<h2 class=\"section-title\">").append(escapeText(titulo)).append("</h2>")
-                .append("<p class=\"section-summary\">").append(resumenHtml).append("</p>")
+                .append("<div class=\"section-detail\">")
+                .append("<span class=\"section-label\">Descripcion:</span> ").append(descripcionHtml)
+                .append("</div>")
+                .append("<div class=\"section-detail\">")
+                .append("<span class=\"section-label\">Aporte:</span> ").append(aporteHtml)
+                .append("</div>")
                 .append("<div class=\"chart\">")
                 .append("<img src=\"").append(imagen).append("\" alt=\"").append(escapeText(titulo)).append("\" />")
                 .append("</div>")
@@ -163,7 +171,7 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
 
     private ReporteGraficoPdfRequest construirGraficoPorId(String idGrafico, EstadisticasContext context) {
         if (!StringUtils.hasText(idGrafico)) {
-            return crearGraficoGenerico("Grafico", "Sin descripcion disponible.", List.of());
+            return crearGraficoGenerico("Grafico", "Sin descripcion disponible.", "Sin informacion adicional.", List.of());
         }
         String id = idGrafico.trim().toLowerCase();
         switch (id) {
@@ -171,45 +179,54 @@ public class EstadisticasPdfServiceImpl implements EstadisticasPdfService {
                 return crearGraficoGenerico(
                         "Carga de actividades por usuario",
                         "Muestra el total de asignaciones registradas por docente.",
+                        "Permite identificar docentes con mayor carga y priorizar ajustes de distribucion.",
                         construirCargaActividades(context));
             case "ocupacion_cupos":
                 return crearGraficoGenerico(
                         "Ocupacion de horas vs. cupo permitido",
                         "Resume las horas asignadas por tipo de contratacion (cupo del calendario cuando aplica).",
+                        "Apoya el control de cupos y el balance de horas por modalidad.",
                         construirOcupacionCupos(context));
             case "cobertura_docente":
                 return crearGraficoGenerico(
                         "Cobertura docente por semestre",
                         "Porcentaje de necesidades cubiertas por semestre.",
+                        "Indica niveles de cobertura y posibles brechas por semestre.",
                         construirCoberturaDocente(context));
             case "demanda_necesidades":
                 return crearGraficoGenerico(
                         "Demanda de necesidades por programa",
                         "Muestra la cantidad de necesidades registradas por programa.",
+                        "Ayuda a priorizar programas con mayor demanda.",
                         construirDemandaNecesidades(context));
             case "flujo_necesidades":
                 return crearGraficoGenerico(
                         "Flujo de necesidades y tiempos de aprobacion",
                         "Resume la cantidad de necesidades por estado.",
+                        "Permite monitorear el avance y detectar cuellos de botella.",
                         construirFlujoNecesidades(context));
             case "cobertura_necesidades_actividades":
                 return crearGraficoGenerico(
                         "Cobertura de necesidades vs. actividades",
                         "Muestra necesidades cubiertas frente a pendientes por asignar.",
+                        "Apoya el seguimiento de pendientes y el cierre de asignaciones.",
                         construirCoberturaNecesidades(context));
             default:
                 return crearGraficoGenerico(
                         "Grafico no reconocido",
                         "El identificador solicitado no existe en el catalogo.",
+                        "No se puede aportar informacion adicional con este identificador.",
                         List.of());
         }
     }
 
-    private ReporteGraficoPdfRequest crearGraficoGenerico(String titulo, String resumen,
+    private ReporteGraficoPdfRequest crearGraficoGenerico(String titulo, String resumen, String aporte,
             List<ReporteDatoGraficoRequest> datos) {
         ReporteGraficoPdfRequest grafico = new ReporteGraficoPdfRequest();
         grafico.setTitulo(titulo);
         grafico.setResumen(resumen);
+        grafico.setDescripcion(resumen);
+        grafico.setAporte(aporte);
         grafico.setDatos(datos);
         return grafico;
     }
